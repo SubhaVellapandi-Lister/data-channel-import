@@ -2,7 +2,7 @@ import { IJobConfig, JobStatus } from "@data-channels/dcSDK";
 import { CourseImportProcessor } from "./Processor";
 
 const job: IJobConfig = {
-    guid: '1234567890-009-hisd',
+    guid: '1234567890-011-hisd',
 
     channel: {
         flow: ['validate', 'batchToAp'],
@@ -20,10 +20,12 @@ const job: IJobConfig = {
                 method: 'batchToAp',
                 granularity: 'row',
                 parameters: {
-                    rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repojwt',
+                    rulesRepoUrl: 'https://api2-ada.hobsonshighered.com/aplan-repository',
+                    // rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repojwt',
                     rulesRepoJWT: '${ENV:APSDK_JWT}',
                     rulesRepoProduct: 'naviance',
-                    namespace: 'dcimport.hisd'
+                    // namespace: '9110149DUS'
+                    namespace: '4823640DUS'
                 }
             }
         }
@@ -43,7 +45,7 @@ const job: IJobConfig = {
         {
             s3: {
                 bucket: 'data-channels-work-dev1',
-                key: 'testing/houston_mapping.csv'
+                key: 'testing/houstonMappingFixed.csv'
             },
             name: 'mapping'
         }
@@ -64,17 +66,12 @@ const job: IJobConfig = {
 (async () => {
 
     // job.guid = `1234567890-${new Date().getTime()}`;
-    const processor = new CourseImportProcessor(job);
+    const processor = new CourseImportProcessor(job, { storeFilesLocal: true });
 
     // validating
 
-    // await processor.handle();
-
+    await processor.handle();
     console.log(JSON.stringify(processor.job, undefined, 2));
-
-    // validating
-    // processor.job.currentStep = 'validate';
-    // await processor.handle();
 
     // processing
     processor.job.currentStep = 'batchToAp';

@@ -11,14 +11,30 @@ export interface ITranslateConfig {
 }
 
 export class CourseImportProcessor extends BaseProcessor {
-    private apBatchSize = 200;
+    private apBatchSize = 100;
     private apBatch: IRowData[] = [];
     private batchCount = 0;
+    private duplicatesSkipped = 0;
+    private coursesPushed = 0;
     private namespace = '';
     private originalHeaders: string[] = [];
     private seenCourseIds: { [key: string]: string } = {};
     private schoolsByCourse: { [key: string]: string[] } = {};
     private subjectAreaMapping: { [key: string]: string } = {};
+    private instructionalLevelMap = {
+        AP: 'Advanced Placement',
+        BAS: 'Basic',
+        EL: 'English Learner',
+        DE: 'Dual Enrollment',
+        GEN: 'General',
+        GTAA: 'Gifted and Talented/Advanced Academic',
+        HON: 'Honors Level',
+        HSE: 'High School Equivalent',
+        IB: 'International Baccalaureate',
+        REM: 'Remedial',
+        SWD: 'Students with Disabilities',
+        UT: 'Untracked'
+    };
 
     public async translate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
 
@@ -72,7 +88,8 @@ export class CourseImportProcessor extends BaseProcessor {
         const courses: Course[] = [];
         for (const rowData of this.apBatch) {
             const credits = parseFloat(rowData['Credits']) || 0;
-            const instructionalLevel = rowData['Instructional_Level'] || 'UT';
+            const instructionalLevelCode = rowData['Instructional_Level'] || 'UT';
+            const instructionalLevel = this.instructionalLevelMap[instructionalLevelCode] || 'Untracked';
             const statusCode = rowData['Status'] === 'Y' ? 'ACTIVE' : 'INACTIVE';
             const isCte = rowData['CTE'] === 'Y' ? 1 : 0;
             const isTechPrep = 0;
@@ -89,6 +106,7 @@ export class CourseImportProcessor extends BaseProcessor {
                 }
             }
             if (this.seenCourseIds[rowData['Course_ID']]) {
+                this.duplicatesSkipped += 1;
                 continue;
             }
             this.seenCourseIds[rowData['Course_ID']] = rowData['Course_ID'];
@@ -130,6 +148,7 @@ export class CourseImportProcessor extends BaseProcessor {
                 rowData['Course_Name'],
                 new Annotations(annoItems)
             ));
+            this.coursesPushed += 1;
         }
         b.addItems(courses);
         await b.createOrUpdate();
@@ -183,7 +202,9 @@ export class CourseImportProcessor extends BaseProcessor {
         }
 
         return { results: {
-            batchCount: this.batchCount
+            batchCount: this.batchCount,
+            duplicatesSkipped: this.duplicatesSkipped,
+            coursesPushed: this.coursesPushed
         }};
     }
 }
