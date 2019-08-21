@@ -1,0 +1,75 @@
+{
+  "name": "course-planner-import",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "prestart": "npm run -s build",
+    "start": "node dist/index.js",
+    "build": "mkdirp dist && npm run compile",
+    "lint": "tslint --project tsconfig.json",
+    "clean": "shx rm -rf dist coverage",
+    "compile": "tsc",
+    "compile:once": "tsc --noEmit",
+    "compile:watch": "tsc --watch --noEmit",
+    "test": "npm run lint && npm run compile:once && npm run test:cov",
+    "test:cov": "jest --coverage --no-cache --runInBand",
+    "test:nocov": "jest --no-cache --runInBand"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hobsons/data-channels.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Hobsons/data-channels/issues"
+  },
+  "homepage": "https://github.com/Hobsons/data-channels#readme",
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.31",
+    "@types/jest": "24.0.11",
+    "@types/lodash": "4.14.117",
+    "@types/node": "10.12.14",
+    "aws-sdk": "^2.492.0",
+    "jest": "24.4.0",
+    "mkdirp": "0.5.1",
+    "shx": "0.3.2",
+    "ts-jest": "24.0.0",
+    "ts-node": "8.0.2",
+    "tslint": "5.11.0",
+    "typescript": "3.3.1"
+  },
+  "dependencies": {
+    "@academic-planner/apSDK": "1.1.0",
+    "@data-channels/dcSDK": "0.1.7",
+    "lodash": "4.17.15",
+    "request": "^2.88.0"
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "src/**/*.ts",
+      "!<rootDir>/node_modules/",
+      "!src/**/__*__/*.ts",
+      "!src/types/*.d.ts",
+      "!src/index.ts"
+    ],
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ],
+    "roots": [
+      "src"
+    ],
+    "testURL": "http://localhost",
+    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.ts$",
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "verbose": true
+  }
+}
