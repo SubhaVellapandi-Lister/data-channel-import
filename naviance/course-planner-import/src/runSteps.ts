@@ -20,12 +20,12 @@ const job: IJobConfig = {
                 method: 'batchToAp',
                 granularity: 'row',
                 parameters: {
-                    rulesRepoUrl: 'https://api2-ada.hobsonshighered.com/aplan-repository',
-                    // rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repojwt',
+                    // rulesRepoUrl: 'https://api2-ada.hobsonshighered.com/aplan-repository',
+                    rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repojwt',
                     rulesRepoJWT: '${ENV:APSDK_JWT}',
                     rulesRepoProduct: 'naviance',
-                    // namespace: '9110149DUS'
-                    namespace: '4823640DUS'
+                    namespace: '9110149DUS'
+                    // namespace: '4823640DUS'
                 }
             }
         }
@@ -38,14 +38,15 @@ const job: IJobConfig = {
         {
             s3: {
                 bucket: 'data-channels-work-dev1',
-                key: 'testing/houston_courses.csv'
+                key: 'testing/houston_courses_partial.csv'
             },
             name: 'courses'
         },
         {
             s3: {
                 bucket: 'data-channels-work-dev1',
-                key: 'testing/houstonMappingFixed.csv'
+                key: 'testing/houstonDevMapping.csv'
+            //    key: 'testing/houstonMappingFixed.csv'
             },
             name: 'mapping'
         }
@@ -64,6 +65,8 @@ const job: IJobConfig = {
 };
 
 (async () => {
+
+    console.log(JSON.stringify(job, undefined, 2));
 
     // job.guid = `1234567890-${new Date().getTime()}`;
     const processor = new CourseImportProcessor(job, { storeFilesLocal: true });

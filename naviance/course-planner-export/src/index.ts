@@ -1,7 +1,7 @@
-import { CourseImportProcessor } from "./Processor";
+import { PlanExportProcessor } from "./Processor";
 
-export async function courseImportHandler(event: any): Promise<any> {
-    const processor = new CourseImportProcessor(event.Job);
+export async function planExportHandler(event: any): Promise<any> {
+    const processor = new PlanExportProcessor(event.Job);
     await processor.handle(event.TaskToken);
 
     const response = {

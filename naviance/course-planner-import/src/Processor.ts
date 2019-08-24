@@ -35,6 +35,32 @@ export class CourseImportProcessor extends BaseProcessor {
         SWD: 'Students with Disabilities',
         UT: 'Untracked'
     };
+    private scedMapping = {
+        '01': 'English Language and Literature',
+        '02': 'Mathematics',
+        '03': 'Life and Physical Sciences',
+        '04': 'Social Sciences and History',
+        '05': 'Visual and Performing Arts',
+        '06': 'Foreign Language and Literature',
+        '07': 'Religious Education and Theology',
+        '08': 'Physical, Health, and Safety Education',
+        '09': 'Military Science',
+        '10': 'Information Technology',
+        '11': 'Communication and Audio/Visual Technology',
+        '12': 'Business and Marketing',
+        '13': 'Manufacturing',
+        '14': 'Health Care Sciences',
+        '15': 'Public, Protective, and Government Services',
+        '16': 'Hospitality and Tourism',
+        '17': 'Architecture and Construction',
+        '18': 'Agriculture, Food, and Natural Resources',
+        '19': 'Human Services',
+        '20': 'Transportation, Distribution and Logistics',
+        '21': 'Engineering and Technology',
+        '22': 'Miscellaneous',
+        '23': 'Non-Subject-Specific',
+        '24': 'World Languages'
+    };
 
     public async translate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
 
@@ -187,7 +213,9 @@ export class CourseImportProcessor extends BaseProcessor {
             }
         }
         if (this.apBatch.length === this.apBatchSize) {
+            console.log('BATCH TO AP START PROCESSBATCH');
             await this.processBatch();
+            console.log('BATCH TO AP STOP PROCESSBATCH');
         }
 
         return {
@@ -198,7 +226,9 @@ export class CourseImportProcessor extends BaseProcessor {
 
     public async after_batchToAp(input: IStepBeforeInput): Promise<IStepAfterOutput> {
         if (this.apBatch.length > 0) {
+            console.log('AFTERWARDS START PROCESSBATCH');
             await this.processBatch();
+            console.log('AFTERWARDS STOP PROCESSBATCH');
         }
 
         return { results: {
