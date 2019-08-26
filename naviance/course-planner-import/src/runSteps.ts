@@ -5,17 +5,31 @@ const job: IJobConfig = {
     guid: '1234567890-011-hisd',
 
     channel: {
-        flow: ['validate', 'batchToAp'],
+        flow: ['validate', 'createSubjects', 'batchToAp'],
         steps: {
             validate: {
-                inputs: ['mapping', 'courses'],
+                inputs: ['schools', 'mapping', 'courses'],
                 outputs: ['mappingValidated', 'coursesValidated'],
                 processor: 'data-channels-navianceCourseImport',
                 method: 'validate',
                 granularity: 'row'
             },
+            createSubjects: {
+                inputs: ['coursesValidated'],
+                processor: 'data-channels-navianceCourseImport',
+                method: 'createSubjects',
+                granularity: 'row',
+                parameters: {
+                    // rulesRepoUrl: 'https://api2-ada.hobsonshighered.com/aplan-repository',
+                    rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repojwt',
+                    rulesRepoJWT: '${ENV:APSDK_JWT}',
+                    rulesRepoProduct: 'naviance',
+                    namespace: '9110149DUS'
+                    // namespace: '4823640DUS'
+                }
+            },
             batchToAp: {
-                inputs: ['mappingValidated', 'coursesValidated'],
+                inputs: ['schoolsValidated', 'mappingValidated', 'coursesValidated'],
                 processor: 'data-channels-navianceCourseImport',
                 method: 'batchToAp',
                 granularity: 'row',
@@ -49,6 +63,14 @@ const job: IJobConfig = {
             //    key: 'testing/houstonMappingFixed.csv'
             },
             name: 'mapping'
+        },
+        {
+            s3: {
+                bucket: 'data-channels-work-dev1',
+                key: 'testing/houstonSchoolIds.csv'
+            //    key: 'testing/houstonMappingFixed.csv'
+            },
+            name: 'schools'
         }
     ],
     filesOut: [],
