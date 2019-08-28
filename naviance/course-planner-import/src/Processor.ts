@@ -212,6 +212,7 @@ export class CourseImportProcessor extends BaseProcessor {
 
             const annoItems: IAnnotationItems = {
                 id: { value: rowData['Course_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+                number: { value: rowData['Course_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
                 name: { value: rowData['Course_Name'], type: 'STRING', operator: AnnotationOperator.EQUALS },
                 grades: { value: grades, type: 'LIST_INTEGER', operator: AnnotationOperator.EQUALS },
                 status: { value: statusCode, type: 'STRING', operator: AnnotationOperator.EQUALS },

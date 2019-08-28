@@ -2,7 +2,7 @@ import { IJobConfig, JobStatus } from "@data-channels/dcSDK";
 import { CourseImportProcessor } from "./Processor";
 
 const job: IJobConfig = {
-    guid: '1234567890-011-hisd',
+    guid: '1234567890-01234-import',
 
     channel: {
         flow: ['validate', 'createSubjects', 'batchToAp'],
@@ -20,12 +20,13 @@ const job: IJobConfig = {
                 method: 'createSubjects',
                 granularity: 'row',
                 parameters: {
-                    // rulesRepoUrl: 'https://api2-ada.hobsonshighered.com/aplan-repository',
-                    rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repojwt',
+                    rulesRepoUrl: 'https://api2-ada.hobsonshighered.com/aplan-repository',
+                    // rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repojwt',
                     rulesRepoJWT: '${ENV:APSDK_JWT}',
                     rulesRepoProduct: 'naviance',
-                    namespace: '9110149DUS'
-                    // namespace: '4823640DUS'
+                    namespace: ''
+                    // namespace: '9110149DUS' // houston dev
+                    // namespace: '4823640DUS' // houston prod
                 }
             },
             batchToAp: {
@@ -34,12 +35,12 @@ const job: IJobConfig = {
                 method: 'batchToAp',
                 granularity: 'row',
                 parameters: {
-                    // rulesRepoUrl: 'https://api2-ada.hobsonshighered.com/aplan-repository',
-                    rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repojwt',
+                    rulesRepoUrl: 'https://api2-ada.hobsonshighered.com/aplan-repository',
+                    // rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repojwt',
                     rulesRepoJWT: '${ENV:APSDK_JWT}',
                     rulesRepoProduct: 'naviance',
-                    namespace: '9110149DUS'
-                    // namespace: '4823640DUS'
+                    // namespace: '9110149DUS' // houston dev
+                    // namespace: '4823640DUS' // houston prod
                 }
             }
         }
@@ -58,8 +59,10 @@ const job: IJobConfig = {
         },
         {
             s3: {
-                bucket: 'data-channels-work-dev1',
-                key: 'testing/houstonDevMapping.csv'
+                // bucket: 'data-channels-work-dev1',
+                bucket: 'data-channels-sftp-dev1',
+
+            //    key: 'testing/houstonDevMapping.csv'
             //    key: 'testing/houstonMappingFixed.csv'
             },
             name: 'mapping'
@@ -78,6 +81,9 @@ const job: IJobConfig = {
         validate: {
             finished: false
         },
+        createSubjects: {
+            finished: false
+        },
         batchToAp: {
             finished: false
         }
@@ -94,7 +100,11 @@ const job: IJobConfig = {
     const processor = new CourseImportProcessor(job, { storeFilesLocal: true });
 
     // validating
+    await processor.handle();
+    console.log(JSON.stringify(processor.job, undefined, 2));
 
+    // creating subjects
+    processor.job.currentStep = 'createSubjects';
     await processor.handle();
     console.log(JSON.stringify(processor.job, undefined, 2));
 
