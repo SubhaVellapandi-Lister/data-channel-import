@@ -137,18 +137,31 @@ export class CourseImportProcessor extends BaseProcessor {
     }
 
     public async createSubjects(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
-        const rowSub = input.data['Subject_Area'];
-        const rowSced = input.data['SCED_Subject_Area'];
-
-        if (!rowSced || !rowSub || !rowSced.length || !rowSub.length) {
+        if (input.index === 1) {
+            // skip header
             return { outputs: {}};
         }
 
-        const scedMap = this.scedMapping[rowSced] || this.scedMapping['0' + rowSced];
+        if (input.data['JSON_OBJECT']) {
+            // migration file
+            const rowObj = JSON.parse(input.data['JSON_OBJECT']);
+            this.subjectAreaMapping[rowObj['subjectArea']['name']] =
+                `${rowObj['subjectArea']['name']}_${rowObj['subjectArea']['category']}`;
+        } else {
+            // client file, no naviance code so look for sced
+            const rowSub = input.data['Subject_Area'];
+            const rowSced = input.data['SCED_Subject_Area'];
 
-        if (!this.subjectAreaMapping[rowSub] && scedMap) {
-            this.subjectsCreated += 1;
-            this.subjectAreaMapping[rowSub] = `${scedMap}_${rowSub}`;
+            if (!rowSced || !rowSub || !rowSced.length || !rowSub.length) {
+                return { outputs: {}};
+            }
+
+            const scedMap = this.scedMapping[rowSced] || this.scedMapping['0' + rowSced];
+
+            if (!this.subjectAreaMapping[rowSub] && scedMap) {
+                this.subjectsCreated += 1;
+                this.subjectAreaMapping[rowSub] = `${scedMap}_${rowSub}`;
+            }
         }
 
         return {
@@ -181,73 +194,115 @@ export class CourseImportProcessor extends BaseProcessor {
         };
     }
 
+    private courseFromRowData(rowData: IRowData): Course {
+        const credits = parseFloat(rowData['Credits']) || 0;
+        const instructionalLevelCode = rowData['Instructional_Level'] || 'UT';
+        const instructionalLevel = this.instructionalLevelMap[instructionalLevelCode] || 'Untracked';
+        const statusCode = rowData['Status'] === 'Y' ? 'ACTIVE' : 'INACTIVE';
+        const isCte = rowData['CTE'] === 'Y' ? 1 : 0;
+        const isTechPrep = 0;
+        const schoolsList = this.schoolsByCourse[rowData['Course_ID']] || [];
+        const rowSub = rowData['Subject_Area'];
+        const expandedSubjectArea =
+            this.subjectAreaMapping[rowSub] ||
+            this.subjectAreaMapping[rowSub.replace('/', '\\/')] ||
+            'Basic Skills_Unknown';
+        const grades: number[] = [];
+        for (const g of [6, 7, 8, 9, 10, 11, 12]) {
+            if (rowData[`GR${g}`] === 'Y') {
+                grades.push(g);
+            }
+        }
+
+        const annoItems: IAnnotationItems = {
+            id: { value: rowData['Course_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            number: { value: rowData['Course_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            name: { value: rowData['Course_Name'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            grades: { value: grades, type: 'LIST_INTEGER', operator: AnnotationOperator.EQUALS },
+            status: { value: statusCode, type: 'STRING', operator: AnnotationOperator.EQUALS },
+            credits: { value: credits, type: 'DECIMAL', operator: AnnotationOperator.EQUALS },
+            cteCourse: { value: isCte, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS },
+            techPrepCourse: { value: isTechPrep, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS },
+            stateCode: { value: rowData['State_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            stateId: { value: rowData['State_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            subjectArea: { value: expandedSubjectArea, type: 'STRING', operator: AnnotationOperator.EQUALS },
+            instructionalLevel: { value: instructionalLevel, type: 'STRING', operator: AnnotationOperator.EQUALS },
+            schools: { value: schoolsList, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
+            description: { value: rowData['Description'], type: 'STRING', operator: AnnotationOperator.EQUALS }
+        };
+
+        if (rowData['Elective']) {
+            const isElective = rowData['Elective'] === 'Y' ? 1 : 0;
+            annoItems['elective'] = { value: isElective, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS };
+        }
+
+        if (rowData['Max_Enroll']) {
+            const maxEnroll = parseInt(rowData['Max_Enroll']);
+            annoItems['maxEnroll'] = { value: maxEnroll, type: 'DECIMAL', operator: AnnotationOperator.EQUALS };
+        }
+
+        if (rowData['Course_Duration']) {
+            annoItems['courseDuration'] = {
+                value: rowData['Course_Duration'], type: 'STRING', operator: AnnotationOperator.EQUALS
+            };
+        }
+
+        return new Course(
+            rowData['Course_ID'],
+            rowData['Course_Name'],
+            new Annotations(annoItems)
+        );
+    }
+
+    private courseFromJSON(rowData: IRowData): Course {
+        const cObj = JSON.parse(rowData['JSON_OBJECT']);
+
+        const instructLev = cObj['instructionalLevel'] || 'Untracked';
+        const isCte = cObj['cteCourse'] === true ? 1 : 0;
+        const isTechPrep = cObj['techPrepCourse'] === true ? 1 : 0;
+        const expandedSubjectArea =
+            this.subjectAreaMapping[cObj['subjectArea']['name']] ||
+            'Basic Skills_Unknown';
+        const desc = cObj['description'] || cObj['_description'];
+
+        const annoItems: IAnnotationItems = {
+            id: { value: cObj['id'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            number: { value: cObj['id'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            name: { value: cObj['name'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            grades: { value: cObj['grades'], type: 'LIST_INTEGER', operator: AnnotationOperator.EQUALS },
+            status: { value: cObj['status'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            credits: { value: cObj['credits'], type: 'DECIMAL', operator: AnnotationOperator.EQUALS },
+            cteCourse: { value: isCte, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS },
+            techPrepCourse: { value: isTechPrep, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS },
+            stateCode: { value: cObj['stateCode'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            stateId: { value: cObj['stateCode'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            subjectArea: { value: expandedSubjectArea, type: 'STRING', operator: AnnotationOperator.EQUALS },
+            instructionalLevel: { value: instructLev, type: 'STRING', operator: AnnotationOperator.EQUALS },
+            schools: { value: cObj['schools'] || [], type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
+            description: { value: desc, type: 'STRING', operator: AnnotationOperator.EQUALS }
+        };
+
+        return new Course(
+            cObj['id'],
+            cObj['name'],
+            new Annotations(annoItems)
+        );
+    }
+
     private async processBatch(): Promise<void> {
         this.batchCount += 1;
         const b = new Batch({namespace: new Namespace(this.namespace)});
         const courses: Course[] = [];
         for (const rowData of this.apBatch) {
-            const credits = parseFloat(rowData['Credits']) || 0;
-            const instructionalLevelCode = rowData['Instructional_Level'] || 'UT';
-            const instructionalLevel = this.instructionalLevelMap[instructionalLevelCode] || 'Untracked';
-            const statusCode = rowData['Status'] === 'Y' ? 'ACTIVE' : 'INACTIVE';
-            const isCte = rowData['CTE'] === 'Y' ? 1 : 0;
-            const isTechPrep = 0;
-            const schoolsList = this.schoolsByCourse[rowData['Course_ID']] || [];
-            const rowSub = rowData['Subject_Area'];
-            const expandedSubjectArea =
-                this.subjectAreaMapping[rowSub] ||
-                this.subjectAreaMapping[rowSub.replace('/', '\\/')] ||
-                'Basic Skills_Unknown';
-            const grades: number[] = [];
-            for (const g of [6, 7, 8, 9, 10, 11, 12]) {
-                if (rowData[`GR${g}`] === 'Y') {
-                    grades.push(g);
-                }
-            }
-            if (this.seenCourseIds[rowData['Course_ID']]) {
+            const course = rowData['JSON_OBJECT'] ?
+                this.courseFromJSON(rowData) : this.courseFromRowData(rowData);
+
+            if (this.seenCourseIds[course.name]) {
                 this.duplicatesSkipped += 1;
                 continue;
             }
-            this.seenCourseIds[rowData['Course_ID']] = rowData['Course_ID'];
-
-            const annoItems: IAnnotationItems = {
-                id: { value: rowData['Course_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
-                number: { value: rowData['Course_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
-                name: { value: rowData['Course_Name'], type: 'STRING', operator: AnnotationOperator.EQUALS },
-                grades: { value: grades, type: 'LIST_INTEGER', operator: AnnotationOperator.EQUALS },
-                status: { value: statusCode, type: 'STRING', operator: AnnotationOperator.EQUALS },
-                credits: { value: credits, type: 'DECIMAL', operator: AnnotationOperator.EQUALS },
-                cteCourse: { value: isCte, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS },
-                techPrepCourse: { value: isTechPrep, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS },
-                stateCode: { value: rowData['State_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
-                stateId: { value: rowData['State_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
-                subjectArea: { value: expandedSubjectArea, type: 'STRING', operator: AnnotationOperator.EQUALS },
-                instructionalLevel: { value: instructionalLevel, type: 'STRING', operator: AnnotationOperator.EQUALS },
-                schools: { value: schoolsList, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
-                description: { value: rowData['Description'], type: 'STRING', operator: AnnotationOperator.EQUALS }
-            };
-
-            if (rowData['Elective']) {
-                const isElective = rowData['Elective'] === 'Y' ? 1 : 0;
-                annoItems['elective'] = { value: isElective, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS };
-            }
-
-            if (rowData['Max_Enroll']) {
-                const maxEnroll = parseInt(rowData['Max_Enroll']);
-                annoItems['maxEnroll'] = { value: maxEnroll, type: 'DECIMAL', operator: AnnotationOperator.EQUALS };
-            }
-
-            if (rowData['Course_Duration']) {
-                annoItems['courseDuration'] = {
-                    value: rowData['Course_Duration'], type: 'STRING', operator: AnnotationOperator.EQUALS
-                };
-            }
-
-            courses.push(new Course(
-                rowData['Course_ID'],
-                rowData['Course_Name'],
-                new Annotations(annoItems)
-            ));
+            this.seenCourseIds[course.name] = course.name;
+            courses.push(course);
             this.coursesPushed += 1;
         }
         b.addItems(courses);

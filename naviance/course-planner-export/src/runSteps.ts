@@ -2,7 +2,7 @@ import { IJobConfig, JobStatus } from "@data-channels/dcSDK";
 import { PlanExportProcessor } from "./Processor";
 
 const job: IJobConfig = {
-    guid: '1234567890-export-099',
+    guid: '1234567890-export-123',
 
     channel: {
         flow: ['export'],
