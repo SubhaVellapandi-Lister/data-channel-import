@@ -1,7 +1,24 @@
-import { AnnotationOperator, Annotations, AnnotationType, Batch,
-    Course, IAnnotationItems, Namespace, RulesRepository } from "@academic-planner/apSDK";
-import { BaseProcessor, IRowData, IRowProcessorInput,
-    IRowProcessorOutput, IStepAfterOutput, IStepBeforeInput } from "@data-channels/dcSDK";
+import {
+    AnnotationOperator,
+    Annotations,
+    Batch,
+    Course,
+    CourseStatement,
+    IAnnotationItems,
+    Namespace
+} from "@academic-planner/apSDK";
+import {
+    BaseProcessor,
+    IRowData,
+    IRowProcessorInput,
+    IRowProcessorOutput,
+    IStepAfterOutput,
+    IStepBeforeInput
+} from "@data-channels/dcSDK";
+import { instructionalLevelMap } from "./Contants";
+import { getCombinedSubjectArea, ISubjectAreaLoad, loadExistingSubjectAreas,
+    parseSubjectAreaRow, saveSubjectAreas } from "./SubjectAreas";
+import { initRulesRepo, prereqCourseStatement } from "./Utils";
 
 export interface ITranslateConfig {
     headers: string[];
@@ -17,92 +34,19 @@ export class CourseImportProcessor extends BaseProcessor {
     private duplicatesSkipped = 0;
     private coursesPushed = 0;
     private namespace = '';
-    private originalHeaders: string[] = [];
     private seenCourseIds: { [key: string]: string } = {};
     private schoolsByCourse: { [key: string]: string[] } = {};
     private navianceSchoolByLocalId: { [key: string]: string } = {};
-    private subjectAreaMapping: { [key: string]: string } = {};
-    private instructionalLevelMap = {
-        AP: 'Advanced Placement',
-        BAS: 'Basic',
-        EL: 'English Learner',
-        DE: 'Dual Enrollment',
-        GEN: 'General',
-        GTAA: 'Gifted and Talented/Advanced Academic',
-        HON: 'Honors Level',
-        HSE: 'High School Equivalent',
-        IB: 'International Baccalaureate',
-        REM: 'Remedial',
-        SWD: 'Students with Disabilities',
-        UT: 'Untracked'
-    };
-    private scedMapping = {
-        '01': 'English Language and Literature',
-        '02': 'Mathematics',
-        '03': 'Life and Physical Sciences',
-        '04': 'Social Sciences and History',
-        '05': 'Visual and Performing Arts',
-        '06': 'Foreign Language and Literature',
-        '07': 'Religious Education and Theology',
-        '08': 'Physical, Health, and Safety Education',
-        '09': 'Military Science',
-        '10': 'Information Technology',
-        '11': 'Communication and Audio/Visual Technology',
-        '12': 'Business and Marketing',
-        '13': 'Manufacturing',
-        '14': 'Health Care Sciences',
-        '15': 'Public, Protective, and Government Services',
-        '16': 'Hospitality and Tourism',
-        '17': 'Architecture and Construction',
-        '18': 'Agriculture, Food, and Natural Resources',
-        '19': 'Human Services',
-        '20': 'Transportation, Distribution and Logistics',
-        '21': 'Engineering and Technology',
-        '22': 'Miscellaneous',
-        '23': 'Non-Subject-Specific',
-        '24': 'World Languages'
-    };
+    private subjectAreasLoaded: ISubjectAreaLoad = { subjectAreaMapping: {}};
     private subjectsCreated: number = 0;
-    private foundSubArea: AnnotationType | null = null;
-
-    public async translate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
-
-        const config = input.parameters!['translationConfig'] as ITranslateConfig;
-        if (input.index === 1) {
-            this.originalHeaders = input.raw;
-
-            return {
-                index: input.index,
-                outputs: {
-                    default: config.headers
-                }
-            };
-        }
-
-        const newData: { [key: string]: string } = {};
-        for (const [idx, val] of input.raw.entries()) {
-            const curHeaderVal = this.originalHeaders[idx];
-            if (config.mapping[curHeaderVal]) {
-                newData[config.mapping[curHeaderVal]] = val;
-            } else {
-                newData[curHeaderVal] = val;
-            }
-        }
-
-        const newRow: string[] = [];
-        for (const newHeaderVal of config.headers) {
-            newRow.push(newData[newHeaderVal] || '');
-        }
-
-        return {
-            index: input.index,
-            outputs: {
-                default: newRow
-            }
-        };
-    }
+    private singleHighschoolId = '';
 
     public async validate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
+        // things to validate for
+        // 1.  course ID contains spaces (just a warning and remove spaces?)
+        // 2.  subject area not found
+        // 3.  Invalid column type / value
+
         return {
             outputs: {
                 [`${input.name}Validated`]:
@@ -111,29 +55,10 @@ export class CourseImportProcessor extends BaseProcessor {
         };
     }
 
-    public async loadExistingSubjectAreas() {
-        const subjectAreaPager = AnnotationType.find(
-            new Namespace(this.namespace), { findCriteria: { name: 'SUBJECT_AREA' } });
-        const subAreasFound = await subjectAreaPager.all();
-        if (subAreasFound.length > 0) {
-            const subArea = subAreasFound[0];
-            this.foundSubArea = subArea;
-            for (const subString of subArea.stringValues) {
-                const [navSub, schoolSub] = subString.split('_');
-                this.subjectAreaMapping[schoolSub] = subString;
-            }
-        }
-    }
-
     public async before_createSubjects(input: IStepBeforeInput) {
-        RulesRepository.init({
-            url: input.parameters!['rulesRepoUrl'],
-            jwt: input.parameters!['rulesRepoJWT'],
-            product: input.parameters!['rulesRepoProduct']
-        });
+        initRulesRepo(input.parameters!);
         this.namespace = input.parameters!['namespace'];
-
-        this.loadExistingSubjectAreas();
+        this.subjectAreasLoaded = await loadExistingSubjectAreas(this.namespace);
     }
 
     public async createSubjects(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
@@ -141,27 +66,11 @@ export class CourseImportProcessor extends BaseProcessor {
             // skip header
             return { outputs: {}};
         }
+        const subMap = this.subjectAreasLoaded.subjectAreaMapping;
 
-        if (input.data['JSON_OBJECT']) {
-            // migration file
-            const rowObj = JSON.parse(input.data['JSON_OBJECT']);
-            this.subjectAreaMapping[rowObj['subjectArea']['name']] =
-                `${rowObj['subjectArea']['name']}_${rowObj['subjectArea']['category']}`;
-        } else {
-            // client file, no naviance code so look for sced
-            const rowSub = input.data['Subject_Area'];
-            const rowSced = input.data['SCED_Subject_Area'];
-
-            if (!rowSced || !rowSub || !rowSced.length || !rowSub.length) {
-                return { outputs: {}};
-            }
-
-            const scedMap = this.scedMapping[rowSced] || this.scedMapping['0' + rowSced];
-
-            if (!this.subjectAreaMapping[rowSub] && scedMap) {
-                this.subjectsCreated += 1;
-                this.subjectAreaMapping[rowSub] = `${scedMap}_${rowSub}`;
-            }
+        const created = parseSubjectAreaRow(input.data, subMap);
+        if (created) {
+            this.subjectsCreated += 1;
         }
 
         return {
@@ -170,21 +79,7 @@ export class CourseImportProcessor extends BaseProcessor {
     }
 
     public async after_createSubjects(input: IStepBeforeInput): Promise<IStepAfterOutput> {
-        const subjectAreaValues = Object.values(this.subjectAreaMapping);
-        let createdAnnotationType = false;
-        if (this.foundSubArea) {
-            this.foundSubArea.values = subjectAreaValues;
-        } else {
-            createdAnnotationType = true;
-            this.foundSubArea = new AnnotationType(
-                'SUBJECT_AREA',
-                'Subject Area',
-                Annotations.simple({
-                    description: "Type used to describe Subject Areas (MATHEMATICS_MATH)"
-                }),
-                subjectAreaValues);
-        }
-        await this.foundSubArea.save(this.namespace);
+        const createdAnnotationType = saveSubjectAreas(this.namespace, this.subjectAreasLoaded);
 
         return {
             results: {
@@ -197,16 +92,18 @@ export class CourseImportProcessor extends BaseProcessor {
     private courseFromRowData(rowData: IRowData): Course {
         const credits = parseFloat(rowData['Credits']) || 0;
         const instructionalLevelCode = rowData['Instructional_Level'] || 'UT';
-        const instructionalLevel = this.instructionalLevelMap[instructionalLevelCode] || 'Untracked';
+        const instructionalLevel = instructionalLevelMap[instructionalLevelCode] || 'Untracked';
         const statusCode = rowData['Status'] === 'Y' ? 'ACTIVE' : 'INACTIVE';
         const isCte = rowData['CTE'] === 'Y' ? 1 : 0;
         const isTechPrep = 0;
         const schoolsList = this.schoolsByCourse[rowData['Course_ID']] || [];
+        if (!schoolsList.length && this.singleHighschoolId) {
+            schoolsList.push(this.singleHighschoolId);
+        }
         const rowSub = rowData['Subject_Area'];
-        const expandedSubjectArea =
-            this.subjectAreaMapping[rowSub] ||
-            this.subjectAreaMapping[rowSub.replace('/', '\\/')] ||
-            'Basic Skills_Unknown';
+        const combinedSubjectArea = getCombinedSubjectArea(
+            rowSub, rowData['SCED_Subject_Area'], this.subjectAreasLoaded
+        );
         const grades: number[] = [];
         for (const g of [6, 7, 8, 9, 10, 11, 12]) {
             if (rowData[`GR${g}`] === 'Y') {
@@ -225,10 +122,11 @@ export class CourseImportProcessor extends BaseProcessor {
             techPrepCourse: { value: isTechPrep, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS },
             stateCode: { value: rowData['State_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
             stateId: { value: rowData['State_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
-            subjectArea: { value: expandedSubjectArea, type: 'STRING', operator: AnnotationOperator.EQUALS },
+            subjectArea: { value: combinedSubjectArea, type: 'STRING', operator: AnnotationOperator.EQUALS },
             instructionalLevel: { value: instructionalLevel, type: 'STRING', operator: AnnotationOperator.EQUALS },
             schools: { value: schoolsList, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
-            description: { value: rowData['Description'], type: 'STRING', operator: AnnotationOperator.EQUALS }
+            description: { value: rowData['Description'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            prerequisites: { value: rowData['Prereq_Text'] || '', type: 'STRING', operator: AnnotationOperator.EQUALS }
         };
 
         if (rowData['Elective']) {
@@ -247,10 +145,30 @@ export class CourseImportProcessor extends BaseProcessor {
             };
         }
 
+        const statements: CourseStatement[] = [];
+
+        if (rowData['Prereq_ID']) {
+            const cs = prereqCourseStatement(rowData['Prereq_ID']);
+            if (cs) {
+                statements.push(cs);
+            }
+        }
+
+        if (rowData['Coreq_ID']) {
+            const cs = prereqCourseStatement(rowData['Coreq_ID']);
+            if (cs) {
+                cs.annotations = Annotations.simple({coreq: true});
+                statements.push(cs);
+            }
+        }
+
+        const strippedCourseId = rowData['Course_ID'].replace(/\s/g, '');
+
         return new Course(
-            rowData['Course_ID'],
+            strippedCourseId,
             rowData['Course_Name'],
-            new Annotations(annoItems)
+            new Annotations(annoItems),
+            statements
         );
     }
 
@@ -260,14 +178,19 @@ export class CourseImportProcessor extends BaseProcessor {
         const instructLev = cObj['instructionalLevel'] || 'Untracked';
         const isCte = cObj['cteCourse'] === true ? 1 : 0;
         const isTechPrep = cObj['techPrepCourse'] === true ? 1 : 0;
-        const expandedSubjectArea =
-            this.subjectAreaMapping[cObj['subjectArea']['name']] ||
-            'Basic Skills_Unknown';
+        const subName = cObj['subjectArea'] ? cObj['subjectArea']['name'] : 'Unknown';
+        const subCategory = cObj['subjectArea'] ? cObj['subjectArea']['category'] : 'Basic Skills';
+        const combinedSubjectArea = `${subCategory}_${subName}`;
         const desc = cObj['description'] || cObj['_description'];
+        const courseId = cObj['id'] || cObj['schoolCode'];
+        const schoolList = cObj['schools'] || [];
+        if (!schoolList.length && cObj['highschoolId']) {
+            schoolList.push(cObj['highschoolId']);
+        }
 
         const annoItems: IAnnotationItems = {
-            id: { value: cObj['id'], type: 'STRING', operator: AnnotationOperator.EQUALS },
-            number: { value: cObj['id'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            id: { value: courseId, type: 'STRING', operator: AnnotationOperator.EQUALS },
+            number: { value: courseId, type: 'STRING', operator: AnnotationOperator.EQUALS },
             name: { value: cObj['name'], type: 'STRING', operator: AnnotationOperator.EQUALS },
             grades: { value: cObj['grades'], type: 'LIST_INTEGER', operator: AnnotationOperator.EQUALS },
             status: { value: cObj['status'], type: 'STRING', operator: AnnotationOperator.EQUALS },
@@ -276,14 +199,14 @@ export class CourseImportProcessor extends BaseProcessor {
             techPrepCourse: { value: isTechPrep, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS },
             stateCode: { value: cObj['stateCode'], type: 'STRING', operator: AnnotationOperator.EQUALS },
             stateId: { value: cObj['stateCode'], type: 'STRING', operator: AnnotationOperator.EQUALS },
-            subjectArea: { value: expandedSubjectArea, type: 'STRING', operator: AnnotationOperator.EQUALS },
+            subjectArea: { value: combinedSubjectArea, type: 'STRING', operator: AnnotationOperator.EQUALS },
             instructionalLevel: { value: instructLev, type: 'STRING', operator: AnnotationOperator.EQUALS },
-            schools: { value: cObj['schools'] || [], type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
+            schools: { value: schoolList, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
             description: { value: desc, type: 'STRING', operator: AnnotationOperator.EQUALS }
         };
 
         return new Course(
-            cObj['id'],
+            courseId,
             cObj['name'],
             new Annotations(annoItems)
         );
@@ -299,6 +222,7 @@ export class CourseImportProcessor extends BaseProcessor {
 
             if (this.seenCourseIds[course.name]) {
                 this.duplicatesSkipped += 1;
+                console.log('DUPLICATE', course.name);
                 continue;
             }
             this.seenCourseIds[course.name] = course.name;
@@ -306,30 +230,36 @@ export class CourseImportProcessor extends BaseProcessor {
             this.coursesPushed += 1;
         }
         b.addItems(courses);
+        console.log('COURSES', courses.length);
         await b.createOrUpdate();
         this.apBatch = [];
     }
 
     public async before_batchToAp(input: IStepBeforeInput) {
-        RulesRepository.init({
-            url: input.parameters!['rulesRepoUrl'],
-            jwt: input.parameters!['rulesRepoJWT'],
-            product: input.parameters!['rulesRepoProduct']
-        });
+        initRulesRepo(input.parameters!);
         this.namespace = input.parameters!['namespace'];
 
-        this.loadExistingSubjectAreas();
+        if (input.parameters!['singleHighschoolId']) {
+            this.singleHighschoolId = input.parameters!['singleHighschoolId'];
+        }
+
+        this.subjectAreasLoaded = await loadExistingSubjectAreas(this.namespace);
     }
 
     public async batchToAp(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
         if (input.data['IS_VALID'] === 'valid') {
             if (input.name === 'mappingValidated') {
                 const localId = input.data['School_ID'];
-                const schoolId = this.navianceSchoolByLocalId[localId] || localId;
+                const schoolId =
+                    this.navianceSchoolByLocalId[localId] ||
+                    this.navianceSchoolByLocalId['0' + localId] ||
+                    localId;
                 if (!this.schoolsByCourse[input.data['Course_ID']]) {
                     this.schoolsByCourse[input.data['Course_ID']] = [];
                 }
-                this.schoolsByCourse[input.data['Course_ID']].push(schoolId);
+                if (!this.schoolsByCourse[input.data['Course_ID']].includes(schoolId)) {
+                    this.schoolsByCourse[input.data['Course_ID']].push(schoolId);
+                }
             } else if (input.name === 'schoolsValidated') {
                 const locSchoolId = input.data['Local_School_ID'];
                 const navSchoolId = input.data['Naviance_School_ID'];
@@ -349,6 +279,8 @@ export class CourseImportProcessor extends BaseProcessor {
     }
 
     public async after_batchToAp(input: IStepBeforeInput): Promise<IStepAfterOutput> {
+        console.log(this.navianceSchoolByLocalId);
+        console.log('AFTER', this.apBatch.length);
         if (this.apBatch.length > 0) {
             await this.processBatch();
         }

@@ -1,0 +1,41 @@
+export const instructionalLevelMap = {
+    AP: 'Advanced Placement',
+    BAS: 'Basic',
+    EL: 'English Learner',
+    DE: 'Dual Enrollment',
+    GEN: 'General',
+    GTAA: 'Gifted and Talented/Advanced Academic',
+    HON: 'Honors Level',
+    HSE: 'High School Equivalent',
+    IB: 'International Baccalaureate',
+    REM: 'Remedial',
+    SWD: 'Students with Disabilities',
+    UT: 'Untracked'
+};
+
+export const scedMapping = {
+    '01': 'English Language and Literature',
+    '02': 'Mathematics',
+    '03': 'Life and Physical Sciences',
+    '04': 'Social Sciences and History',
+    '05': 'Visual and Performing Arts',
+    '06': 'Foreign Language and Literature',
+    '07': 'Religious Education and Theology',
+    '08': 'Physical, Health, and Safety Education',
+    '09': 'Military Science',
+    '10': 'Information Technology',
+    '11': 'Communication and Audio/Visual Technology',
+    '12': 'Business and Marketing',
+    '13': 'Manufacturing',
+    '14': 'Health Care Sciences',
+    '15': 'Public, Protective, and Government Services',
+    '16': 'Hospitality and Tourism',
+    '17': 'Architecture and Construction',
+    '18': 'Agriculture, Food, and Natural Resources',
+    '19': 'Human Services',
+    '20': 'Transportation, Distribution and Logistics',
+    '21': 'Engineering and Technology',
+    '22': 'Miscellaneous',
+    '23': 'Non-Subject-Specific',
+    '24': 'World Languages'
+};

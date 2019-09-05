@@ -1,0 +1,45 @@
+{
+    "defaultSeverity": "error",
+    "extends": [
+        "tslint:recommended"
+    ],
+    "jsRules": {},
+    "linterOptions": {
+        "exclude": [
+            "src/parsing/*"
+        ]
+    },
+    "rules": {
+        "align": [true, "parameters"],
+        "array-type": false,
+        "indent": [
+            true,
+            "spaces"
+        ],
+        "max-classes-per-file": false,
+        "member-access": false,
+        "newline-before-return": true,
+        "no-console": false,
+        "no-string-literal": false,
+        "no-floating-promises": true,
+        "quotemark": false,
+        "radix": false,
+        "trailing-comma": false,
+        "object-literal-sort-keys": false,
+        "member-ordering": [true, { "order": [
+            "public-static-field",
+            "protected-static-field",
+            "private-static-field",
+            "public-instance-field",
+            "protected-instance-field",
+            "private-instance-field",
+            "constructor",
+            {
+                "name": "methods",
+                "kinds": ["static-method", "instance-method"]
+            }]
+        }],
+        "variable-name": [true, "ban-keywords", "check-format", "allow-leading-underscore"]
+    },
+    "rulesDirectory": []
+}
