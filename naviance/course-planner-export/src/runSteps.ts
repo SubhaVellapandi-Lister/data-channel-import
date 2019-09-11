@@ -1,8 +1,9 @@
 import { IJobConfig, JobStatus } from "@data-channels/dcSDK";
-import { PlanExportProcessor } from "./Processor";
+import { PlanExportProcessor } from "./PlanExportProcessor";
+import { ProgramExportProcessor } from "./ProgramExportProcessor";
 
-const job: IJobConfig = {
-    guid: '1234567890-export-123',
+const plansJob: IJobConfig = {
+    guid: '1234567890-export-dev',
 
     channel: {
         flow: ['export'],
@@ -13,29 +14,14 @@ const job: IJobConfig = {
                 method: 'export',
                 granularity: 'files',
                 parameters: {
-                    rulesRepoUrl: 'https://api2-ada.hobsonshighered.com/aplan-repository',
-                    // rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repojwt',
+                    // rulesRepoUrl: 'https://api2-ada.hobsonshighered.com/aplan-repository',
+                    rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repoqa',
                     rulesRepoProduct: 'naviance',
-                    planningUrl: 'https://api2-ada.hobsonshighered.com/aplan-planning',
-                    // planningUrl: 'https://turbo-api.hobsonshighered.com/aplan-planjwt',
+                    // planningUrl: 'https://api2-ada.hobsonshighered.com/aplan-planning',
+                    planningUrl: 'https://turbo-api.hobsonshighered.com/aplan-planqa',
                     JWT: '${ENV:APSDK_JWT}',
                     // schools: ['9110149DUS']
-                    schools: [
-                        '7803403DUS',
-                        '4816230DUS',
-                        '4823640DUS',
-                        '7803362DUS',
-                        '7802518DUS',
-                        '4814730DUS',
-                        '7802622DUS',
-                        '7802691DUS',
-                        '7800033DUS',
-                        '181724USPU',
-                        '4835100DUS',
-                        '7802592DUS',
-                        '9110170DUS',
-                        '1810650DUS'
-                    ]
+                    schools: ['9947559DUS']
                 }
             }
         }
@@ -51,7 +37,54 @@ const job: IJobConfig = {
             step: 'export',
             s3: {
                 bucket: 'data-channels-work-dev1',
-                key: 'exports/CoursePlans.csv'
+                key: 'exports/9947559DUS/CoursePlansDev.csv'
+            }
+        }
+    ],
+    steps: {
+        export: {
+            finished: false
+        }
+    },
+    status: JobStatus.STARTED,
+    created: new Date()
+};
+
+const programsJob: IJobConfig = {
+    guid: '1234567890-program-export-dev',
+
+    channel: {
+        flow: ['export'],
+        steps: {
+            export: {
+                outputs: ['Programs'],
+                processor: 'data-channels-naviancePlanExport',
+                method: 'export',
+                granularity: 'files',
+                parameters: {
+                    // rulesRepoUrl: 'https://api2-ada.hobsonshighered.com/aplan-repository',
+                    rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repoqa',
+                    rulesRepoProduct: 'naviance',
+                    // planningUrl: 'https://api2-ada.hobsonshighered.com/aplan-planning',
+                    planningUrl: 'https://turbo-api.hobsonshighered.com/aplan-planqa',
+                    JWT: '${ENV:APSDK_JWT}',
+                    schools: ['9947559DUS']
+                }
+            }
+        }
+    },
+    workspace: {
+        bucket: 'data-channels-work-dev1'
+    },
+    currentStep: 'export',
+    filesIn: [],
+    filesOut: [
+        {
+            name: 'Programs',
+            step: 'export',
+            s3: {
+                bucket: 'data-channels-work-dev1',
+                key: 'exports/9947559DUS/Programs.csv'
             }
         }
     ],
@@ -65,14 +98,14 @@ const job: IJobConfig = {
 };
 
 (async () => {
-    console.log(JSON.stringify(job, undefined, 2));
-
-    // job.guid = `1234567890-${new Date().getTime()}`;
-    const processor = new PlanExportProcessor(job, { storeFilesLocal: true });
-
-    // exporting
-
-    await processor.handle();
-    console.log(JSON.stringify(processor.job, undefined, 2));
-
+/*
+    plansJob.guid = `1234567890-${new Date().getTime()}`;
+    const plansProcessor = new PlanExportProcessor(plansJob, { storeFilesLocal: true });
+    await plansProcessor.handle();
+    console.log(JSON.stringify(plansProcessor.job, undefined, 2));
+*/
+    programsJob.guid = ``;
+    const programsProcessor = new ProgramExportProcessor(programsJob, { storeFilesLocal: true });
+    await programsProcessor.handle();
+    console.log(JSON.stringify(programsProcessor.job, undefined, 2));
 })();

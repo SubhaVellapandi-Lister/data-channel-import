@@ -12,6 +12,9 @@ export function initRulesRepo(params: object) {
 }
 
 export function prereqCourseStatement(preqString: string): CourseStatement | null {
+    if (preqString.trim().length < 3) {
+        return null;
+    }
     try {
         const cs = (ChuteToObject.fromString(`
             Course throwaway "throwaway"

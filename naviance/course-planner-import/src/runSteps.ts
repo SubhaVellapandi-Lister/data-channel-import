@@ -250,9 +250,9 @@ const migrateJob: IJobConfig = {
     // console.log(JSON.stringify(processor.job, undefined, 2));
 
     // creating subjects
-    /* processor.job.currentStep = 'createSubjects';
-    await processor.handle();
-    console.log(JSON.stringify(processor.job, undefined, 2));*/
+    // processor.job.currentStep = 'createSubjects';
+    // await processor.handle();
+    // console.log(JSON.stringify(processor.job, undefined, 2));
 
     // processing
     processor.job.currentStep = 'batchToAp';

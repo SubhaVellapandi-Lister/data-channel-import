@@ -1,4 +1,4 @@
-import { PlanExportProcessor } from "./Processor";
+import { PlanExportProcessor } from "./PlanExportProcessor";
 
 export async function planExportHandler(event: any): Promise<any> {
     const processor = new PlanExportProcessor(event.Job);

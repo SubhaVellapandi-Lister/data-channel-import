@@ -1,23 +1,26 @@
 import { Annotations, AnnotationType, Namespace } from "@academic-planner/apSDK";
 import { IRowData } from "@data-channels/dcSDK";
-import { scedMapping } from "./Contants";
+import { csscMapping, scedMapping } from "./Contants";
 
+export interface ISubjectAreaCodePair {
+    scedCode: number;
+    csscCode: number;
+}
 export interface ISubjectAreaLoad {
     foundSubArea?: AnnotationType;
-    subjectAreaMapping: { [key: string]: string[] };
+    subjectAreaMapping: { [key: string]: ISubjectAreaCodePair[] };
 }
 
 export function getCombinedSubjectArea(subName: string, scedCode: string, subLoad: ISubjectAreaLoad): string {
-    const navCode = scedMapping[scedCode] || '';
     if (subLoad.subjectAreaMapping[subName]) {
-        if (subLoad.subjectAreaMapping[subName].includes(navCode)) {
-            return `${navCode}_${subName}`;
+        for (const codePair of subLoad.subjectAreaMapping[subName]) {
+            if (codePair.scedCode === parseInt(scedCode)) {
+                return `${subName}_${codePair.csscCode}_${codePair.scedCode}`;
+            }
         }
-
-        return `${subLoad.subjectAreaMapping[subName][0]}_${subName}`;
     }
 
-    return 'Basic Skills_Unknown';
+    return `${subName}_0_22`;
 }
 
 export async function loadExistingSubjectAreas(namespace: string): Promise<ISubjectAreaLoad> {
@@ -29,18 +32,30 @@ export async function loadExistingSubjectAreas(namespace: string): Promise<ISubj
         const subArea = subAreasFound[0];
         results.foundSubArea = subArea;
         for (const subString of subArea.stringValues) {
-            const [navSub, schoolSub] = subString.split('_');
-            if (!results.subjectAreaMapping[schoolSub]) {
-                results.subjectAreaMapping[schoolSub] = [];
+            const subParts = subString.split('_');
+            let name = '';
+            let codePair = { csscCode: 0, scedCode: 0};
+            if (subParts.length === 2) {
+                // old style codes
+                name = subParts[1];
+                codePair = getSubjectCodePair(subParts[0]);
+            } else {
+                name = subParts[0];
+                codePair.csscCode = parseInt(subParts[1]);
+                codePair.scedCode = parseInt(subParts[2]);
             }
-            results.subjectAreaMapping[schoolSub].push(navSub);
+
+            if (!results.subjectAreaMapping[name]) {
+                results.subjectAreaMapping[name] = [];
+            }
+            results.subjectAreaMapping[name].push(codePair);
         }
     }
 
     return results;
 }
 
-export function parseSubjectAreaRow(data: IRowData, subMap: { [key: string]: string[]}): boolean {
+export function parseSubjectAreaRow(data: IRowData, subMap: { [key: string]: ISubjectAreaCodePair[]}): boolean {
     let created = false;
 
     if (data['JSON_OBJECT']) {
@@ -51,26 +66,42 @@ export function parseSubjectAreaRow(data: IRowData, subMap: { [key: string]: str
             if (!subMap[name]) {
                 subMap[name] = [];
             }
-            subMap[name].push(rowObj['subjectArea']['category']);
+            const codePair = getSubjectCodePair(rowObj['subjectArea']['category']);
+            let exists = false;
+            for (const existPair of subMap[name]) {
+                if (codePair.csscCode === existPair.csscCode) {
+                    exists = true;
+                }
+            }
+            if (!exists) {
+                subMap[name].push(codePair);
+                created = true;
+            }
         }
     } else {
         // client file, no naviance code so look for sced
         const rowSub = data['Subject_Area'];
-        const rowSced = data['SCED_Subject_Area'];
+        const rowSced = parseInt(data['SCED_Subject_Area']) || 0;
 
-        if (!rowSced || !rowSub || !rowSced.length || !rowSub.length) {
+        if (!rowSced || !rowSub || !rowSub.length) {
             return false;
         }
 
-        const scedMap = scedMapping[rowSced] || scedMapping['0' + rowSced];
+        const scedMap = scedMapping[rowSced] || scedMapping[rowSced];
 
         if (scedMap) {
             if (!subMap[rowSub]) {
                 subMap[rowSub] = [];
             }
-            if (!subMap[rowSub].includes(scedMap)) {
+            let exists = false;
+            for (const codePair of subMap[rowSub]) {
+                if (codePair.scedCode === rowSced) {
+                    exists = true;
+                }
+            }
+            if (!exists) {
+                subMap[rowSub].push({ csscCode: 0, scedCode: rowSced});
                 created = true;
-                subMap[rowSub].push(scedMap);
             }
         }
     }
@@ -79,15 +110,12 @@ export function parseSubjectAreaRow(data: IRowData, subMap: { [key: string]: str
 }
 
 export async function saveSubjectAreas(namespace: string, subLoad: ISubjectAreaLoad): Promise<boolean> {
-    let subjectAreaValues: string[] = [];
-    for (const subName of Object.keys(subLoad.subjectAreaMapping)) {
-        for (const navCode of subLoad.subjectAreaMapping[subName]) {
-            subjectAreaValues.push(`${navCode}_${subName}`);
-        }
-    }
+    const subjectAreaValues: string[] = [];
 
-    if (!subjectAreaValues.includes('Basic Skills_Unknown')) {
-        subjectAreaValues = subjectAreaValues.concat('Basic Skills_Unknown');
+    for (const subName of Object.keys(subLoad.subjectAreaMapping)) {
+        for (const codePair of subLoad.subjectAreaMapping[subName]) {
+            subjectAreaValues.push(`${subName}_${codePair.csscCode}_${codePair.scedCode}`);
+        }
     }
 
     let createdAnnotationType = false;
@@ -107,4 +135,20 @@ export async function saveSubjectAreas(namespace: string, subLoad: ISubjectAreaL
     await subLoad.foundSubArea!.save(new Namespace(namespace));
 
     return createdAnnotationType;
+}
+
+export function getSubjectCodePair(categoryName: string): ISubjectAreaCodePair {
+    const codePair = { csscCode: 0, scedCode: 0};
+    for (const scedCode of Object.keys(scedMapping)) {
+        if (scedMapping[scedCode] === categoryName) {
+            codePair.scedCode = parseInt(scedCode);
+        }
+    }
+    for (const csscCode of Object.keys(csscMapping)) {
+        if (csscMapping[csscCode] === categoryName) {
+            codePair.csscCode = parseInt(csscCode);
+        }
+    }
+
+    return codePair;
 }
