@@ -18,7 +18,7 @@ import {
 import { instructionalLevelMap } from "./Contants";
 import { getCombinedSubjectArea, getMigratedSubjectArea, ISubjectAreaLoad, loadExistingSubjectAreas,
     parseSubjectAreaRow, saveSubjectAreas } from "./SubjectAreas";
-import { initRulesRepo, prereqCourseStatement } from "./Utils";
+import { getRowVal, initRulesRepo, prereqCourseStatement } from "./Utils";
 
 export interface ITranslateConfig {
     headers: string[];
@@ -90,83 +90,101 @@ export class CourseImportProcessor extends BaseProcessor {
     }
 
     private courseFromRowData(rowData: IRowData): Course {
-        const credits = parseFloat(rowData['Credits']) || 0;
-        const instructionalLevelCode = rowData['Instructional_Level'] || 'UT';
+        const courseId = getRowVal(rowData, 'Course_ID');
+        const courseName = getRowVal(rowData, 'Course_Name');
+        const stateId = getRowVal(rowData, 'State_ID');
+        const credits = parseFloat(getRowVal(rowData, 'Credits')) || 0;
+        const instructionalLevelCode = getRowVal(rowData, 'Instructional_Level') || 'UT';
         const instructionalLevel = instructionalLevelMap[instructionalLevelCode] || 'Untracked';
-        const statusCode = rowData['Status'] === 'Y' ? 'ACTIVE' : 'INACTIVE';
-        const isCte = rowData['CTE'] === 'Y' ? 1 : 0;
+        const statusCode = getRowVal(rowData, 'Status') === 'Y' ? 'ACTIVE' : 'INACTIVE';
+        const isCte = getRowVal(rowData, 'CTE') === 'Y' ? 1 : 0;
         const isTechPrep = 0;
-        const schoolsList = this.schoolsByCourse[rowData['Course_ID']] || [];
+        const schoolsList = this.schoolsByCourse[courseId] || [];
         if (!schoolsList.length && this.singleHighschoolId) {
             schoolsList.push(this.singleHighschoolId);
         }
-        const rowSub = rowData['Subject_Area'];
+        const rowSub = getRowVal(rowData, 'Subject_Area');
         const combinedSubjectArea = getCombinedSubjectArea(
-            rowSub, rowData['SCED_Subject_Area'], this.subjectAreasLoaded
+            rowSub, getRowVal(rowData, 'SCED_Subject_Area'), this.subjectAreasLoaded
         );
         const grades: number[] = [];
         for (const g of [6, 7, 8, 9, 10, 11, 12]) {
-            if (rowData[`GR${g}`] === 'Y') {
+            if (getRowVal(rowData, `GR${g}`) === 'Y') {
                 grades.push(g);
+            }
+        }
+        if (!grades.length) {
+            const gradeLow = parseInt(getRowVal(rowData, 'Grade_Low'));
+            const gradeHigh = parseInt(getRowVal(rowData, 'Grade_High'));
+            if (gradeLow && gradeHigh && gradeHigh >= gradeLow) {
+                let curGrade = gradeLow;
+                while (curGrade <= gradeHigh) {
+                    grades.push(curGrade);
+                    curGrade += 1;
+                }
             }
         }
 
         const annoItems: IAnnotationItems = {
-            id: { value: rowData['Course_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
-            number: { value: rowData['Course_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
-            name: { value: rowData['Course_Name'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            id: { value: courseId, type: 'STRING', operator: AnnotationOperator.EQUALS },
+            number: { value: courseId, type: 'STRING', operator: AnnotationOperator.EQUALS },
+            name: { value: courseName, type: 'STRING', operator: AnnotationOperator.EQUALS },
             grades: { value: grades, type: 'LIST_INTEGER', operator: AnnotationOperator.EQUALS },
             status: { value: statusCode, type: 'STRING', operator: AnnotationOperator.EQUALS },
             credits: { value: credits, type: 'DECIMAL', operator: AnnotationOperator.EQUALS },
             cteCourse: { value: isCte, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS },
             techPrepCourse: { value: isTechPrep, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS },
-            stateCode: { value: rowData['State_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
-            stateId: { value: rowData['State_ID'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            stateCode: { value: stateId, type: 'STRING', operator: AnnotationOperator.EQUALS },
+            stateId: { value: stateId, type: 'STRING', operator: AnnotationOperator.EQUALS },
             subjectArea: { value: combinedSubjectArea, type: 'STRING', operator: AnnotationOperator.EQUALS },
             instructionalLevel: { value: instructionalLevel, type: 'STRING', operator: AnnotationOperator.EQUALS },
             schools: { value: schoolsList, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
-            description: { value: rowData['Description'], type: 'STRING', operator: AnnotationOperator.EQUALS },
-            prerequisites: { value: rowData['Prereq_Text'] || '', type: 'STRING', operator: AnnotationOperator.EQUALS }
+            description: {
+                value: getRowVal(rowData, 'Description'), type: 'STRING', operator: AnnotationOperator.EQUALS
+            },
+            prerequisites: {
+                value: getRowVal(rowData, 'Prereq_Text') || '', type: 'STRING', operator: AnnotationOperator.EQUALS
+            }
         };
 
-        if (rowData['Elective']) {
-            const isElective = rowData['Elective'] === 'Y' ? 1 : 0;
+        if (getRowVal(rowData, 'Elective')) {
+            const isElective = getRowVal(rowData, 'Elective') === 'Y' ? 1 : 0;
             annoItems['elective'] = { value: isElective, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS };
         }
 
-        if (rowData['Max_Enroll']) {
-            const maxEnroll = parseInt(rowData['Max_Enroll']);
+        if (getRowVal(rowData, 'Max_Enroll')) {
+            const maxEnroll = parseInt(getRowVal(rowData, 'Max_Enroll'));
             annoItems['maxEnroll'] = { value: maxEnroll, type: 'DECIMAL', operator: AnnotationOperator.EQUALS };
         }
 
-        if (rowData['Course_Duration']) {
+        if (getRowVal(rowData, 'Course_Duration')) {
             annoItems['courseDuration'] = {
-                value: rowData['Course_Duration'], type: 'STRING', operator: AnnotationOperator.EQUALS
+                value: getRowVal(rowData, 'Course_Duration'), type: 'STRING', operator: AnnotationOperator.EQUALS
             };
         }
 
         const statements: CourseStatement[] = [];
 
-        if (rowData['Prereq_ID']) {
-            const cs = prereqCourseStatement(rowData['Prereq_ID']);
+        if (getRowVal(rowData, 'Prereq_ID')) {
+            const cs = prereqCourseStatement(getRowVal(rowData, 'Prereq_ID'));
             if (cs) {
                 statements.push(cs);
             }
         }
 
-        if (rowData['Coreq_ID']) {
-            const cs = prereqCourseStatement(rowData['Coreq_ID']);
+        if (getRowVal(rowData, 'Coreq_ID')) {
+            const cs = prereqCourseStatement(getRowVal(rowData, 'Coreq_ID'));
             if (cs) {
                 cs.annotations = Annotations.simple({coreq: true});
                 statements.push(cs);
             }
         }
 
-        const strippedCourseId = rowData['Course_ID'].replace(/\s/g, '');
+        const strippedCourseId = courseId.replace(/\s/g, '');
 
         return new Course(
             strippedCourseId,
-            rowData['Course_Name'],
+            courseName,
             new Annotations(annoItems),
             statements
         );
@@ -249,20 +267,21 @@ export class CourseImportProcessor extends BaseProcessor {
     public async batchToAp(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
         if (input.data['IS_VALID'] === 'valid') {
             if (input.name === 'mappingValidated') {
-                const localId = input.data['School_ID'];
+                const localId = getRowVal(input.data, 'School_ID');
                 const schoolId =
                     this.navianceSchoolByLocalId[localId] ||
                     this.navianceSchoolByLocalId['0' + localId] ||
                     localId;
-                if (!this.schoolsByCourse[input.data['Course_ID']]) {
-                    this.schoolsByCourse[input.data['Course_ID']] = [];
+                const courseId = getRowVal(input.data, 'Course_ID');
+                if (!this.schoolsByCourse[courseId]) {
+                    this.schoolsByCourse[courseId] = [];
                 }
-                if (!this.schoolsByCourse[input.data['Course_ID']].includes(schoolId)) {
-                    this.schoolsByCourse[input.data['Course_ID']].push(schoolId);
+                if (!this.schoolsByCourse[courseId].includes(schoolId)) {
+                    this.schoolsByCourse[courseId].push(schoolId);
                 }
             } else if (input.name === 'schoolsValidated') {
-                const locSchoolId = input.data['Local_School_ID'];
-                const navSchoolId = input.data['Naviance_School_ID'];
+                const locSchoolId = getRowVal(input.data, 'Local_School_ID');
+                const navSchoolId = getRowVal(input.data, 'Naviance_School_ID');
                 this.navianceSchoolByLocalId[locSchoolId] = navSchoolId;
             } else {
                 this.apBatch.push(input.data);

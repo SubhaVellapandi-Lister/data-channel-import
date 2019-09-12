@@ -2,6 +2,7 @@
 import {
     ChuteToObject, Course, CourseStatement, RulesRepository
 } from "@academic-planner/apSDK";
+import { IRowData } from "@data-channels/dcSDK";
 
 export function initRulesRepo(params: object) {
     RulesRepository.init({
@@ -30,4 +31,8 @@ export function prereqCourseStatement(preqString: string): CourseStatement | nul
 
         return null;
     }
+}
+
+export function getRowVal(rowData: IRowData, colName: string) {
+    return rowData[colName] || rowData[colName.toUpperCase()];
 }

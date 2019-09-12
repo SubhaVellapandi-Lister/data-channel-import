@@ -133,7 +133,7 @@ const noMappingJob: IJobConfig = {
                     rulesRepoJWT: '${ENV:APSDK_JWT}',
                     rulesRepoProduct: 'naviance',
                     namespace: '17875USPU', // beechwood
-                    singleHighschoolId: '17875USPU'
+                    // singleHighschoolId: '17875USPU'
                     // namespace: '9110149DUS' // houston dev
                     // namespace: '4823640DUS' // houston prod
                 }
@@ -239,33 +239,24 @@ const migrateJob: IJobConfig = {
     created: new Date()
 };
 
-async function migrate(fullSchoolId: string) {
-    const schoolId = fullSchoolId.split('-')[1];
-    const mjob = _.merge(migrateJob, {
-        guid: `1234567890-migrate-${schoolId}`,
+async function processJob(jobToRun: IJobConfig, namespace: string, filesIn: any[]) {
+    const mjob = _.merge(jobToRun, {
+        guid: `1234567890-migrate-${namespace}`,
         channel: {
             steps: {
                 createSubjects: {
                     parameters: {
-                        namespace: schoolId
+                        namespace
                     }
                 },
                 batchToAp: {
                     parameters: {
-                        namespace: schoolId
+                        namespace
                     }
                 }
             }
         },
-        filesIn: [
-            {
-                s3: {
-                    bucket: 'data-channels-naviance-migrations',
-                    key: `production/courses/${fullSchoolId}.csv`
-                },
-                name: 'courses'
-            },
-        ]
+        filesIn
     });
 
     const processor = new CourseImportProcessor(mjob, { storeFilesLocal: true });
@@ -285,9 +276,50 @@ async function migrate(fullSchoolId: string) {
     console.log(JSON.stringify(processor.job, undefined, 2));
 }
 
+async function migrate(fullSchoolId: string) {
+    const ns = fullSchoolId.split('-')[1];
+    await processJob(migrateJob, ns, [
+        {
+            s3: {
+                bucket: 'data-channels-naviance-migrations',
+                key: `production/courses/${fullSchoolId}.csv`
+            },
+            name: 'courses'
+        },
+    ]);
+}
+
+async function noMapping(ns: string, bucket: string, key: string, singleHighSchool?: boolean) {
+    let nmJob = Object.assign({}, noMappingJob);
+    if (singleHighSchool) {
+        nmJob = _.merge(nmJob, {
+            channel: {
+                steps: {
+                    batchToAp: {
+                        parameters: {
+                            singleHighschoolId: ns
+                        }
+                    }
+                }
+            }
+        });
+    }
+    await processJob(nmJob, ns, [
+        {
+            s3: {
+                bucket,
+                key
+            },
+            name: 'courses'
+        }
+    ]);
+}
+
 (async () => {
 
-    await migrate('district-4814730DUS');
+    // await migrate('district-7800043DUS');
+
+    await noMapping('2400480DUS', 'data-channels-sftp-dev1', 'montgomeryschoolsmd/CourseCatalog.csv');
 
     // console.log(JSON.stringify(job, undefined, 2));
 

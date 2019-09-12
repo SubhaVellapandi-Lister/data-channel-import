@@ -1,6 +1,7 @@
 import { Annotations, AnnotationType, Namespace } from "@academic-planner/apSDK";
 import { IRowData } from "@data-channels/dcSDK";
 import { csscMapping, scedMapping } from "./Contants";
+import { getRowVal } from "./Utils";
 
 export interface ISubjectAreaCodePair {
     scedCode: number;
@@ -86,8 +87,8 @@ export function parseSubjectAreaRow(data: IRowData, subMap: { [key: string]: ISu
         }
     } else {
         // client file, no naviance code so look for sced
-        const rowSub = data['Subject_Area'];
-        const rowSced = parseInt(data['SCED_Subject_Area']) || 0;
+        const rowSub = getRowVal(data, 'Subject_Area');
+        const rowSced = parseInt(getRowVal(data, 'SCED_Subject_Area')) || 0;
 
         if (!rowSced || !rowSub || !rowSub.length) {
             return false;
