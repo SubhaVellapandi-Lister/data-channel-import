@@ -1,4 +1,5 @@
 import { IJobConfig, JobStatus } from "@data-channels/dcSDK";
+import _ from "lodash";
 import { CourseImportProcessor } from "./Processor";
 
 const job: IJobConfig = {
@@ -191,7 +192,7 @@ const migrateJob: IJobConfig = {
                     // rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repojwt',
                     rulesRepoJWT: '${ENV:APSDK_JWT}',
                     rulesRepoProduct: 'naviance',
-                    namespace: '43618USPU'
+                    namespace: '43618USPU' // horn
                 }
             },
             batchToAp: {
@@ -204,7 +205,7 @@ const migrateJob: IJobConfig = {
                     // rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repojwt',
                     rulesRepoJWT: '${ENV:APSDK_JWT}',
                     rulesRepoProduct: 'naviance',
-                    namespace: '43618USPU'
+                    namespace: '43618USPU' // horn
                 }
             }
         }
@@ -238,12 +239,60 @@ const migrateJob: IJobConfig = {
     created: new Date()
 };
 
+async function migrate(fullSchoolId: string) {
+    const schoolId = fullSchoolId.split('-')[1];
+    const mjob = _.merge(migrateJob, {
+        guid: `1234567890-migrate-${schoolId}`,
+        channel: {
+            steps: {
+                createSubjects: {
+                    parameters: {
+                        namespace: schoolId
+                    }
+                },
+                batchToAp: {
+                    parameters: {
+                        namespace: schoolId
+                    }
+                }
+            }
+        },
+        filesIn: [
+            {
+                s3: {
+                    bucket: 'data-channels-naviance-migrations',
+                    key: `production/courses/${fullSchoolId}.csv`
+                },
+                name: 'courses'
+            },
+        ]
+    });
+
+    const processor = new CourseImportProcessor(mjob, { storeFilesLocal: true });
+
+    // validating
+    await processor.handle();
+    console.log(JSON.stringify(processor.job, undefined, 2));
+
+    // creating subjects
+    processor.job.currentStep = 'createSubjects';
+    await processor.handle();
+    console.log(JSON.stringify(processor.job, undefined, 2));
+
+    // processing
+    processor.job.currentStep = 'batchToAp';
+    await processor.handle();
+    console.log(JSON.stringify(processor.job, undefined, 2));
+}
+
 (async () => {
 
-    console.log(JSON.stringify(job, undefined, 2));
+    await migrate('district-4814730DUS');
+
+    // console.log(JSON.stringify(job, undefined, 2));
 
     // job.guid = `1234567890-${new Date().getTime()}`;
-    const processor = new CourseImportProcessor(job, { storeFilesLocal: true });
+    // const processor = new CourseImportProcessor(job, { storeFilesLocal: true });
 
     // validating
     // await processor.handle();
@@ -255,8 +304,8 @@ const migrateJob: IJobConfig = {
     // console.log(JSON.stringify(processor.job, undefined, 2));
 
     // processing
-    processor.job.currentStep = 'batchToAp';
+    /* processor.job.currentStep = 'batchToAp';
     await processor.handle();
-    console.log(JSON.stringify(processor.job, undefined, 2));
+    console.log(JSON.stringify(processor.job, undefined, 2)); */
 
 })();

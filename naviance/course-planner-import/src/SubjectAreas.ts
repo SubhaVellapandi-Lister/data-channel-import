@@ -23,6 +23,12 @@ export function getCombinedSubjectArea(subName: string, scedCode: string, subLoa
     return `${subName}_0_22`;
 }
 
+export function getMigratedSubjectArea(subName: string, categoryName: string) {
+    const codePair = getSubjectCodePair(categoryName);
+
+    return `${subName}_${codePair.csscCode}_${codePair.scedCode}`;
+}
+
 export async function loadExistingSubjectAreas(namespace: string): Promise<ISubjectAreaLoad> {
     const results: ISubjectAreaLoad = { subjectAreaMapping: {} };
     const subjectAreaPager = AnnotationType.find(
@@ -145,7 +151,7 @@ export function getSubjectCodePair(categoryName: string): ISubjectAreaCodePair {
         }
     }
     for (const csscCode of Object.keys(csscMapping)) {
-        if (csscMapping[csscCode] === categoryName) {
+        if (csscMapping[csscCode] === categoryName.toUpperCase()) {
             codePair.csscCode = parseInt(csscCode);
         }
     }

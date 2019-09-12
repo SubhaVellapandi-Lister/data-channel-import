@@ -16,7 +16,7 @@ import {
     IStepBeforeInput
 } from "@data-channels/dcSDK";
 import { instructionalLevelMap } from "./Contants";
-import { getCombinedSubjectArea, ISubjectAreaLoad, loadExistingSubjectAreas,
+import { getCombinedSubjectArea, getMigratedSubjectArea, ISubjectAreaLoad, loadExistingSubjectAreas,
     parseSubjectAreaRow, saveSubjectAreas } from "./SubjectAreas";
 import { initRulesRepo, prereqCourseStatement } from "./Utils";
 
@@ -180,7 +180,7 @@ export class CourseImportProcessor extends BaseProcessor {
         const isTechPrep = cObj['techPrepCourse'] === true ? 1 : 0;
         const subName = cObj['subjectArea'] ? cObj['subjectArea']['name'] : 'Unknown';
         const subCategory = cObj['subjectArea'] ? cObj['subjectArea']['category'] : 'Basic Skills';
-        const combinedSubjectArea = `${subCategory}_${subName}`;
+        const combinedSubjectArea = getMigratedSubjectArea(subName, subCategory);
         const desc = cObj['description'] || cObj['_description'];
         const courseId = cObj['id'] || cObj['schoolCode'];
         const schoolList = cObj['schools'] || [];
