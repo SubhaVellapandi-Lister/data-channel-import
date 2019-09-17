@@ -223,8 +223,10 @@ export class CourseImportProcessor extends BaseProcessor {
             description: { value: desc, type: 'STRING', operator: AnnotationOperator.EQUALS }
         };
 
+        const strippedCourseId = courseId.replace(/\s/g, '');
+
         return new Course(
-            courseId,
+            strippedCourseId,
             cObj['name'],
             new Annotations(annoItems)
         );

@@ -1,10 +1,9 @@
-import { IJobConfig, JobStatus } from "@data-channels/dcSDK";
+import { JobStatus, jobWithInlineChannel } from "@data-channels/dcSDK";
 import _ from "lodash";
 import { CourseImportProcessor } from "./Processor";
 
-const job: IJobConfig = {
+const normalJob = {
     guid: '1234567890-7777-import',
-
     channel: {
         flow: ['validate', 'createSubjects', 'batchToAp'],
         steps: {
@@ -78,7 +77,6 @@ const job: IJobConfig = {
             name: 'schools'
         }
     ],
-    filesOut: [],
     steps: {
         validate: {
             finished: false
@@ -89,12 +87,10 @@ const job: IJobConfig = {
         batchToAp: {
             finished: false
         }
-    },
-    status: JobStatus.STARTED,
-    created: new Date()
+    }
 };
 
-const noMappingJob: IJobConfig = {
+const noMappingJob = {
     guid: '1234567890-01234-import-no-mapping',
 
     channel: {
@@ -153,7 +149,6 @@ const noMappingJob: IJobConfig = {
             name: 'courses'
         }
     ],
-    filesOut: [],
     steps: {
         validate: {
             finished: false
@@ -164,14 +159,11 @@ const noMappingJob: IJobConfig = {
         batchToAp: {
             finished: false
         }
-    },
-    status: JobStatus.STARTED,
-    created: new Date()
+    }
 };
 
-const migrateJob: IJobConfig = {
+const migrateJob = {
     guid: '1234567890-01234-course-migrate',
-
     channel: {
         flow: ['validate', 'createSubjects', 'batchToAp'],
         steps: {
@@ -223,7 +215,6 @@ const migrateJob: IJobConfig = {
             name: 'courses'
         },
     ],
-    filesOut: [],
     steps: {
         validate: {
             finished: false
@@ -234,12 +225,10 @@ const migrateJob: IJobConfig = {
         batchToAp: {
             finished: false
         }
-    },
-    status: JobStatus.STARTED,
-    created: new Date()
+    }
 };
 
-async function processJob(jobToRun: IJobConfig, namespace: string, filesIn: any[]) {
+async function processJob(jobToRun: any, namespace: string, filesIn: any[]) {
     const mjob = _.merge(jobToRun, {
         guid: `1234567890-migrate-${namespace}`,
         channel: {
@@ -259,20 +248,15 @@ async function processJob(jobToRun: IJobConfig, namespace: string, filesIn: any[
         filesIn
     });
 
-    const processor = new CourseImportProcessor(mjob, { storeFilesLocal: true });
+    const channelConfig = Object.assign({}, mjob.channel);
+    mjob.channel = {};
 
-    // validating
-    await processor.handle();
+    const jobObj = jobWithInlineChannel(mjob, channelConfig);
+
+    const processor = new CourseImportProcessor(jobObj, { storeFilesLocal: true });
+
     console.log(JSON.stringify(processor.job, undefined, 2));
-
-    // creating subjects
-    processor.job.currentStep = 'createSubjects';
-    await processor.handle();
-    console.log(JSON.stringify(processor.job, undefined, 2));
-
-    // processing
-    processor.job.currentStep = 'batchToAp';
-    await processor.handle();
+    await processor.processAll();
     console.log(JSON.stringify(processor.job, undefined, 2));
 }
 
@@ -319,7 +303,10 @@ async function noMapping(ns: string, bucket: string, key: string, singleHighScho
 
     // await migrate('district-7800043DUS');
 
-    await noMapping('2400480DUS', 'data-channels-sftp-dev1', 'montgomeryschoolsmd/CourseCatalog.csv');
+    // await noMapping('2400480DUS', 'data-channels-sftp-dev1', 'montgomeryschoolsmd/CourseCatalog.csv');
+
+    await noMapping('15295USPU', 'data-channels-naviance-migrations',
+        'production/courses/highschool-15295USPU.csv', true);
 
     // console.log(JSON.stringify(job, undefined, 2));
 
