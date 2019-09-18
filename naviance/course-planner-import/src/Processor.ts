@@ -96,7 +96,7 @@ export class CourseImportProcessor extends BaseProcessor {
         const credits = parseFloat(getRowVal(rowData, 'Credits')) || 0;
         const instructionalLevelCode = getRowVal(rowData, 'Instructional_Level') || 'UT';
         const instructionalLevel = instructionalLevelMap[instructionalLevelCode] || 'Untracked';
-        const statusCode = getRowVal(rowData, 'Status') === 'Y' ? 'ACTIVE' : 'INACTIVE';
+        const statusCode = getRowVal(rowData, 'Status') === 'Y' || '1' ? 'ACTIVE' : 'INACTIVE';
         const isCte = getRowVal(rowData, 'CTE') === 'Y' ? 1 : 0;
         const isTechPrep = 0;
         const schoolsList = this.schoolsByCourse[courseId] || [];

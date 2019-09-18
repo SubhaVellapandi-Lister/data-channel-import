@@ -305,26 +305,35 @@ async function noMapping(ns: string, bucket: string, key: string, singleHighScho
 
     // await noMapping('2400480DUS', 'data-channels-sftp-dev1', 'montgomeryschoolsmd/CourseCatalog.csv');
 
-    await noMapping('15295USPU', 'data-channels-naviance-migrations',
-        'production/courses/highschool-15295USPU.csv', true);
+    /* await noMapping('15295USPU', 'data-channels-naviance-migrations',
+        'production/courses/highschool-15295USPU.csv', true); */
 
-    // console.log(JSON.stringify(job, undefined, 2));
-
-    // job.guid = `1234567890-${new Date().getTime()}`;
-    // const processor = new CourseImportProcessor(job, { storeFilesLocal: true });
-
-    // validating
-    // await processor.handle();
-    // console.log(JSON.stringify(processor.job, undefined, 2));
-
-    // creating subjects
-    // processor.job.currentStep = 'createSubjects';
-    // await processor.handle();
-    // console.log(JSON.stringify(processor.job, undefined, 2));
-
-    // processing
-    /* processor.job.currentStep = 'batchToAp';
-    await processor.handle();
-    console.log(JSON.stringify(processor.job, undefined, 2)); */
+    await processJob(
+        normalJob,
+        '1930930DUS',
+        [
+            {
+                s3: {
+                    bucket: 'data-channels-sftp-dev1',
+                    key: 'wdmcs/updated course catalog template.csv'
+                },
+                name: 'courses'
+            },
+            {
+                s3: {
+                    bucket: 'data-channels-sftp-dev1',
+                    key: 'wdmcs/course mapping upload CP2 VHAVSW.csv'
+                },
+                name: 'mapping'
+            },
+            {
+                s3: {
+                    bucket: 'data-channels-naviance-migrations',
+                    key: 'production/schoolIdMappings/district-1930930DUS.csv'
+                },
+                name: 'schools'
+            }
+        ]
+    );
 
 })();

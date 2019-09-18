@@ -2,7 +2,9 @@ import { Namespace, Program, ProgramStatement, RulesRepository } from "@academic
 import {
     BaseProcessor,
     IFileProcessorInput,
-    IFileProcessorOutput
+    IFileProcessorOutput,
+    IStepAfterOutput,
+    IStepBeforeInput
 } from "@data-channels/dcSDK";
 import { getSchools } from "./Schools";
 
@@ -27,20 +29,36 @@ export class ProgramExportProcessor extends BaseProcessor {
         'Requirement_Name',
         'Requirement_Credits'
     ];
+    private programsExported: { [schoolId: string]: number } = {};
 
-    public async export(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
-
+    public async findSchools(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
         RulesRepository.init({
             url: input.parameters!['rulesRepoUrl'],
             jwt: input.parameters!['JWT'],
             product: input.parameters!['rulesRepoProduct']
         });
+        const schools = await getSchools(input.parameters!['rulesRepoUrl'], input.parameters!['JWT']);
 
-        this.writeOutputRow(input.outputs['Programs'].writeStream, this.headers);
+        return {
+            results: {
+                schools
+            }
+        };
+    }
+
+    public async before_export(input: IStepBeforeInput) {
+        RulesRepository.init({
+            url: input.parameters!['rulesRepoUrl'],
+            jwt: input.parameters!['JWT'],
+            product: input.parameters!['rulesRepoProduct']
+        });
+    }
+
+    public async export(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
+        const schoolId = Object.keys(input.outputs)[0];
+
+        this.writeOutputRow(input.outputs[schoolId].writeStream, this.headers);
         let programsExported = 0;
-
-        const schoolIdList = input.parameters!['schools'] ||
-            await getSchools(input.parameters!['rulesRepoUrl'], input.parameters!['JWT']);
 
         function stringAnno(program: Program | ProgramStatement, annoName: string): string {
             if (!program.annotations || !program.annotations.getValue(annoName)) {
@@ -65,68 +83,73 @@ export class ProgramExportProcessor extends BaseProcessor {
             return (program.annotations.getValue(annoName) || '') === 1 ? 'YES' : 'NO';
         }
 
-        for (const schoolId of schoolIdList) {
-            console.log(`processing school ${schoolId}`);
-            const pager = Program.find(new Namespace(schoolId));
+        console.log(`processing school ${schoolId}`);
+        const pager = Program.find(new Namespace(schoolId));
 
-            console.log(`found ${await pager.total()} programs`);
-            let page = await pager.page(1);
+        console.log(`found ${await pager.total()} programs`);
+        let page = await pager.page(1);
+        console.log('ZIPPO');
+        while (page.length) {
+            for await (const program of page) {
+                console.log(program.guid);
+                programsExported += 1;
 
-            while (page.length) {
-                for await (const program of page) {
-                    programsExported += 1;
+                const pubTimestampStr = stringAnno(program, 'lastPublished');
+                const pubDate = pubTimestampStr ? new Date(parseInt(pubTimestampStr)).toISOString() : '';
 
-                    const pubTimestampStr = stringAnno(program, 'lastPublished');
-                    const pubDate = pubTimestampStr ? new Date(parseInt(pubTimestampStr)).toISOString() : '';
+                const rowData = {
+                    Naviance_School_ID: schoolId,
+                    GUID: program.guid,
+                    Naviance_Program_ID: program.name,
+                    Program_Name: stringAnno(program, 'name'),
+                    Type: stringAnno(program, 'type'),
+                    Author_ID: program.authorId,
+                    Updated_Date: program.file.repoFile!.latestVersion!.created,
+                    Published: booleanAnno(program, 'published'),
+                    Published_Date: pubDate,
+                    Published_Schools: listStringAnno(program, 'publishedSchools'),
+                    Class_Year_From: stringAnno(program, 'classYearFrom'),
+                    Class_Year_To: stringAnno(program, 'classYearTo'),
+                    Active_Schools: listStringAnno(program, 'activeSchools'),
+                };
 
-                    const rowData = {
-                        Naviance_School_ID: schoolId,
-                        GUID: program.guid,
-                        Naviance_Program_ID: program.name,
-                        Program_Name: stringAnno(program, 'name'),
-                        Type: stringAnno(program, 'type'),
-                        Author_ID: program.authorId,
-                        Updated_Date: program.file.repoFile!.latestVersion!.created,
-                        Published: booleanAnno(program, 'published'),
-                        Published_Date: pubDate,
-                        Published_Schools: listStringAnno(program, 'publishedSchools'),
-                        Class_Year_From: stringAnno(program, 'classYearFrom'),
-                        Class_Year_To: stringAnno(program, 'classYearTo'),
-                        Active_Schools: listStringAnno(program, 'activeSchools'),
-                    };
+                console.log(`XYZ ${schoolId} - ${program.guid}`);
 
-                    if (!program.statements) {
-                        const flatRow = this.headers.map((headerName) => (rowData[headerName] || '').toString());
-                        this.writeOutputRow(input.outputs['Programs'].writeStream, flatRow);
-                    } else {
-                        let totalCredits = 0;
-                        for (const stmt of program.statements) {
-                            if (stmt.annotations && stmt.annotations.getValue('credits')) {
-                                totalCredits += parseInt(stmt.annotations.getValue('credits')!.toString()) || 0;
-                            }
-                        }
-                        for (const [idx, stmt] of program.statements.entries()) {
-                            const reqRowData = Object.assign({
-                                Total_Credits: totalCredits.toString(),
-                                Requirement_Index: idx.toString(),
-                                Requirement_Name: stringAnno(stmt, 'name'),
-                                Requirement_Credits: stringAnno(stmt, 'credits')
-                            }, rowData);
-                            const flatRow = this.headers.map((headerName) => (reqRowData[headerName] || '').toString());
-                            this.writeOutputRow(input.outputs['Programs'].writeStream, flatRow);
+                if (!program.statements) {
+                    const flatRow = this.headers.map((headerName) => (rowData[headerName] || '').toString());
+                    this.writeOutputRow(input.outputs[schoolId].writeStream, flatRow);
+                } else {
+                    let totalCredits = 0;
+                    for (const stmt of program.statements) {
+                        if (stmt.annotations && stmt.annotations.getValue('credits')) {
+                            totalCredits += parseInt(stmt.annotations.getValue('credits')!.toString()) || 0;
                         }
                     }
-
-                    console.log(`${schoolId} - ${program.guid}`);
+                    for (const [idx, stmt] of program.statements.entries()) {
+                        const reqRowData = Object.assign({
+                            Total_Credits: totalCredits.toString(),
+                            Requirement_Index: idx.toString(),
+                            Requirement_Name: stringAnno(stmt, 'name'),
+                            Requirement_Credits: stringAnno(stmt, 'credits')
+                        }, rowData);
+                        const flatRow = this.headers.map((headerName) => (reqRowData[headerName] || '').toString());
+                        this.writeOutputRow(input.outputs[schoolId].writeStream, flatRow);
+                    }
                 }
-                page = await pager.next();
+
+                console.log(`${schoolId} - ${program.guid}`);
             }
+            page = await pager.next();
         }
 
-        return {
-            results: {
-                programsExported
-            }
-        };
+        this.programsExported[schoolId] = programsExported;
+
+        return {};
+    }
+
+    public async after_export(input: IStepBeforeInput): Promise<IStepAfterOutput> {
+        return { results: {
+            programsExported: this.programsExported
+        }};
     }
 }

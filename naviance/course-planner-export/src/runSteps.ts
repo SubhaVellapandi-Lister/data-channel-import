@@ -29,8 +29,7 @@ const plansChannelConfig = {
                 rulesRepoProduct: 'naviance',
                 // planningUrl: 'https://api2-ada.hobsonshighered.com/aplan-planning',
                 planningUrl: 'https://turbo-api.hobsonshighered.com/aplan-planjwt',
-                JWT: '${ENV:APSDK_JWT}',
-                // schools: ['9110149DUS']
+                JWT: '${ENV:APSDK_JWT}'
             }
         }
     }
@@ -62,21 +61,29 @@ const plansJob = {
 };
 
 const programChannelsConfig = {
-    flow: ['export'],
+    flow: ['findSchools', 'export'],
     steps: {
-        export: {
-            outputs: ['Programs'],
-            processor: 'data-channels-naviancePlanExport',
-            method: 'export',
-            granularity: 'files',
+        findSchools: {
+            processor: 'data-channels-navianceProgramExport',
+            method: 'findSchools',
+            granularity: 'once',
             parameters: {
                 // rulesRepoUrl: 'https://api2-ada.hobsonshighered.com/aplan-repository',
                 rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repoqa',
                 rulesRepoProduct: 'naviance',
-                // planningUrl: 'https://api2-ada.hobsonshighered.com/aplan-planning',
-                planningUrl: 'https://turbo-api.hobsonshighered.com/aplan-planqa',
                 JWT: '${ENV:APSDK_JWT}',
-                schools: ['9947559DUS']
+            }
+        },
+        export: {
+            outputs: ['${steps.findSchools.output.schools}'],
+            processor: 'data-channels-navianceProgramExport',
+            method: 'export',
+            granularity: 'oncePerOutput',
+            parameters: {
+                // rulesRepoUrl: 'https://api2-ada.hobsonshighered.com/aplan-repository',
+                rulesRepoUrl: 'https://turbo-api.hobsonshighered.com/aplan-repoqa',
+                rulesRepoProduct: 'naviance',
+                JWT: '${ENV:APSDK_JWT}'
             }
         }
     }
@@ -87,40 +94,35 @@ const programsJob = {
     workspace: {
         bucket: 'data-channels-work-dev1'
     },
-    currentStep: 'export',
-    filesIn: [],
+    currentStep: 'findSchools',
     filesOut: [
         {
-            name: 'Programs',
+            name: '${steps.findSchools.output.schools}',
             s3: {
                 bucket: 'data-channels-work-dev1',
-                key: 'exports/9947559DUS/Programs.csv'
+                key: 'exports/tenant=${name}/plansOfStudy.csv'
             }
         }
     ],
     steps: {
-        findTenants: {
+        findSchools: {
             finished: false
         },
         export: {
             finished: false
         }
-    },
-    status: JobStatus.Started,
-    created: new Date()
+    }
 };
 
 (async () => {
-
-    // plansJob.guid = `1234567890-${new Date().getTime()}`;
-    const job = jobWithInlineChannel(plansJob, plansChannelConfig);
+   /* const job = jobWithInlineChannel(plansJob, plansChannelConfig);
     const plansProcessor = new PlanExportProcessor(job, { storeFilesLocal: true });
     await plansProcessor.processAll();
-    console.log(JSON.stringify(plansProcessor.job, undefined, 2));
+    console.log(JSON.stringify(plansProcessor.job, undefined, 2)); */
 
-/*    programsJob.guid = ``;
-    const programsProcessor = new ProgramExportProcessor(programsJob, { storeFilesLocal: true });
-    await programsProcessor.handle();
+    const progJob = jobWithInlineChannel(programsJob, programChannelsConfig);
+    const programsProcessor = new ProgramExportProcessor(progJob, { storeFilesLocal: true });
+    await programsProcessor.processAll();
     console.log(JSON.stringify(programsProcessor.job, undefined, 2));
-    */
+
 })();
