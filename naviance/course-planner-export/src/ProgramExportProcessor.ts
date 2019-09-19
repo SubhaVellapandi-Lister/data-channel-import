@@ -88,10 +88,8 @@ export class ProgramExportProcessor extends BaseProcessor {
 
         console.log(`found ${await pager.total()} programs`);
         let page = await pager.page(1);
-        console.log('ZIPPO');
         while (page.length) {
             for await (const program of page) {
-                console.log(program.guid);
                 programsExported += 1;
 
                 const pubTimestampStr = stringAnno(program, 'lastPublished');
@@ -112,8 +110,6 @@ export class ProgramExportProcessor extends BaseProcessor {
                     Class_Year_To: stringAnno(program, 'classYearTo'),
                     Active_Schools: listStringAnno(program, 'activeSchools'),
                 };
-
-                console.log(`XYZ ${schoolId} - ${program.guid}`);
 
                 if (!program.statements) {
                     const flatRow = this.headers.map((headerName) => (rowData[headerName] || '').toString());
