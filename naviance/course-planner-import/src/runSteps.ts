@@ -310,26 +310,26 @@ async function noMapping(ns: string, bucket: string, key: string, singleHighScho
 
     await processJob(
         normalJob,
-        '1930930DUS',
+        '0619540DUS',
         [
             {
                 s3: {
                     bucket: 'data-channels-sftp-dev1',
-                    key: 'wdmcs/updated course catalog template.csv'
+                    key: 'kernhigh/Course_Template.csv'
                 },
                 name: 'courses'
             },
             {
                 s3: {
                     bucket: 'data-channels-sftp-dev1',
-                    key: 'wdmcs/course mapping upload CP2 VHAVSW.csv'
+                    key: 'kernhigh/Course_Mapping.csv'
                 },
                 name: 'mapping'
             },
             {
                 s3: {
                     bucket: 'data-channels-naviance-migrations',
-                    key: 'production/schoolIdMappings/district-1930930DUS.csv'
+                    key: 'production/schoolIdMappings/district-0619540DUS.csv'
                 },
                 name: 'schools'
             }

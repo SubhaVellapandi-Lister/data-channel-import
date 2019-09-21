@@ -34,5 +34,10 @@ export function prereqCourseStatement(preqString: string): CourseStatement | nul
 }
 
 export function getRowVal(rowData: IRowData, colName: string) {
-    return rowData[colName] || rowData[colName.toUpperCase()];
+    const val = rowData[colName] || rowData[colName.toUpperCase()];
+    if (val === 'NULL') {
+        return undefined;
+    }
+
+    return val;
 }

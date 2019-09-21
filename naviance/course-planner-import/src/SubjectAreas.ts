@@ -18,7 +18,7 @@ export function getCombinedSubjectArea(subName: string, scedCode: string, subLoa
     }
     if (subLoad.subjectAreaMapping[subName]) {
         for (const codePair of subLoad.subjectAreaMapping[subName]) {
-            if (codePair.scedCode === parseInt(scedCode)) {
+            if (!scedCode || codePair.scedCode === parseInt(scedCode)) {
                 return `${subName}_${codePair.csscCode}_${codePair.scedCode}`;
             }
         }
@@ -90,8 +90,8 @@ export function parseSubjectAreaRow(data: IRowData, subMap: { [key: string]: ISu
         }
     } else {
         // client file, no naviance code so look for sced
-        let rowSub = getRowVal(data, 'Subject_Area');
-        const rowSced = parseInt(getRowVal(data, 'SCED_Subject_Area')) || 0;
+        let rowSub = getRowVal(data, 'Subject_Area') || getRowVal(data, 'SUBJECT_AREA_1') || '';
+        const rowSced = parseInt(getRowVal(data, 'SCED_Subject_Area') || '0') || 0;
 
         if (rowSced && (!rowSub || !rowSub.length)) {
             rowSub = scedMapping[rowSced] || '';
