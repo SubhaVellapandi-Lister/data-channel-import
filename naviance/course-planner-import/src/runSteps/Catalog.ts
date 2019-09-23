@@ -1,6 +1,6 @@
 import { JobStatus, jobWithInlineChannel } from "@data-channels/dcSDK";
 import _ from "lodash";
-import { CourseImportProcessor } from "./Processor";
+import { CourseImportProcessor } from "../Processor";
 
 const normalJob = {
     guid: '1234567890-7777-import',
@@ -310,26 +310,26 @@ async function noMapping(ns: string, bucket: string, key: string, singleHighScho
 
     await processJob(
         normalJob,
-        '0619540DUS',
+        '0506330DUS',
         [
             {
                 s3: {
                     bucket: 'data-channels-sftp-dev1',
-                    key: 'kernhigh/Course_Template.csv'
+                    key: 'fortsmithschools/Naviance_Course_Catalog.csv'
                 },
                 name: 'courses'
             },
             {
                 s3: {
                     bucket: 'data-channels-sftp-dev1',
-                    key: 'kernhigh/Course_Mapping.csv'
+                    key: 'fortsmithschools/Naviance_Course_Catalog_Mappings.csv'
                 },
                 name: 'mapping'
             },
             {
                 s3: {
                     bucket: 'data-channels-naviance-migrations',
-                    key: 'production/schoolIdMappings/district-0619540DUS.csv'
+                    key: 'production/schoolIdMappings/district-0506330DUS.csv'
                 },
                 name: 'schools'
             }
