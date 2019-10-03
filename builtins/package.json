@@ -30,7 +30,7 @@
     "@types/aws-lambda": "8.10.31",
     "@types/jest": "24.0.11",
     "@types/lodash": "4.14.117",
-    "@types/node": "10.12.14",
+    "@types/node": "10.14.17",
     "aws-sdk": "^2.492.0",
     "jest": "24.4.0",
     "mkdirp": "0.5.1",
@@ -38,7 +38,7 @@
     "ts-jest": "24.0.0",
     "ts-node": "8.0.2",
     "tslint": "5.11.0",
-    "typescript": "3.3.1"
+    "typescript": "3.6.3"
   },
   "dependencies": {
     "@data-channels/dcSDK": "0.1.12",

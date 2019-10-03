@@ -4,14 +4,14 @@ import {
     IRowProcessorOutput
 } from "@data-channels/dcSDK";
 
-export interface ITranslateConfig {
+interface ITranslateConfig {
     headers: string[];
     mapping: {
         [name: string]: string;
     };
 }
 
-export class TranslateProcessor extends BaseProcessor {
+export default class Translate extends BaseProcessor {
     private originalHeaders: string[] = [];
 
     public async translate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {

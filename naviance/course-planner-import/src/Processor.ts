@@ -28,7 +28,7 @@ export interface ITranslateConfig {
 }
 
 export class CourseImportProcessor extends BaseProcessor {
-    private apBatchSize = 10;
+    private apBatchSize = 30;
     private apBatch: IRowData[] = [];
     private batchCount = 0;
     private duplicatesSkipped = 0;
@@ -46,6 +46,8 @@ export class CourseImportProcessor extends BaseProcessor {
         // 1.  course ID contains spaces (just a warning and remove spaces?)
         // 2.  subject area not found
         // 3.  Invalid column type / value
+        // 4.  course ID same as state ID (can be ok for some tenants)
+        // 5.  subject area too short (just a warning)
 
         return {
             outputs: {
@@ -96,8 +98,9 @@ export class CourseImportProcessor extends BaseProcessor {
         const credits = parseFloat(getRowVal(rowData, 'Credits') || getRowVal(rowData, 'Credit') || '0') || 0;
         const instructionalLevelCode = getRowVal(rowData, 'Instructional_Level') || 'UT';
         const instructionalLevel = instructionalLevelMap[instructionalLevelCode] || 'Untracked';
-        const statusCode = (getRowVal(rowData, 'Status') || getRowVal(rowData, 'Active')) === 'Y' || '1'
-            ? 'ACTIVE' : 'INACTIVE';
+        const rawStatusCode = (getRowVal(rowData, 'Status') || getRowVal(rowData, 'Active'));
+        const statusCode = (rawStatusCode === 'Y' || rawStatusCode === '1' || rawStatusCode === 'A') ?
+             'ACTIVE' : 'INACTIVE';
         const isCte = getRowVal(rowData, 'CTE') === 'Y' ? 1 : 0;
         const isTechPrep = 0;
         const schoolsList = this.schoolsByCourse[courseId] || [];
@@ -106,7 +109,7 @@ export class CourseImportProcessor extends BaseProcessor {
         }
         const rowSub = getRowVal(rowData, 'Subject_Area') || getRowVal(rowData, 'SUBJECT_AREA_1') || '';
         const combinedSubjectArea = getCombinedSubjectArea(
-            rowSub, getRowVal(rowData, 'SCED_Subject_Area') || '', this.subjectAreasLoaded
+            rowSub, getRowVal(rowData, 'SCED_Subject_Area') || '', this.subjectAreasLoaded, stateId
         );
         const grades: number[] = [];
         for (const g of [6, 7, 8, 9, 10, 11, 12]) {
@@ -193,7 +196,7 @@ export class CourseImportProcessor extends BaseProcessor {
         );
     }
 
-    private courseFromJSON(rowData: IRowData): Course {
+    private courseFromJSON(rowData: IRowData): Course | null {
         const cObj = JSON.parse(rowData['JSON_OBJECT']);
 
         const instructLev = cObj['instructionalLevel'] || 'Untracked';
@@ -204,6 +207,11 @@ export class CourseImportProcessor extends BaseProcessor {
         const combinedSubjectArea = getMigratedSubjectArea(subName, subCategory);
         const desc = cObj['description'] || cObj['_description'];
         const courseId = cObj['id'] || cObj['schoolCode'];
+        if (!courseId) {
+            console.log('No course ID found', cObj);
+
+            return null;
+        }
         const schoolList = cObj['schools'] || [];
         if (!schoolList.length && cObj['highschoolId']) {
             schoolList.push(cObj['highschoolId']);
@@ -226,7 +234,7 @@ export class CourseImportProcessor extends BaseProcessor {
             description: { value: desc, type: 'STRING', operator: AnnotationOperator.EQUALS }
         };
 
-        const strippedCourseId = courseId.replace(/\s/g, '');
+        const strippedCourseId = courseId.replace(/\s/g, '').split('(')[0];
 
         return new Course(
             strippedCourseId,
@@ -242,6 +250,10 @@ export class CourseImportProcessor extends BaseProcessor {
         for (const rowData of this.apBatch) {
             const course = rowData['JSON_OBJECT'] ?
                 this.courseFromJSON(rowData) : this.courseFromRowData(rowData);
+
+            if (!course) {
+                continue;
+            }
 
             if (this.seenCourseIds[course.name]) {
                 this.duplicatesSkipped += 1;

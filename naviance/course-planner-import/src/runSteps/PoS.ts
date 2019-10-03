@@ -35,7 +35,7 @@ const normalJob = {
 };
 
 async function processJob(jobToRun: any, namespace: string, filesIn: any[]) {
-    const mjob = _.merge(jobToRun, {
+    const mjob = _.merge(_.cloneDeep(jobToRun), {
         guid: `1234567890-pos-import-${namespace}`,
         channel: {
             steps: {
@@ -63,7 +63,7 @@ async function processJob(jobToRun: any, namespace: string, filesIn: any[]) {
 
 (async () => {
     // lincoln
-    await processJob(
+    /*await processJob(
         normalJob,
         '2930450DUS',
         [
@@ -77,7 +77,21 @@ async function processJob(jobToRun: any, namespace: string, filesIn: any[]) {
         ]
     );
 
-    /*
+    // fairfax
+    await processJob(
+        normalJob,
+        '5101260DUS',
+        [
+            {
+                s3: {
+                    bucket: 'data-channels-work-dev1',
+                    key: 'ready/testing/district-plans-of-study-5101260DUS.csv'
+                },
+                name: 'pos'
+            }
+        ]
+    );
+
     // fairfax trainer
     await processJob(
         normalJob,
@@ -91,8 +105,20 @@ async function processJob(jobToRun: any, namespace: string, filesIn: any[]) {
                 name: 'pos'
             }
         ]
-    ); */
+    );*/
 
-
+    await processJob(
+        normalJob,
+        '1812810DUS',
+        [
+            {
+                s3: {
+                    bucket: 'data-channels-work-dev1',
+                    key: 'ready/testing/district-plans-of-study-1812810DUS.csv'
+                },
+                name: 'pos'
+            }
+        ]
+    );
 
 })();

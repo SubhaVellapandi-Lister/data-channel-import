@@ -12,7 +12,9 @@ export interface ISubjectAreaLoad {
     subjectAreaMapping: { [key: string]: ISubjectAreaCodePair[] };
 }
 
-export function getCombinedSubjectArea(subName: string, scedCode: string, subLoad: ISubjectAreaLoad): string {
+export function getCombinedSubjectArea(
+    subName: string, scedCode: string, subLoad: ISubjectAreaLoad, stateCode: string
+): string {
     if (scedCode && (!subName || !subName.length)) {
         subName = scedMapping[parseInt(scedCode)] || '';
     }

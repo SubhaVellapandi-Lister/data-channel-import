@@ -47,7 +47,10 @@ export class PosProcessor extends BaseProcessor {
 
         const existing = await Program.findOne({ namespace: new Namespace(this.namespace), itemName: programId});
 
-        const classYears = cObj['eligibleClasses'];
+        let classYears = cObj['eligibleClasses'];
+        if (!classYears || !classYears.length) {
+            classYears = [2019, 2020];
+        }
         classYears.sort();
 
         const published = cObj['published'] ? 1 : 0;
@@ -232,10 +235,10 @@ export class PosProcessor extends BaseProcessor {
             const gl = parseInt(entry['gradeLevel']);
             if (!entriesByGrade[gl]) {
                 entriesByGrade[gl] = [];
-                entriesByGrade[gl].push(entry);
             }
+            entriesByGrade[gl].push(entry);
         }
-        const grades = Object.keys(entriesByGrade).sort();
+        const grades = Object.keys(entriesByGrade).sort((g1, g2) => parseInt(g1) - parseInt(g2));
         const gradeExpressions: ListExpression[] = [];
         for (const grade of grades) {
             const entries = entriesByGrade[grade].sort((a: object, b: object) => a['priority'] - b['priority']);
