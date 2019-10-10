@@ -1,4 +1,4 @@
-import { BaseProcessor, Job } from "@data-channels/dcsdk";
+import { BaseProcessor, Job } from "@data-channels/dcSDK";
 import HelloWorld from "./processors/HelloWorld";
 import Translate from "./processors/Translate";
 
@@ -16,6 +16,7 @@ export default class BuiltInRouter {
             }
             case 'hello': {
                 processor = new HelloWorld(job);
+                break;
             }
             default: {
                 throw new Error(`Built-in method ${step!.method} not found`);

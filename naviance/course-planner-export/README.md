@@ -1,3 +1,35 @@
+## Student Plan Export
+
+Student Plan Export Data Dictionary
+
+* Naviance_School_ID - Naviance ID for the district or single high school
+* GUID - Academic Planner GUID for this student plan
+* Plan_Name - Name that the student put on the plan
+* Student_ID - Naviance ID for the student
+* Author_ID - Naviance ID for the author (may be same as student)
+* Created_Date - Date plan was first created
+* Updated_Date - Date plan was last updated
+* Approval_Date - Date plan was last approved
+* Status - Course Planner status - CP team can give valid values
+* Is_Active - Student plan is their current active plan (if they have multiple plans this may be false)
+* Plan_Of_Study_Name - Descriptive name for the plan of study used by this student plan
+* Plan_Of_Study_ID - Academic Planner GUID for this plan of study
+* Plan_Of_Study_Is_Published - Whether or not this plan of study is currently published
+* Cluster_Name - Descriptive name for the cluster (if any) used by this student plan
+* Cluster_ID - Course Planner GUID for this cluster (if any).  Note that clusters aren't actual program objects in AP behind the scenes, they are just "tags" on pathways.
+* Pathway_Name - Descriptive name for the pathway (if any) used by this student plan
+* Pathway_ID - Academic Planner GUID for this pathway
+* Pathway_Is_Published - Whether or not this pathway is currently published
+* Num_Requirements_Met - Number of requirements in PoS and Pathway that are currently met by the student's plan
+* Num_Requirements_Total - Number of total requirements PoS and Pathway
+* Requirements_All_Met - Whether or not all requirements have been met by this plan
+* Required_Credits_Total - Sum of all credits required for all requirements in PoS and Pathway
+* Required_Credits_Remaining - Sum of credits still remaining for all requirements that have not been met by the completed or planned courses.
+* Completed_Credits - Sum of all credits that a student has already completed based on their course history
+* Planned_Credits - Sum of all credits that a student is still planning on taking
+* Planned_Courses - Names of courses that a student is planning on taking
+
+
 ## Build ZIP package from docker
 
 Note that this is necessary because apSDK has non-JS dependencies that need to be built on linux in order to be importable on AWS lambda.

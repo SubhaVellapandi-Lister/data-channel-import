@@ -22,10 +22,12 @@ export class PlanExportProcessor extends BaseProcessor {
         'Is_Active',
         'Plan_Of_Study_Name',
         'Plan_Of_Study_ID',
+        'Plan_Of_Study_Is_Published',
         'Cluster_Name',
         'Cluster_ID',
         'Pathway_Name',
         'Pathway_ID',
+        'Pathway_Is_Published',
         'Num_Requirements_Met',
         'Num_Requirements_Total',
         'Requirements_All_Met',
@@ -53,10 +55,12 @@ export class PlanExportProcessor extends BaseProcessor {
         const progNames = {
             Plan_Of_Study_Name: '',
             Plan_Of_Study_ID: '',
+            Plan_Of_Study_Is_Published: '',
             Cluster_Name: '',
             Cluster_ID: '',
             Pathway_Name: '',
-            Pathway_ID: ''
+            Pathway_ID: '',
+            Pathway_Is_Published: ''
         };
         const namespace = new Namespace(plan.scope.replace('namespace.', ''));
         for (const progRef of plan.programs) {
@@ -64,15 +68,18 @@ export class PlanExportProcessor extends BaseProcessor {
             const progName = (program.annotations.getValue('name') || '').toString();
             const progId = program.guid!;
             const clusterId = program.annotations.getValue('clusterId');
+            const published = program.annotations.getValue('published');
             if (clusterId) {
                 const clusterProgram = await this.findProgram(namespace, clusterId as string);
                 progNames.Cluster_Name = (clusterProgram.annotations.getValue('name') || '').toString();
                 progNames.Cluster_ID = clusterProgram.guid!;
                 progNames.Pathway_Name = progName;
                 progNames.Pathway_ID = progId;
+                progNames.Pathway_Is_Published = published ? 'TRUE' : 'FALSE';
             } else {
                 progNames.Plan_Of_Study_Name = progName;
                 progNames.Plan_Of_Study_ID = progId;
+                progNames.Plan_Of_Study_Is_Published = published ? 'TRUE' : 'FALSE';
             }
         }
 
@@ -119,8 +126,31 @@ export class PlanExportProcessor extends BaseProcessor {
 
         let page = await pager.page(1);
 
+        const sleep = (milliseconds: number) => {
+            return new Promise((resolve) => setTimeout(resolve, milliseconds));
+        };
+
         while (page.length) {
-            const pageOfPlans = page.map(async (slim) => ({slim, full: await slim.toStudentPlan()}));
+            const pageOfPlans = page.map(async (slim) => {
+                let full: StudentPlan;
+                let retries = 5;
+                while (retries > 0) {
+                    try {
+                        full = await slim.toStudentPlan();
+                        break;
+                    } catch {
+                        console.log(`ERROR GETTING FULL PLAN, RETRYING WITH ${retries} RETRIES...`);
+                        await sleep(1000);
+                        retries -= 1;
+                    }
+                }
+
+                if (retries === 0) {
+                    full = await slim.toStudentPlan();
+                }
+
+                return {slim, full: full!};
+            });
             for await (const planSet of pageOfPlans) {
                 plansExported += 1;
 
@@ -170,7 +200,13 @@ export class PlanExportProcessor extends BaseProcessor {
                 this.writeOutputRow(input.outputs[schoolId].writeStream, flatRow);
                 console.log(`${schoolId} - ${planSet.slim.guid}`);
             }
-            page = await pager.next();
+            try {
+                page = await pager.next();
+            } catch {
+                console.log('ERROR GETTING NEXT PAGE OF PLANS, RETRYING...');
+                sleep(2000);
+                page = await pager.next();
+            }
         }
 
         this.plansExported[schoolId] = plansExported;

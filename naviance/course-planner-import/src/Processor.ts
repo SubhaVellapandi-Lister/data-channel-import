@@ -289,7 +289,9 @@ export class CourseImportProcessor extends BaseProcessor {
                     this.navianceSchoolByLocalId[localId] ||
                     this.navianceSchoolByLocalId['0' + localId] ||
                     localId;
+
                 const courseId = getRowVal(input.data, 'Course_ID') || '';
+                // console.log(`${courseId} ${schoolId}`);
                 if (!this.schoolsByCourse[courseId]) {
                     this.schoolsByCourse[courseId] = [];
                 }
