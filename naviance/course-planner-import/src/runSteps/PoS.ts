@@ -107,7 +107,8 @@ async function processJob(jobToRun: any, namespace: string, filesIn: any[]) {
         ]
     );*/
 
-    await processJob(
+    // msd wayne
+    /*await processJob(
         normalJob,
         '1812810DUS',
         [
@@ -115,6 +116,37 @@ async function processJob(jobToRun: any, namespace: string, filesIn: any[]) {
                 s3: {
                     bucket: 'data-channels-work-dev1',
                     key: 'ready/testing/district-plans-of-study-1812810DUS.csv'
+                },
+                name: 'pos'
+            }
+        ]
+    ); */
+
+    /* simi */
+    /* await processJob(
+        normalJob,
+        '0636840DUS',
+        [
+            {
+                s3: {
+                    bucket: 'data-channels-work-dev1',
+                    key: 'ready/testing/district-plans-of-study-0636840DUS.csv'
+                },
+                name: 'pos'
+            }
+        ]
+    );
+    */
+
+    // walton
+    await processJob(
+        normalJob,
+        '15295USPU',
+        [
+            {
+                s3: {
+                    bucket: 'data-channels-work-dev1',
+                    key: 'ready/testing/district-plans-of-study-15295USPU.csv'
                 },
                 name: 'pos'
             }

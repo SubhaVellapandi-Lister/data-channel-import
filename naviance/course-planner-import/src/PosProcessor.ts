@@ -76,13 +76,17 @@ export class PosProcessor extends BaseProcessor {
 
         const statements: TakeStatement[] = [];
 
-        for (const requirement of cObj['requirements']) {
-            const reqId = uuidv5(requirement['pk'].toString(), this.uuidSeed);
+        const requirements = cObj['requirements'] || cObj['pathway']['requirements'];
+
+        for (const requirement of requirements) {
+            const reqPk = requirement['pk'] || requirement['requirementId'];
+            const reqDetails = requirement['requirement'] || requirement;
+            const reqId = uuidv5(reqPk.toString(), this.uuidSeed);
             const statementAnno = Annotations.simple({
                 id: reqId,
-                name: requirement['name'],
-                description: requirement['description'].replace(/\n/g, ' ').replace(/\r/g, ''),
-                credits: requirement['maximumCredits']
+                name: reqDetails['name'],
+                description: reqDetails['description'].replace(/\n/g, ' ').replace(/\r/g, ''),
+                credits: reqDetails['maximumCredits']
             });
             const rules: ListExpression[] = [];
 
@@ -93,7 +97,7 @@ export class PosProcessor extends BaseProcessor {
                     console.log(`Empty rule`);
                 }
             }
-            for (const rule of requirement['rules']) {
+            for (const rule of reqDetails['rules']) {
                 switch (rule['type']) {
                     case 1:
                         pushRule(this.mandatedRule(rule));
@@ -111,7 +115,7 @@ export class PosProcessor extends BaseProcessor {
                 }
             }
             if (!rules.length) {
-                console.log(`Skipping empty requirement ${requirement['name']}`);
+                console.log(`Skipping empty requirement ${reqDetails['name']}`);
                 continue;
             }
             statements.push(new TakeStatement(rules, undefined, statementAnno));
@@ -241,12 +245,23 @@ export class PosProcessor extends BaseProcessor {
         const grades = Object.keys(entriesByGrade).sort((g1, g2) => parseInt(g1) - parseInt(g2));
         const gradeExpressions: ListExpression[] = [];
         for (const grade of grades) {
-            const entries = entriesByGrade[grade].sort((a: object, b: object) => a['priority'] - b['priority']);
-            gradeExpressions.push(new ListExpression(
-                entries.map((e: object) => e['courseId'].toString()),
-                Annotations.simple({ grade: parseInt(grade) }),
-                Modifiers.simple({ courses: 1 })
-            ));
+            const entriesBySequence: { [sequenceId: number]: object[] } = {};
+            for (const entry of entriesByGrade[grade]) {
+                if (!entriesBySequence[entry.sequenceId]) {
+                    entriesBySequence[entry.sequenceId] = [];
+                }
+                entriesBySequence[entry.sequenceId].push(entry);
+            }
+            const sequences = Object.keys(entriesBySequence).sort();
+            for (const sequenceId of sequences) {
+                const entries = entriesBySequence[sequenceId]
+                    .sort((a: object, b: object) => a['priority'] - b['priority']);
+                gradeExpressions.push(new ListExpression(
+                    entries.map((e: object) => e['courseId'].toString()),
+                    Annotations.simple({ grade: parseInt(grade) }),
+                    Modifiers.simple({ courses: 1 })
+                ));
+            }
         }
         if (!gradeExpressions.length) {
             return null;

@@ -14,7 +14,8 @@ export default class BuiltInRouter {
                 processor = new Translate(job);
                 break;
             }
-            case 'hello': {
+            case 'hello':
+            case 'helloRow': {
                 processor = new HelloWorld(job);
                 break;
             }

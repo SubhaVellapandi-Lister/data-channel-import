@@ -301,39 +301,39 @@ async function noMapping(ns: string, bucket: string, key: string, singleHighScho
 
 (async () => {
 
-    // await migrate('district-1812810DUS');
+    await migrate('district-1201770DUS');
 
     // await noMapping('2400480DUS', 'data-channels-sftp-dev1', 'montgomeryschoolsmd/CourseCatalog.csv');
 
     /* await noMapping('1301290DUS', 'data-channels-naviance-migrations',
         'production/courses/highschool-15295USPU.csv', true); */
 
-    await processJob(
+    /* await processJob(
         normalJob,
-        '7802511DUS',
+        '2400480DUS',
         [
             {
                 s3: {
                     bucket: 'data-channels-sftp-dev1',
-                    key: 'wcpsmd/Course Catalog 09262019.csv'
+                    key: 'montgomeryschoolsmd/CourseCatalog.csv'
                 },
                 name: 'courses'
             },
             {
                 s3: {
                     bucket: 'data-channels-sftp-dev1',
-                    key: 'wcpsmd/Course Mapping Fixed Headers.csv'
+                    key: 'montgomeryschoolsmd/CourseMapping.csv'
                 },
                 name: 'mapping'
             },
             {
                 s3: {
                     bucket: 'data-channels-naviance-migrations',
-                    key: 'production/schoolIdMappings/district-7802511DUS.csv'
+                    key: 'production/schoolIdMappings/district-2400480DUS.csv'
                 },
                 name: 'schools'
             }
         ]
-    );
+    ); */
 
 })();

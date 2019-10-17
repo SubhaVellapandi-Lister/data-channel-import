@@ -92,7 +92,7 @@ export class CourseImportProcessor extends BaseProcessor {
     }
 
     private courseFromRowData(rowData: IRowData): Course {
-        const courseId = getRowVal(rowData, 'Course_ID') || '';
+        const courseId = getRowVal(rowData, 'Course_ID') || getRowVal(rowData, 'Course_Code') || '';
         const courseName = getRowVal(rowData, 'Course_Name') || getRowVal(rowData, 'Course_Title') || '';
         const stateId = getRowVal(rowData, 'State_ID') || getRowVal(rowData, 'State_Category_Code') || '';
         const credits = parseFloat(getRowVal(rowData, 'Credits') || getRowVal(rowData, 'Credit') || '0') || 0;
@@ -188,12 +188,14 @@ export class CourseImportProcessor extends BaseProcessor {
 
         const strippedCourseId = courseId.replace(/\s/g, '');
 
-        return new Course(
+        const course = new Course(
             strippedCourseId,
             courseName,
             new Annotations(annoItems),
             statements
         );
+
+        return course;
     }
 
     private courseFromJSON(rowData: IRowData): Course | null {
@@ -290,7 +292,7 @@ export class CourseImportProcessor extends BaseProcessor {
                     this.navianceSchoolByLocalId['0' + localId] ||
                     localId;
 
-                const courseId = getRowVal(input.data, 'Course_ID') || '';
+                const courseId = getRowVal(input.data, 'Course_ID') || getRowVal(input.data, 'Course_Code') || '';
                 // console.log(`${courseId} ${schoolId}`);
                 if (!this.schoolsByCourse[courseId]) {
                     this.schoolsByCourse[courseId] = [];

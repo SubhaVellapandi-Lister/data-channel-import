@@ -35,7 +35,8 @@ export class PlanExportProcessor extends BaseProcessor {
         'Required_Credits_Remaining',
         'Completed_Credits',
         'Planned_Credits',
-        'Planned_Courses'
+        'Planned_Courses',
+        'Course_History'
     ];
     private plansExported: { [schoolId: string]: number } = {};
     private programsByName: { [name: string]: Program } = {};
@@ -96,7 +97,7 @@ export class PlanExportProcessor extends BaseProcessor {
 
         return {
             results: {
-                schools
+                schools: ['9947611DUS']
             }
         };
     }
@@ -190,7 +191,8 @@ export class PlanExportProcessor extends BaseProcessor {
                     Required_Credits_Remaining: audit.progress.creditsRemaining.toString(),
                     Completed_Credits: audit.progress.creditsCompleted.toString(),
                     Planned_Credits: audit.progress.creditsInPlan.toString(),
-                    Planned_Courses: planVersion.courses.map((course) => course.number).join(', ')
+                    Planned_Courses: planVersion.courses.map((course) => course.number).join(', '),
+                    Course_History: ''
                 };
 
                 Object.assign(rowData, await this.findProgramColumns(planSet.full));
