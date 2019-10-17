@@ -97,7 +97,8 @@ export class PlanExportProcessor extends BaseProcessor {
 
         return {
             results: {
-                schools: ['9947611DUS']
+                // schools: ['9947611DUS']
+                schools
             }
         };
     }
