@@ -1,4 +1,8 @@
-import { Namespace, PlanningEngine, Program, RulesRepository, StudentPlan } from "@academic-planner/apSDK";
+import { ICourseRecord } from "@academic-planner/academic-planner-common";
+import {
+    Namespace, PlanningEngine, Program,
+    RawStorage, RulesRepository, StudentPlan
+} from "@academic-planner/apSDK";
 import {
     BaseProcessor,
     IFileProcessorInput,
@@ -10,15 +14,17 @@ import { getSchools } from "./Schools";
 
 export class PlanExportProcessor extends BaseProcessor {
     private headers = [
-        'Naviance_School_ID',
+        'Tenant_ID',
         'GUID',
         'Plan_Name',
         'Student_ID',
         'Author_ID',
         'Created_Date',
         'Updated_Date',
-        'Approval_Date',
         'Status',
+        'Approval_Requirement',
+        'Pathway_Label',
+        'Cluster_Label',
         'Is_Active',
         'Plan_Of_Study_Name',
         'Plan_Of_Study_ID',
@@ -33,10 +39,23 @@ export class PlanExportProcessor extends BaseProcessor {
         'Requirements_All_Met',
         'Required_Credits_Total',
         'Required_Credits_Remaining',
+        'PoS_Num_Requirements_Met',
+        'PoS_Num_Requirements_Total',
+        'PoS_Requirements_All_Met',
+        'PoS_Required_Credits_Total',
+        'PoS_Required_Credits_Remaining',
+        'Pathway_Num_Requirements_Met',
+        'Pathway_Num_Requirements_Total',
+        'Pathway_Requirements_All_Met',
+        'Pathway_Required_Credits_Total',
+        'Pathway_Required_Credits_Remaining',
+        'Credit_Discrepancy',
         'Completed_Credits',
+        'Completed_Credits_Used',
         'Planned_Credits',
+        'Planned_Credits_Used',
         'Planned_Courses',
-        'Course_History'
+        'Completed_Courses'
     ];
     private plansExported: { [schoolId: string]: number } = {};
     private programsByName: { [name: string]: Program } = {};
@@ -53,6 +72,7 @@ export class PlanExportProcessor extends BaseProcessor {
     }
 
     private async findProgramColumns(plan: StudentPlan): Promise<object> {
+        const audit = plan.latestAudit;
         const progNames = {
             Plan_Of_Study_Name: '',
             Plan_Of_Study_ID: '',
@@ -61,12 +81,54 @@ export class PlanExportProcessor extends BaseProcessor {
             Cluster_ID: '',
             Pathway_Name: '',
             Pathway_ID: '',
-            Pathway_Is_Published: ''
+            Pathway_Is_Published: '',
+            Num_Requirements_Met: audit.progress.statementsMet.toString(),
+            Num_Requirements_Total: audit.progress.statementsTotal.toString(),
+            Requirements_All_Met: (audit.progress.statementsMet === audit.progress.statementsTotal).toString(),
+            Required_Credits_Total: audit.progress.creditsRequired.toString(),
+            Required_Credits_Remaining: audit.progress.creditsRemaining.toString(),
+            PoS_Num_Requirements_Met: '',
+            PoS_Num_Requirements_Total: '',
+            PoS_Requirements_All_Met: '',
+            PoS_Required_Credits_Total: '',
+            PoS_Required_Credits_Remaining: '',
+            Pathway_Num_Requirements_Met: '',
+            Pathway_Num_Requirements_Total: '',
+            Pathway_Requirements_All_Met: '',
+            Pathway_Required_Credits_Total: '',
+            Pathway_Required_Credits_Remaining: ''
         };
         const namespace = new Namespace(plan.scope.replace('namespace.', ''));
+        let planTotalCreditsRequired = 0;
         for (const progRef of plan.programs) {
             const program = await this.findProgram(namespace, progRef.name);
             const progName = (program.annotations.getValue('name') || '').toString();
+            const rawAudit = audit.rawAudit.programs.filter((progDet) => progDet.program.name === program.name)[0];
+            if (!rawAudit) {
+                continue;
+            }
+            const statements = rawAudit.program.statements;
+            let statementsMet = 0;
+            let creditsTotal = 0;
+            for (const stmt of statements) {
+                if (stmt.auditResult.isMet) {
+                    statementsMet += 1;
+                }
+                let foundAnnoCreds = false;
+                if (stmt.with) {
+                    for (const withItem of stmt.with) {
+                        if (withItem.name === 'credits') {
+                            creditsTotal += withItem.value as number;
+                            foundAnnoCreds = true;
+                            break;
+                        }
+                    }
+                }
+                if (!foundAnnoCreds) {
+                    creditsTotal += stmt.auditResult.creditProgress.creditsRequired;
+                }
+            }
+            planTotalCreditsRequired += creditsTotal;
             const progId = program.guid!;
             const clusterId = program.annotations.getValue('clusterId');
             const published = program.annotations.getValue('published');
@@ -76,15 +138,31 @@ export class PlanExportProcessor extends BaseProcessor {
                 progNames.Cluster_ID = clusterProgram.guid!;
                 progNames.Pathway_Name = progName;
                 progNames.Pathway_ID = progId;
-                progNames.Pathway_Is_Published = published ? 'TRUE' : 'FALSE';
+                progNames.Pathway_Is_Published = this.booleanToString(published);
+                progNames.Pathway_Num_Requirements_Met = statementsMet.toString();
+                progNames.Pathway_Num_Requirements_Total = statements.length.toString();
+                progNames.Pathway_Required_Credits_Remaining = audit.progress.creditsRemaining.toString();
+                progNames.Pathway_Required_Credits_Total = creditsTotal.toString();
+                progNames.Pathway_Requirements_All_Met = this.booleanToString(statements.length === statementsMet);
             } else {
                 progNames.Plan_Of_Study_Name = progName;
                 progNames.Plan_Of_Study_ID = progId;
-                progNames.Plan_Of_Study_Is_Published = published ? 'TRUE' : 'FALSE';
+                progNames.Plan_Of_Study_Is_Published = this.booleanToString(published);
+                progNames.PoS_Num_Requirements_Met = statementsMet.toString();
+                progNames.PoS_Num_Requirements_Total = statements.length.toString();
+                progNames.PoS_Required_Credits_Remaining = audit.progress.creditsRemaining.toString();
+                progNames.PoS_Required_Credits_Total = creditsTotal.toString();
+                progNames.PoS_Requirements_All_Met = this.booleanToString(statements.length === statementsMet);
             }
         }
 
+        progNames.Required_Credits_Total = planTotalCreditsRequired.toString();
+
         return progNames;
+    }
+
+    private booleanToString(item: any) {
+        return item ? 'TRUE' : 'FALSE';
     }
 
     public async findSchools(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
@@ -93,11 +171,15 @@ export class PlanExportProcessor extends BaseProcessor {
             jwt: input.parameters!['JWT'],
             product: input.parameters!['rulesRepoProduct']
         });
-        const schools = await getSchools(input.parameters!['rulesRepoUrl'], input.parameters!['JWT']);
+        let schools: string[] = [];
+        if (input.parameters!['schools']) {
+            schools = input.parameters!['schools'];
+        } else {
+            schools = await getSchools(input.parameters!['rulesRepoUrl'], input.parameters!['JWT']);
+        }
 
         return {
             results: {
-                // schools: ['9947611DUS']
                 schools
             }
         };
@@ -125,6 +207,17 @@ export class PlanExportProcessor extends BaseProcessor {
         console.log(`processing school ${schoolId}`);
         this.programsByName = {};
         const pager = StudentPlan.find(`naviance.${schoolId}`);
+
+        const namespace = new Namespace(schoolId);
+        const config = await RawStorage.findOne({namespace, itemName: schoolId });
+        let configItems: { [name: string]: string } = {};
+        if (config && config.json) {
+            configItems = {
+                Approval_Requirement: config.json['approvalRequirement'] || '',
+                Pathway_Label: config.json['labels']['pathway'] || '',
+                Cluster_Label: config.json['labels']['cluster'] || ''
+            };
+        }
 
         let page = await pager.page(1);
 
@@ -173,8 +266,12 @@ export class PlanExportProcessor extends BaseProcessor {
                     }
                 }
 
+                const plannedCreditTotal = audit.studentRecords
+                    .map((rec) => (rec.record as ICourseRecord).credits)
+                    .reduce((credA, credB) => credA + credB, 0);
+
                 const rowData = {
-                    Naviance_School_ID: schoolId,
+                    Tenant_ID: schoolId,
                     GUID: planSet.slim.guid,
                     Plan_Name: planName,
                     Student_ID:  planSet.slim.studentPrincipleId,
@@ -183,20 +280,17 @@ export class PlanExportProcessor extends BaseProcessor {
                     Updated_Date: planVersion.created,
                     Status: planStatus,
                     Is_Active: isActive,
-                    Approval_Date: '',
-                    Num_Requirements_Met: audit.progress.statementsMet.toString(),
-                    Num_Requirements_Total: audit.progress.statementsTotal.toString(),
-                    Requirements_All_Met:
-                        (audit.progress.statementsMet === audit.progress.statementsTotal).toString(),
-                    Required_Credits_Total: audit.progress.creditsRequired.toString(),
-                    Required_Credits_Remaining: audit.progress.creditsRemaining.toString(),
-                    Completed_Credits: audit.progress.creditsCompleted.toString(),
-                    Planned_Credits: audit.progress.creditsInPlan.toString(),
+                    Credit_Discrepancy: 'FALSE',
+                    Completed_Credits_Used: audit.progress.creditsCompleted.toString(),
+                    Planned_Credits_Used: audit.progress.creditsInPlan.toString(),
+                    Completed_Credits: "0", // need to tweak once we are storing course histories
+                    Planned_Credits: plannedCreditTotal.toString(),
                     Planned_Courses: planVersion.courses.map((course) => course.number).join(', '),
-                    Course_History: ''
+                    Course_History: '' // need to tweak once we are storing course histories
                 };
 
                 Object.assign(rowData, await this.findProgramColumns(planSet.full));
+                Object.assign(rowData, configItems);
 
                 const flatRow = this.headers.map((headerName) => (rowData[headerName] || '').toString());
 

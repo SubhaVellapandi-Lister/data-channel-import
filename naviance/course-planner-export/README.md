@@ -39,7 +39,9 @@ Student Plan Export Data Dictionary
 * Pathway_Required_Credits_Remaining - Pathway specific sum of credits still remaining for all requirements
 * Credit_Discrepancy - Boolean true/false flag if student plan currently has credit discrepancy due to completed course credits being lower than what was planned.
 * Completed_Credits - Sum of all credits that a student has already completed based on their course history
+* Completed_Credits_Used - Sum of all credits that a student has already completed and were used to meet requirements
 * Planned_Credits - Sum of all credits that a student is still planning on taking
+* Planned_Credits_Used - Sum of all planned course credits that were used to meet requirements
 * Planned_Courses - Names of courses that a student is planning on taking
 * Completed_Courses - Names of courses that a student has completed
 

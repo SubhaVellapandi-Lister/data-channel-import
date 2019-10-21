@@ -52,7 +52,10 @@ const plansJob = {
     ],
     steps: {
         findSchools: {
-            finished: false
+            finished: false/*,
+            parameters: {
+                schools: ['9947611DUS']
+            } */
         },
         export: {
             finished: false

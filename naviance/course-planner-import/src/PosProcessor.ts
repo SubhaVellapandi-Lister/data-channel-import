@@ -106,6 +106,7 @@ export class PosProcessor extends BaseProcessor {
                         pushRule(this.groupOfCoursesRule(rule));
                         break;
                     case 3:
+                    case 6:
                         pushRule(this.choicesByGradeRule(rule));
                         break;
                     case 4:
