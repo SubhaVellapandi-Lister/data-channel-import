@@ -1,0 +1,12 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Data-Channels Builtins Lambda
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  ProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://data-channels-processor-deployments-dev/dd7efba9d47e695dc7e74ebdd798ffb9
+      FunctionName: data-channels-BuiltInProcessor
+      Handler: dist/index.BuiltInHandler
+      Timeout: 300
+      Runtime: nodejs10.x

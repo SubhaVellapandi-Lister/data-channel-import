@@ -46,7 +46,7 @@ const plansJob = {
             name: '${steps.findSchools.output.schools}',
             s3: {
                 bucket: 'data-channels-work-dev1',
-                key: 'exports/tenant=${name}/coursePlans.csv'
+                key: 'exports/course_plans_${name}.csv'
             }
         }
     ],

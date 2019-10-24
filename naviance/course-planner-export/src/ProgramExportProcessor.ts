@@ -1,4 +1,4 @@
-import { Namespace, Program, ProgramStatement, RulesRepository } from "@academic-planner/apSDK";
+import { Namespace, Program, ProgramStatement } from "@academic-planner/apSDK";
 import {
     BaseProcessor,
     IFileProcessorInput,
@@ -6,7 +6,7 @@ import {
     IStepAfterOutput,
     IStepBeforeInput
 } from "@data-channels/dcSDK";
-import { getSchools } from "./Schools";
+import { initServices } from "./Utils";
 
 export class ProgramExportProcessor extends BaseProcessor {
     private headers = [
@@ -31,30 +31,11 @@ export class ProgramExportProcessor extends BaseProcessor {
     ];
     private programsExported: { [schoolId: string]: number } = {};
 
-    public async findSchools(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
-        RulesRepository.init({
-            url: input.parameters!['rulesRepoUrl'],
-            jwt: input.parameters!['JWT'],
-            product: input.parameters!['rulesRepoProduct']
-        });
-        const schools = await getSchools(input.parameters!['rulesRepoUrl'], input.parameters!['JWT']);
-
-        return {
-            results: {
-                schools
-            }
-        };
+    public async before_exportPrograms(input: IStepBeforeInput) {
+        initServices(input.parameters!);
     }
 
-    public async before_export(input: IStepBeforeInput) {
-        RulesRepository.init({
-            url: input.parameters!['rulesRepoUrl'],
-            jwt: input.parameters!['JWT'],
-            product: input.parameters!['rulesRepoProduct']
-        });
-    }
-
-    public async export(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
+    public async exportPrograms(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
         const schoolId = Object.keys(input.outputs)[0];
 
         this.writeOutputRow(input.outputs[schoolId].writeStream, this.headers);
@@ -143,7 +124,7 @@ export class ProgramExportProcessor extends BaseProcessor {
         return {};
     }
 
-    public async after_export(input: IStepBeforeInput): Promise<IStepAfterOutput> {
+    public async after_exportPrograms(input: IStepBeforeInput): Promise<IStepAfterOutput> {
         return { results: {
             programsExported: this.programsExported
         }};

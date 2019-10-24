@@ -301,39 +301,39 @@ async function noMapping(ns: string, bucket: string, key: string, singleHighScho
 
 (async () => {
 
-    await migrate('district-1201770DUS');
+    // await migrate('district-1201770DUS');
 
     // await noMapping('2400480DUS', 'data-channels-sftp-dev1', 'montgomeryschoolsmd/CourseCatalog.csv');
 
     /* await noMapping('1301290DUS', 'data-channels-naviance-migrations',
         'production/courses/highschool-15295USPU.csv', true); */
 
-    /* await processJob(
+    await processJob(
         normalJob,
-        '2400480DUS',
+        '4807830DUS',
         [
             {
                 s3: {
-                    bucket: 'data-channels-sftp-dev1',
-                    key: 'montgomeryschoolsmd/CourseCatalog.csv'
+                    bucket: 'data-channels-work-dev1',
+                    key: 'ready/testing/ALIEF_NAVIANCE_SCHOOL_COURSE_CATALOG_DATA_EXPORT.csv'
                 },
                 name: 'courses'
             },
             {
                 s3: {
-                    bucket: 'data-channels-sftp-dev1',
-                    key: 'montgomeryschoolsmd/CourseMapping.csv'
+                    bucket: 'data-channels-work-dev1',
+                    key: 'ready/testing/ALIEF_NAVIANCE_SCHOOL_COURSE_MAPPING_DATA_EXPORT.csv'
                 },
                 name: 'mapping'
             },
             {
                 s3: {
-                    bucket: 'data-channels-naviance-migrations',
-                    key: 'production/schoolIdMappings/district-2400480DUS.csv'
+                    bucket: 'data-channels-work-dev1',
+                    key: 'ready/testing/school-id-mapping-4807830DUS.csv'
                 },
                 name: 'schools'
             }
         ]
-    ); */
+    );
 
 })();

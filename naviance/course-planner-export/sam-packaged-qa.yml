@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Naviance academic-planner export lambda
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  RepoUrl:
+    Type: String
+  PlanUrl:
+    Type: String
+  Auth0Domain:
+    Type: String
+  Auth0Audience:
+    Type: String
+  Auth0ClientId:
+    Type: String
+  Auth0ClientSecret:
+    Type: String
+Resources:
+  ProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://data-channels-processor-deployments-dev/e298f539a771245c1ec4a759294bfd82
+      FunctionName: cf-naviance-dc-ap-export-qa
+      Handler: dist/index.exportHandler
+      Timeout: 900
+      MemorySize: 2048
+      Runtime: nodejs10.x
+      Environment:
+        Variables:
+          REPO_URL:
+            Ref: RepoUrl
+          PLAN_URL:
+            Ref: PlanUrl
+          AUTH0_DOMAIN:
+            Ref: Auth0Domain
+          AUTH0_AUDIENCE:
+            Ref: Auth0Audience
+          AUTH0_CLIENTID:
+            Ref: Auth0ClientId
+          AUTH0_CLIENTSECRET:
+            Ref: Auth0ClientSecret

@@ -1,7 +1,7 @@
 import { ICourseRecord } from "@academic-planner/academic-planner-common";
 import {
-    Namespace, PlanningEngine, Program,
-    RawStorage, RulesRepository, StudentPlan
+    Namespace, Program,
+    RawStorage, StudentPlan
 } from "@academic-planner/apSDK";
 import {
     BaseProcessor,
@@ -10,7 +10,7 @@ import {
     IStepAfterOutput,
     IStepBeforeInput
 } from "@data-channels/dcSDK";
-import { getSchools } from "./Schools";
+import { initServices } from "./Utils";
 
 export class PlanExportProcessor extends BaseProcessor {
     private headers = [
@@ -165,40 +165,11 @@ export class PlanExportProcessor extends BaseProcessor {
         return item ? 'TRUE' : 'FALSE';
     }
 
-    public async findSchools(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
-        RulesRepository.init({
-            url: input.parameters!['rulesRepoUrl'],
-            jwt: input.parameters!['JWT'],
-            product: input.parameters!['rulesRepoProduct']
-        });
-        let schools: string[] = [];
-        if (input.parameters!['schools']) {
-            schools = input.parameters!['schools'];
-        } else {
-            schools = await getSchools(input.parameters!['rulesRepoUrl'], input.parameters!['JWT']);
-        }
-
-        return {
-            results: {
-                schools
-            }
-        };
+    public async before_exportPlans(input: IStepBeforeInput) {
+        initServices(input.parameters!);
     }
 
-    public async before_export(input: IStepBeforeInput) {
-        RulesRepository.init({
-            url: input.parameters!['rulesRepoUrl'],
-            jwt: input.parameters!['JWT'],
-            product: input.parameters!['rulesRepoProduct']
-        });
-
-        PlanningEngine.init({
-            url: input.parameters!['planningUrl'],
-            jwt: input.parameters!['JWT']
-        });
-    }
-
-    public async export(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
+    public async exportPlans(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
         const schoolId = Object.keys(input.outputs)[0];
 
         this.writeOutputRow(input.outputs[schoolId].writeStream, this.headers);
@@ -311,7 +282,7 @@ export class PlanExportProcessor extends BaseProcessor {
         return {};
     }
 
-    public async after_export(input: IStepBeforeInput): Promise<IStepAfterOutput> {
+    public async after_exportPlans(input: IStepBeforeInput): Promise<IStepAfterOutput> {
         return { results: {
             plansExported: this.plansExported
         }};
