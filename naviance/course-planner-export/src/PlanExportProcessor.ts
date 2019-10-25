@@ -39,21 +39,31 @@ export class PlanExportProcessor extends BaseProcessor {
         'Requirements_All_Met',
         'Required_Credits_Total',
         'Required_Credits_Remaining',
-        'PoS_Num_Requirements_Met',
-        'PoS_Num_Requirements_Total',
-        'PoS_Requirements_All_Met',
-        'PoS_Required_Credits_Total',
-        'PoS_Required_Credits_Remaining',
-        'Pathway_Num_Requirements_Met',
-        'Pathway_Num_Requirements_Total',
-        'Pathway_Requirements_All_Met',
-        'Pathway_Required_Credits_Total',
-        'Pathway_Required_Credits_Remaining',
         'Credit_Discrepancy',
         'Completed_Credits',
         'Completed_Credits_Used',
         'Planned_Credits',
         'Planned_Credits_Used',
+        'PoS_Num_Requirements_Met',
+        'PoS_Num_Requirements_Total',
+        'PoS_Requirements_All_Met',
+        'PoS_Required_Credits_Total',
+        'PoS_Required_Credits_Remaining',
+        'PoS_Credit_Discrepancy',
+        'PoS_Completed_Credits',
+        'PoS_Completed_Credits_Used',
+        'PoS_Planned_Credits',
+        'PoS_Planned_Credits_Used',
+        'Pathway_Num_Requirements_Met',
+        'Pathway_Num_Requirements_Total',
+        'Pathway_Requirements_All_Met',
+        'Pathway_Required_Credits_Total',
+        'Pathway_Required_Credits_Remaining',
+        'Pathway_Credit_Discrepancy',
+        'Pathway_Completed_Credits',
+        'Pathway_Completed_Credits_Used',
+        'Pathway_Planned_Credits',
+        'Pathway_Planned_Credits_Used',
         'Planned_Courses',
         'Completed_Courses'
     ];
@@ -73,6 +83,9 @@ export class PlanExportProcessor extends BaseProcessor {
 
     private async findProgramColumns(plan: StudentPlan): Promise<object> {
         const audit = plan.latestAudit;
+        const gradedRecIds: string[] = audit.studentRecords
+            .filter((srec) => (srec.record as ICourseRecord).grade !== undefined)
+            .map((srec) => srec.identifier);
         const progNames = {
             Plan_Of_Study_Name: '',
             Plan_Of_Study_ID: '',
@@ -92,11 +105,21 @@ export class PlanExportProcessor extends BaseProcessor {
             PoS_Requirements_All_Met: '',
             PoS_Required_Credits_Total: '',
             PoS_Required_Credits_Remaining: '',
+            PoS_Credit_Discrepancy: 'FALSE',
+            PoS_Completed_Credits_Used: '',
+            PoS_Planned_Credits_Used: '',
+            PoS_Completed_Credits: "0", // need to tweak once we are storing course histories
+            PoS_Planned_Credits: '',
             Pathway_Num_Requirements_Met: '',
             Pathway_Num_Requirements_Total: '',
             Pathway_Requirements_All_Met: '',
             Pathway_Required_Credits_Total: '',
-            Pathway_Required_Credits_Remaining: ''
+            Pathway_Required_Credits_Remaining: '',
+            Pathway_Credit_Discrepancy: 'FALSE',
+            Pathway_Completed_Credits_Used: '',
+            Pathway_Planned_Credits_Used: '',
+            Pathway_Completed_Credits: "0", // need to tweak once we are storing course histories
+            Pathway_Planned_Credits: ''
         };
         const namespace = new Namespace(plan.scope.replace('namespace.', ''));
         let planTotalCreditsRequired = 0;
@@ -117,8 +140,11 @@ export class PlanExportProcessor extends BaseProcessor {
                 let foundAnnoCreds = false;
                 if (stmt.with) {
                     for (const withItem of stmt.with) {
-                        if (withItem.name === 'credits') {
-                            creditsTotal += withItem.value as number;
+                        if (withItem.name === 'credits' && withItem.value) {
+                            const credits = parseFloat(withItem.value.toString());
+                            if (credits) {
+                                creditsTotal += credits;
+                            }
                             foundAnnoCreds = true;
                             break;
                         }
@@ -132,6 +158,15 @@ export class PlanExportProcessor extends BaseProcessor {
             const progId = program.guid!;
             const clusterId = program.annotations.getValue('clusterId');
             const published = program.annotations.getValue('published');
+            const plannedCredits = rawAudit.program.auditResult.usedRecords
+                .filter((rec) => !gradedRecIds[rec.studentRecordId])
+                .map((rec) => rec.creditsUsed)
+                .reduce((credA, credB) => credA + credB, 0);
+            const completedCredits = rawAudit.program.auditResult.usedRecords
+                .filter((rec) => gradedRecIds[rec.studentRecordId])
+                .map((rec) => rec.creditsUsed)
+                .reduce((credA, credB) => credA + credB, 0);
+
             if (clusterId) {
                 const clusterProgram = await this.findProgram(namespace, clusterId as string);
                 progNames.Cluster_Name = (clusterProgram.annotations.getValue('name') || '').toString();
@@ -144,6 +179,10 @@ export class PlanExportProcessor extends BaseProcessor {
                 progNames.Pathway_Required_Credits_Remaining = audit.progress.creditsRemaining.toString();
                 progNames.Pathway_Required_Credits_Total = creditsTotal.toString();
                 progNames.Pathway_Requirements_All_Met = this.booleanToString(statements.length === statementsMet);
+                progNames.Pathway_Completed_Credits_Used = rawAudit.progress.credits.creditsGradedUsed.toString();
+                progNames.Pathway_Completed_Credits = completedCredits.toString();
+                progNames.Pathway_Planned_Credits_Used = rawAudit.progress.credits.creditsPlannedUsed.toString();
+                progNames.Pathway_Planned_Credits = plannedCredits.toString();
             } else {
                 progNames.Plan_Of_Study_Name = progName;
                 progNames.Plan_Of_Study_ID = progId;
@@ -153,6 +192,10 @@ export class PlanExportProcessor extends BaseProcessor {
                 progNames.PoS_Required_Credits_Remaining = audit.progress.creditsRemaining.toString();
                 progNames.PoS_Required_Credits_Total = creditsTotal.toString();
                 progNames.PoS_Requirements_All_Met = this.booleanToString(statements.length === statementsMet);
+                progNames.PoS_Completed_Credits_Used = rawAudit.progress.credits.creditsGradedUsed.toString();
+                progNames.PoS_Completed_Credits = completedCredits.toString();
+                progNames.PoS_Planned_Credits_Used = rawAudit.progress.credits.creditsPlannedUsed.toString();
+                progNames.PoS_Planned_Credits = plannedCredits.toString();
             }
         }
 

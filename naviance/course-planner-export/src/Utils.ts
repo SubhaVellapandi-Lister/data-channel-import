@@ -16,9 +16,10 @@ export function initServices(parameters: object) {
         };
     }
     PlanningEngine.init(config);
-    config.product = 'naviance';
-    config.url = parameters['rulesRepoUrl'];
-    RulesRepository.init(config);
+    const repoConfig = Object.assign({}, config);
+    repoConfig.product = 'naviance';
+    repoConfig.url = parameters['rulesRepoUrl'];
+    RulesRepository.init(repoConfig);
 }
 
 export async function getJWT(): Promise<string> {
