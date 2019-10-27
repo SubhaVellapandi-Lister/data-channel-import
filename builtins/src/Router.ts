@@ -3,7 +3,7 @@ import HelloWorld from "./processors/HelloWorld";
 import Translate from "./processors/Translate";
 
 export default class BuiltInRouter {
-    static async handleJobEvent(event: any) {
+    static async handleJobEvent(event: any, context: any) {
         const job = Job.fromConfig(event.Job);
         await job.init();
         const step = job.channelStepDetails(job.currentStep!);
@@ -24,6 +24,6 @@ export default class BuiltInRouter {
             }
         }
 
-        await processor!.handle(event.TaskToken);
+        await processor!.handle(context.awsRequestId , event.TaskToken);
     }
 }
