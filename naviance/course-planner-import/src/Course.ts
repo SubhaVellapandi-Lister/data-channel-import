@@ -20,78 +20,11 @@ import { getCombinedSubjectArea, getMigratedSubjectArea, ISubjectAreaLoad, loadE
     parseSubjectAreaRow, saveSubjectAreas } from "./SubjectAreas";
 import { getRowVal, initRulesRepo, prereqCourseStatement } from "./Utils";
 
-export interface ITranslateConfig {
-    headers: string[];
-    mapping: {
-        [name: string]: string;
-    };
-}
-
-export class CourseImportProcessor extends BaseProcessor {
-    private apBatchSize = 30;
-    private apBatch: IRowData[] = [];
-    private batchCount = 0;
-    private duplicatesSkipped = 0;
-    private coursesPushed = 0;
-    private namespace = '';
-    private seenCourseIds: { [key: string]: string } = {};
-    private schoolsByCourse: { [key: string]: string[] } = {};
-    private navianceSchoolByLocalId: { [key: string]: string } = {};
-    private subjectAreasLoaded: ISubjectAreaLoad = { subjectAreaMapping: {}};
-    private subjectsCreated: number = 0;
-    private singleHighschoolId = '';
-
-    public async validate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
-        // things to validate for
-        // 1.  course ID contains spaces (just a warning and remove spaces?)
-        // 2.  subject area not found
-        // 3.  Invalid column type / value
-        // 4.  course ID same as state ID (can be ok for some tenants)
-        // 5.  subject area too short (just a warning)
-
-        return {
-            outputs: {
-                [`${input.name}Validated`]:
-                    input.index === 1 ? input.raw.concat(['IS_VALID']) : input.raw.concat(['valid'])
-            }
-        };
-    }
-
-    public async before_createSubjects(input: IStepBeforeInput) {
-        initRulesRepo(input.parameters!);
-        this.namespace = input.parameters!['namespace'];
-        this.subjectAreasLoaded = await loadExistingSubjectAreas(this.namespace);
-    }
-
-    public async createSubjects(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
-        if (input.index === 1) {
-            // skip header
-            return { outputs: {}};
-        }
-        const subMap = this.subjectAreasLoaded.subjectAreaMapping;
-
-        const created = parseSubjectAreaRow(input.data, subMap);
-        if (created) {
-            this.subjectsCreated += 1;
-        }
-
-        return {
-            outputs: {}
-        };
-    }
-
-    public async after_createSubjects(input: IStepBeforeInput): Promise<IStepAfterOutput> {
-        const createdAnnotationType = saveSubjectAreas(this.namespace, this.subjectAreasLoaded);
-
-        return {
-            results: {
-                createdAnnotationType,
-                subjectAreasAdded: this.subjectsCreated
-            }
-        };
-    }
-
-    private courseFromRowData(rowData: IRowData): Course {
+export class CourseImport {
+    public static courseFromRowData(
+        rowData: IRowData, singleHighschoolId: string,
+        subjectAreasLoaded: ISubjectAreaLoad, schoolsByCourse: { [key: string]: string[] }
+    ): Course {
         const courseId = getRowVal(rowData, 'Course_ID') || getRowVal(rowData, 'Course_Code') || '';
         const courseName = getRowVal(rowData, 'Course_Name') || getRowVal(rowData, 'Course_Title') || '';
         const stateId = getRowVal(rowData, 'State_ID') || getRowVal(rowData, 'State_Category_Code') || '';
@@ -103,13 +36,13 @@ export class CourseImportProcessor extends BaseProcessor {
              'ACTIVE' : 'INACTIVE';
         const isCte = getRowVal(rowData, 'CTE') === 'Y' ? 1 : 0;
         const isTechPrep = 0;
-        const schoolsList = this.schoolsByCourse[courseId] || [];
-        if (!schoolsList.length && this.singleHighschoolId) {
-            schoolsList.push(this.singleHighschoolId);
+        const schoolsList = schoolsByCourse[courseId] || [];
+        if (!schoolsList.length && singleHighschoolId) {
+            schoolsList.push(singleHighschoolId);
         }
         const rowSub = getRowVal(rowData, 'Subject_Area') || getRowVal(rowData, 'SUBJECT_AREA_1') || '';
         const combinedSubjectArea = getCombinedSubjectArea(
-            rowSub, getRowVal(rowData, 'SCED_Subject_Area') || '', this.subjectAreasLoaded, stateId
+            rowSub, getRowVal(rowData, 'SCED_Subject_Area') || '', subjectAreasLoaded, stateId
         );
         const grades: number[] = [];
         for (const g of [6, 7, 8, 9, 10, 11, 12]) {
@@ -198,7 +131,7 @@ export class CourseImportProcessor extends BaseProcessor {
         return course;
     }
 
-    private courseFromJSON(rowData: IRowData): Course | null {
+    public static courseFromJSON(rowData: IRowData): Course | null {
         const cObj = JSON.parse(rowData['JSON_OBJECT']);
 
         const instructLev = cObj['instructionalLevel'] || 'Untracked';
@@ -243,91 +176,5 @@ export class CourseImportProcessor extends BaseProcessor {
             cObj['name'],
             new Annotations(annoItems)
         );
-    }
-
-    private async processBatch(): Promise<void> {
-        this.batchCount += 1;
-        const b = new Batch({namespace: new Namespace(this.namespace)});
-        const courses: Course[] = [];
-        for (const rowData of this.apBatch) {
-            const course = rowData['JSON_OBJECT'] ?
-                this.courseFromJSON(rowData) : this.courseFromRowData(rowData);
-
-            if (!course) {
-                continue;
-            }
-
-            if (this.seenCourseIds[course.name]) {
-                this.duplicatesSkipped += 1;
-                console.log('DUPLICATE', course.name);
-                continue;
-            }
-            this.seenCourseIds[course.name] = course.name;
-            courses.push(course);
-            this.coursesPushed += 1;
-        }
-        b.addItems(courses);
-        console.log('COURSES', courses.length);
-        await b.createOrUpdate();
-        this.apBatch = [];
-    }
-
-    public async before_batchToAp(input: IStepBeforeInput) {
-        initRulesRepo(input.parameters!);
-        this.namespace = input.parameters!['namespace'];
-
-        if (input.parameters!['singleHighschoolId']) {
-            this.singleHighschoolId = input.parameters!['singleHighschoolId'];
-        }
-
-        this.subjectAreasLoaded = await loadExistingSubjectAreas(this.namespace);
-    }
-
-    public async batchToAp(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
-        if (input.data['IS_VALID'] === 'valid') {
-            if (input.name === 'mappingValidated') {
-                const localId = getRowVal(input.data, 'School_ID') || '';
-                const schoolId =
-                    this.navianceSchoolByLocalId[localId] ||
-                    this.navianceSchoolByLocalId['0' + localId] ||
-                    localId;
-
-                const courseId = getRowVal(input.data, 'Course_ID') || getRowVal(input.data, 'Course_Code') || '';
-                // console.log(`${courseId} ${schoolId}`);
-                if (!this.schoolsByCourse[courseId]) {
-                    this.schoolsByCourse[courseId] = [];
-                }
-                if (!this.schoolsByCourse[courseId].includes(schoolId)) {
-                    this.schoolsByCourse[courseId].push(schoolId);
-                }
-            } else if (input.name === 'schoolsValidated') {
-                const locSchoolId = getRowVal(input.data, 'Local_School_ID') || '';
-                const navSchoolId = getRowVal(input.data, 'Naviance_School_ID') || '';
-                this.navianceSchoolByLocalId[locSchoolId] = navSchoolId;
-            } else {
-                this.apBatch.push(input.data);
-            }
-        }
-        if (this.apBatch.length === this.apBatchSize) {
-            await this.processBatch();
-        }
-
-        return {
-            index: input.index,
-            outputs: {}
-        };
-    }
-
-    public async after_batchToAp(input: IStepBeforeInput): Promise<IStepAfterOutput> {
-        console.log('AFTER', this.apBatch.length);
-        if (this.apBatch.length > 0) {
-            await this.processBatch();
-        }
-
-        return { results: {
-            batchCount: this.batchCount,
-            duplicatesSkipped: this.duplicatesSkipped,
-            coursesPushed: this.coursesPushed
-        }};
     }
 }
