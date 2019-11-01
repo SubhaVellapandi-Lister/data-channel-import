@@ -14,7 +14,11 @@
     "compile:watch": "tsc --watch --noEmit",
     "test": "npm run lint && npm run compile:once && npm run test:cov",
     "test:cov": "jest --coverage --no-cache --runInBand",
-    "test:nocov": "jest --no-cache --runInBand"
+    "test:nocov": "jest --no-cache --runInBand",
+    "pack": "npm-pack-zip",
+    "sam-package-prod": "sam package --template-file sam-template-prod.yml --output-template sam-packaged-prod.yml --s3-bucket data-channels-processor-deployments-dev",
+    "sam-deploy-prod": "sam deploy --template-file ./sam-packaged-prod.yml --stack-name cf-naviance-dc-ap-import-prod --capabilities CAPABILITY_IAM --region us-east-1",
+    "deploy-prod": "npm run build && npm run pack && npm run sam-package-prod && npm run sam-deploy-prod && rm course-planner-import.zip"
   },
   "repository": {
     "type": "git",
@@ -30,23 +34,32 @@
     "@types/aws-lambda": "8.10.31",
     "@types/jest": "24.0.11",
     "@types/lodash": "4.14.117",
-    "@types/node": "10.12.14",
+    "@types/node": "10.14.17",
     "aws-sdk": "^2.492.0",
     "jest": "24.4.0",
     "mkdirp": "0.5.1",
+    "npm-pack-zip": "^1.2.7",
     "shx": "0.3.2",
     "ts-jest": "24.0.0",
     "ts-node": "8.0.2",
     "tslint": "5.11.0",
-    "typescript": "3.3.1"
+    "typescript": "3.6.3"
   },
   "dependencies": {
-    "@academic-planner/apSDK": "1.4.0",
-    "@data-channels/dcSDK": "0.5.0-beta.14",
+    "@academic-planner/apSDK": "1.6.0",
+    "@data-channels/dcSDK": "0.5.3",
     "lodash": "4.17.15",
     "request": "^2.88.0",
     "uuid": "^3.3.3"
   },
+  "bundleDependencies": [
+    "@data-channels/dcSDK",
+    "@academic-planner/apSDK",
+    "request-promise-native",
+    "lodash",
+    "request",
+    "uuid"
+  ],
   "jest": {
     "collectCoverageFrom": [
       "src/**/*.ts",

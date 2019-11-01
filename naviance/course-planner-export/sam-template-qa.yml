@@ -34,5 +34,12 @@ Resources:
           AUTH0_AUDIENCE: !Ref Auth0Audience
           AUTH0_CLIENTID: !Ref Auth0ClientId
           AUTH0_CLIENTSECRET: !Ref Auth0ClientSecret
+      Policies:
+      - Statement:
+        - Sid: SSMGetParameterPolicy
+          Effect: Allow
+          Action:
+          - ssm:GetParameter
+          Resource: arn:aws:ssm:*:*:parameter/academic-planner/*
 
 

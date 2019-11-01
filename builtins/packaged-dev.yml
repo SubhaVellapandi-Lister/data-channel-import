@@ -5,8 +5,15 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-dev/0cb7ab0ae48db478e130d1a8acfecd61
+      CodeUri: s3://data-channels-processor-deployments-dev/df8dd5b91093568210bfbee83933a334
       FunctionName: data-channels-BuiltInProcessor
       Handler: dist/index.BuiltInHandler
       Timeout: 300
       Runtime: nodejs10.x
+      Policies:
+      - Statement:
+        - Sid: SSMGetParameterPolicy
+          Effect: Allow
+          Action:
+          - ssm:GetParameter
+          Resource: arn:aws:ssm:*:*:parameter/data-channels/hello-*

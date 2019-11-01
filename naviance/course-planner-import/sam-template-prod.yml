@@ -1,15 +1,16 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Data-Channels Builtins Lambda
+Description: Naviance academic-planner export lambda
 Transform: AWS::Serverless-2016-10-31
 
 Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: "./"
-      FunctionName: data-channels-BuiltInProcessor
-      Handler: dist/index.BuiltInHandler
-      Timeout: 300
+      CodeUri: "./course-planner-import.zip"
+      FunctionName: cf-naviance-dc-ap-import-prod
+      Handler: dist/index.lambdaHandler
+      Timeout: 900
+      MemorySize: 2048
       Runtime: nodejs10.x
       Policies:
       - Statement:
@@ -17,4 +18,4 @@ Resources:
           Effect: Allow
           Action:
           - ssm:GetParameter
-          Resource: 'arn:aws:ssm:*:*:parameter/data-channels/hello-*'
+          Resource: arn:aws:ssm:*:*:parameter/academic-planner-prod/*

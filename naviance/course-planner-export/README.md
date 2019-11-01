@@ -27,7 +27,7 @@ Student Plan Export Data Dictionary
 * Requirements_All_Met - *(Boolean)* Boolean true/false whether or not all requirements have been met by this plan
 * Required_Credits_Total - *(Decimal)* Sum of all credits required for all requirements in PoS and Pathway
 * Required_Credits_Remaining - *(Decimal)* Sum of credits still remaining for all requirements that have not been met by the completed or planned courses.
-* Credit_Discrepancy - *(Boolean)* Boolean true/false flag if student plan currently has credit discrepancy due to completed course credits being lower than what was planned.
+* Credit_Deficiency - *(Boolean)* Boolean true/false flag if student plan currently has credit deficiency due to completed course credits being lower than what was planned.
 * Completed_Credits - *(Decimal)* Sum of all credits that a student has already completed based on their course history
 * Completed_Credits_Used - *(Decimal)* Sum of all credits that a student has already completed and were used to meet requirements
 * Planned_Credits - *(Decimal)* Sum of all credits that a student is still planning on taking
@@ -37,7 +37,7 @@ Student Plan Export Data Dictionary
 * PoS_Requirements_All_Met - *(Boolean)* PoS specific boolean true/false whether or not all requirements have been met by this plan
 * PoS_Required_Credits_Total - *(Decimal)* PoS specific sum of all credits required for all requirements
 * PoS_Required_Credits_Remaining - *(Decimal)* PoS specific sum of credits still remaining for all requirements
-* PoS_Credit_Discrepancy - *(Boolean)* Boolean true/false flag if PoS currently has credit discrepancy due to completed course credits being lower than what was planned.
+* PoS_Credit_Deficiency - *(Boolean)* Boolean true/false flag if PoS currently has credit deficiency due to completed course credits being lower than what was planned.
 * PoS_Completed_Credits - *(Decimal)* Sum of all credits that a student has already completed based on their course history and used by or associated with PoS
 * PoS_Completed_Credits_Used - *(Decimal)* Sum of all credits that a student has already completed and were used to meet requirements in PoS
 * PoS_Planned_Credits - *(Decimal)* Sum of all planned credits that are associated to PoS
@@ -47,7 +47,7 @@ Student Plan Export Data Dictionary
 * Pathway_Requirements_All_Met - *(Integer)* Pathway specific boolean true/false whether or not all requirements have been met by this plan
 * Pathway_Required_Credits_Total - *(Decimal)* Pathway specific sum of all credits required for all requirements
 * Pathway_Required_Credits_Remaining - *(Decimal)* Pathway specific sum of credits still remaining for all requirements
-* Pathway_Credit_Discrepancy - *(Boolean)* Boolean true/false flag if PoS currently has credit discrepancy due to completed course credits being lower than what was planned.
+* Pathway_Credit_Deficiency - *(Boolean)* Boolean true/false flag if PoS currently has credit deficiency due to completed course credits being lower than what was planned.
 * Pathway_Completed_Credits - *(Decimal)* Sum of all credits that a student has already completed based on their course history and used by or associated with PoS
 * Pathway_Completed_Credits_Used - *(Decimal)* Sum of all credits that a student has already completed and were used to meet requirements in PoS
 * Pathway_Planned_Credits - *(Decimal)* Sum of all planned credits that are associated to PoS

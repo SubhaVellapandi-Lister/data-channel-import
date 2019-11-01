@@ -5,11 +5,20 @@ import {
 import { IRowData } from "@data-channels/dcSDK";
 
 export function initRulesRepo(params: object) {
-    RulesRepository.init({
+    const config: any = {
         url: params['rulesRepoUrl'],
-        jwt: params['rulesRepoJWT'],
+        jwt: params['JWT'] || '',
         product: params['rulesRepoProduct']
-    });
+    };
+    if (params['auth0ClientId']) {
+        config.auth0 = {
+            clientId: params['auth0ClientId'],
+            clientSecret: params['auth0ClientSecret'],
+            domain: params['auth0Domain'],
+            audience: params['auth0Audience']
+        };
+    }
+    RulesRepository.init(config);
 }
 
 export function prereqCourseStatement(preqString: string): CourseStatement | null {
