@@ -42,6 +42,13 @@ export function prereqCourseStatement(preqString: string): CourseStatement | nul
     }
 }
 
+export function prereqCourseStatementFromJson(preqList: string[][]): CourseStatement | null {
+    const preqString =
+        preqList.map((andList) => andList.length > 1 ? `(${andList.join(' and ')})` : andList[0]).join(' or ');
+
+    return prereqCourseStatement(preqString);
+}
+
 export function getRowVal(rowData: IRowData, colName: string) {
     const val = rowData[colName] || rowData[colName.toUpperCase()];
     if (val === 'NULL') {

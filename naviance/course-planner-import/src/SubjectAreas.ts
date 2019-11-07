@@ -124,6 +124,76 @@ export function parseSubjectAreaRow(data: IRowData, subMap: { [key: string]: ISu
     return created;
 }
 
+export async function saveDefaultAnnotationTypes(namespace: string) {
+    const annoTypeData = {
+        ACADEMIC_YEAR: {
+            display: 'Academic Year',
+            description: 'Type used to describe academic year (2018-2019)',
+            value: [/^[0-9]{4}-[0-9]{4}$/]
+        },
+        BOOLEAN: {
+            display: 'Boolean',
+            description: 'Default type used for boolean properties',
+            value: [/[0-1]/]
+        },
+        COURSE_STATUS: {
+            display: 'Course status',
+            description: 'Type used to describe valid status for courses',
+            value: [/ACTIVE/, /INACTIVE/]
+        },
+        DECIMAL: {
+            display: 'Decimal',
+            description: 'Default type used for decimal properties',
+            value: [/^\d*\.?\d*$/]
+        },
+        INTEGER: {
+            display: 'Integer',
+            description: 'Default type used for integer properties',
+            value: [/^\d+$/]
+        },
+        LIST_ACADEMIC_YEAR: {
+            display: 'List of Academic Years',
+            description: 'Type used to describe a list of academic years',
+            value: [/^([0-9]{4}-[0-9]{4})(,[0-9]{4}-[0-9]{4})*$/]
+        },
+        LIST_INTEGER: {
+            display: 'List of Integers',
+            description: 'Default type used for list of integer properties',
+            value: [/^[\d[,\d]*]*$/]
+        },
+        LIST_STRING: {
+            display: 'List of Strings',
+            description: 'Default type used for list of strings properties',
+            value: [/^.*$/]
+        },
+        STRING: {
+            display: 'String',
+            description: 'Default type used for string properties',
+            value: [/^.*$/]
+        }
+    };
+
+    const existingPager = AnnotationType.find(new Namespace(namespace));
+    const existing = await existingPager.all();
+    const existingNames = existing.map((anno) => anno.name);
+
+    for (const annoName of Object.keys(annoTypeData)) {
+        if (existingNames.includes(annoName)) {
+            continue;
+        }
+        const details = annoTypeData[annoName];
+        const newAnno = new AnnotationType(
+            annoName,
+            details['display'],
+            Annotations.simple({
+                description: details['description']
+            }),
+            details['value']
+        );
+        await newAnno.save(new Namespace(namespace), 'import');
+    }
+}
+
 export async function saveSubjectAreas(namespace: string, subLoad: ISubjectAreaLoad): Promise<boolean> {
     const subjectAreaValues: string[] = [];
 

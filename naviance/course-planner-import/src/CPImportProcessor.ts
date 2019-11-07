@@ -17,7 +17,7 @@ import uuidv5 from "uuid/v5";
 import { CourseImport } from "./Course";
 import { PoSImport } from "./PoS";
 import { ISubjectAreaLoad, loadExistingSubjectAreas,
-    parseSubjectAreaRow, saveSubjectAreas } from "./SubjectAreas";
+    parseSubjectAreaRow, saveDefaultAnnotationTypes, saveSubjectAreas } from "./SubjectAreas";
 import { getRowVal, initRulesRepo } from "./Utils";
 
 export class CPImportProcessor extends BaseProcessor {
@@ -80,7 +80,8 @@ export class CPImportProcessor extends BaseProcessor {
     }
 
     public async after_createSubjects(input: IStepBeforeInput): Promise<IStepAfterOutput> {
-        const createdAnnotationType = saveSubjectAreas(this.namespace, this.subjectAreasLoaded);
+        await saveDefaultAnnotationTypes(this.namespace);
+        const createdAnnotationType = await saveSubjectAreas(this.namespace, this.subjectAreasLoaded);
 
         return {
             results: {
@@ -94,8 +95,8 @@ export class CPImportProcessor extends BaseProcessor {
         initRulesRepo(input.parameters!);
         this.namespace = input.parameters!['namespace'];
 
-        if (input.parameters!['singleHighschoolId']) {
-            this.singleHighschoolId = input.parameters!['singleHighschoolId'];
+        if (input.parameters!['tenantType'] === 'highschool') {
+            this.singleHighschoolId = this.namespace;
         }
         this.apBatchSize = input.parameters!['batchSize'] || this.apBatchSize;
 
@@ -194,17 +195,25 @@ export class CPImportProcessor extends BaseProcessor {
 
         const programId = uuidv5(cObj['name'], this.uuidSeed);
 
+        if (input.parameters!['tenantType'] === 'highschool') {
+            this.singleHighschoolId = this.namespace;
+        }
+
         console.log('STARTING', programId);
 
         const existing = await Program.findOne({ namespace: new Namespace(this.namespace), itemName: programId});
-        const annoItems = PoSImport.annotations(cObj);
+        const annoItems = PoSImport.annotations(cObj, this.singleHighschoolId);
         const statements = PoSImport.requirements(cObj, this.uuidSeed);
 
         let program: Program;
         let status = 'UPDATED';
         if (existing) {
             existing.annotations = new Annotations(annoItems);
-            existing.statements = statements;
+            if (!input.parameters!['metadataOnly']) {
+                existing.statements = statements;
+            } else {
+                console.log('Updating metadata only');
+            }
             program = existing;
             this.updatedCount += 1;
             console.log(`Updating ${programId} - ${existing.display}`);

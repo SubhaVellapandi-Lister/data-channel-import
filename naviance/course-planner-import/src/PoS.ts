@@ -28,7 +28,7 @@ export class PoSImport {
     private namespace = '';
     private uuidSeed = 'ec3d4a8c-f8ac-47d3-bb77-abcadea819d9';
 
-    public static annotations(cObj: any): IAnnotationItems {
+    public static annotations(cObj: any, singleHighSchoolId: string): IAnnotationItems {
         let classYears = cObj['eligibleClasses'];
         if (!classYears || !classYears.length) {
             classYears = [2019, 2020];
@@ -36,6 +36,11 @@ export class PoSImport {
         classYears.sort();
 
         const published = cObj['published'] ? 1 : 0;
+        const publishedSchools = cObj['publishedSchools'] || [];
+
+        if (!publishedSchools.length && singleHighSchoolId && published) {
+            publishedSchools.push(singleHighSchoolId);
+        }
 
         const description = cObj['description'].replace(/\n/g, ' ').replace(/\r/g, '');
 
@@ -51,9 +56,9 @@ export class PoSImport {
             classYearTo: { value: classYears.slice(-1)[0], type: 'DECIMAL', operator: AnnotationOperator.EQUALS },
             description: { value: description, type: 'STRING', operator: AnnotationOperator.EQUALS },
             descriptionPlainText: { value: description, type: 'STRING', operator: AnnotationOperator.EQUALS },
-            activeSchools: { value: [], type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
-            checkedSchools: { value: [], type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
-            publishedSchools: { value: [], type: 'LIST_STRING', operator: AnnotationOperator.EQUALS }
+            activeSchools: { value: publishedSchools, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
+            checkedSchools: { value: publishedSchools, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
+            publishedSchools: { value: publishedSchools, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS }
         };
     }
 
@@ -69,7 +74,7 @@ export class PoSImport {
                 id: reqId,
                 name: reqDetails['name'],
                 description: reqDetails['description'].replace(/\n/g, ' ').replace(/\r/g, ''),
-                credits: reqDetails['maximumCredits']
+                credits: reqDetails['maximumCredits'] || 0
             });
             const rules: ListExpression[] = [];
 

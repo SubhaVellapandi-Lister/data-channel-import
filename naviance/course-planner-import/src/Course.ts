@@ -18,7 +18,7 @@ import {
 import { instructionalLevelMap } from "./Contants";
 import { getCombinedSubjectArea, getMigratedSubjectArea, ISubjectAreaLoad, loadExistingSubjectAreas,
     parseSubjectAreaRow, saveSubjectAreas } from "./SubjectAreas";
-import { getRowVal, initRulesRepo, prereqCourseStatement } from "./Utils";
+import { getRowVal, prereqCourseStatement, prereqCourseStatementFromJson } from "./Utils";
 
 export class CourseImport {
     public static courseFromRowData(
@@ -171,10 +171,28 @@ export class CourseImport {
 
         const strippedCourseId = courseId.replace(/\s/g, '').split('(')[0];
 
+        const statements: CourseStatement[] = [];
+
+        if (cObj['coursePrerequisites']) {
+            const cs = prereqCourseStatementFromJson(cObj['coursePrerequisites']);
+            if (cs) {
+                statements.push(cs);
+            }
+        }
+
+        if (cObj['courseCorequisites']) {
+            const cs = prereqCourseStatementFromJson(cObj['courseCorequisites']);
+            if (cs) {
+                cs.annotations = Annotations.simple({coreq: true});
+                statements.push(cs);
+            }
+        }
+
         return new Course(
             strippedCourseId,
             cObj['name'],
-            new Annotations(annoItems)
+            new Annotations(annoItems),
+            statements
         );
     }
 }
