@@ -265,17 +265,18 @@ export class PlanExportProcessor extends BaseProcessor {
 
                 const planVersion = planSet.full.latestVersion();
                 const audit = planSet.full.latestAudit;
-                let planName = '';
-                let planStatus = '';
-                let isActive = '';
+                const meta = planSet.full.meta || {};
+                let planName =  meta['name'] || '';
+                let planStatus = meta['status'] || '';
+                let isActive = meta['isActive'] || '';
                 for (const ctx of planVersion.contexts) {
-                    if (ctx.product['name']) {
+                    if (!planName && ctx.product['name']) {
                         planName = ctx.product['name'];
                     }
-                    if (ctx.product['status']) {
+                    if (!planStatus && ctx.product['status']) {
                         planStatus = ctx.product['status'];
                     }
-                    if (ctx.product['isActive']) {
+                    if (isActive === '' && ctx.product['isActive']) {
                         isActive = ctx.product['isActive'].toString();
                     }
                 }

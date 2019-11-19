@@ -1,6 +1,7 @@
 import { BaseProcessor, Job } from "@data-channels/dcSDK";
 import HelloWorld from "./processors/HelloWorld";
 import Translate from "./processors/Translate";
+import Validate from "./processors/Validate";
 
 export default class BuiltInRouter {
     static async handleJobEvent(event: any) {
@@ -12,6 +13,10 @@ export default class BuiltInRouter {
         switch (step!.method) {
             case 'translate': {
                 processor = new Translate(job);
+                break;
+            }
+            case 'validate': {
+                processor = new Validate(job);
                 break;
             }
             case 'hello':

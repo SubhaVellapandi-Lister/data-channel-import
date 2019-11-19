@@ -18,7 +18,7 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-dev/fbaa90ed96632d522334117809f3da91
+      CodeUri: s3://data-channels-processor-deployments-dev/3c35835dc2235ff91affc1ce2f227a8c
       FunctionName: cf-naviance-dc-ap-export-qa
       Handler: dist/index.exportHandler
       Timeout: 900
@@ -38,3 +38,10 @@ Resources:
             Ref: Auth0ClientId
           AUTH0_CLIENTSECRET:
             Ref: Auth0ClientSecret
+      Policies:
+      - Statement:
+        - Sid: SSMGetParameterPolicy
+          Effect: Allow
+          Action:
+          - ssm:GetParameter
+          Resource: arn:aws:ssm:*:*:parameter/academic-planner/*

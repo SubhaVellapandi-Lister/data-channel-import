@@ -3,6 +3,7 @@ import {
     Batch,
     Course,
     Namespace,
+    PlanContext,
     Program
 } from "@academic-planner/apSDK";
 import {
@@ -39,6 +40,8 @@ export class CPImportProcessor extends BaseProcessor {
     private subjectAreasLoaded: ISubjectAreaLoad = { subjectAreaMapping: {}};
     private subjectsCreated: number = 0;
     private singleHighschoolId = '';
+    private historyStudentId = '';
+    private historyForStudent: object[] = [];
 
     public async validate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
         // things to validate for
@@ -241,6 +244,43 @@ export class CPImportProcessor extends BaseProcessor {
     }
 
     public async after_importPoS(input: IStepBeforeInput): Promise<IStepAfterOutput> {
+        return { results: {
+            createdCount: this.createdCount,
+            updatedCount: this.updatedCount
+        }};
+    }
+
+    public async importHistories(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
+        if (input.index === 1) {
+            return { outputs: {} };
+        }
+
+        const rowData = input.data;
+        const cObj = JSON.parse(rowData['JSON_OBJECT']);
+        const studentId = cObj['studentId'].toString();
+        if (this.historyStudentId !== studentId && this.historyForStudent.length) {
+            const result = await PlanContext.createOrUpdateStudentRecords(
+                this.historyStudentId,
+                'migration',
+                this.namespace,
+                {},
+                this.historyForStudent.map((rec) => ({
+                    number: rec['courseId'],
+                    unique: rec['courseId'],
+                    credits: rec['earnedCredits']
+                }))
+            );
+        }
+
+        return { outputs: {} };
+    }
+
+    public async before_importHistories(input: IStepBeforeInput) {
+        initRulesRepo(input.parameters!);
+        this.namespace = `naviance.${input.parameters!['tenantId']}`;
+    }
+
+    public async after_importHistories(input: IStepBeforeInput): Promise<IStepAfterOutput> {
         return { results: {
             createdCount: this.createdCount,
             updatedCount: this.updatedCount

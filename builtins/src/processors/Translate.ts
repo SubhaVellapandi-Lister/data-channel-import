@@ -15,14 +15,14 @@ export default class Translate extends BaseProcessor {
     private originalHeaders: string[] = [];
 
     public async translate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
-        const config = input.parameters!['translationConfig'] as ITranslateConfig;
+        const config = input.parameters!['translateConfig'] as ITranslateConfig;
         if (input.index === 1) {
             this.originalHeaders = input.raw;
 
             return {
                 index: input.index,
                 outputs: {
-                    default: config.headers
+                    [`${input.name}Translated`]: config.headers
                 }
             };
         }
@@ -45,7 +45,7 @@ export default class Translate extends BaseProcessor {
         return {
             index: input.index,
             outputs: {
-                default: newRow
+                [`${input.name}Translated`]: newRow
             }
         };
     }

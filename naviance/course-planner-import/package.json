@@ -49,7 +49,7 @@
     "typescript": "3.6.3"
   },
   "dependencies": {
-    "@academic-planner/apSDK": "1.6.0",
+    "@academic-planner/apSDK": "1.7.0",
     "@data-channels/dcSDK": "0.5.3",
     "lodash": "4.17.15",
     "request": "^2.88.0",
