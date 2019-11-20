@@ -1,5 +1,5 @@
 {
-  "name": "course-planner-import",
+  "name": "course-planner-export",
   "version": "1.0.0",
   "description": "",
   "main": "index.ts",
@@ -18,7 +18,10 @@
     "pack": "npm-pack-zip",
     "sam-package-qa": "sam package --template-file sam-template-qa.yml --output-template sam-packaged-qa.yml --s3-bucket data-channels-processor-deployments-dev",
     "sam-deploy-qa": "sam deploy --template-file ./sam-packaged-qa.yml --stack-name cf-naviance-dc-ap-export-qa --capabilities CAPABILITY_IAM --region us-east-1",
-    "deploy-qa": "npm run build && npm run pack && npm run sam-package-qa && npm run sam-deploy-qa"
+    "deploy-qa": "npm run build && npm run pack && npm run sam-package-qa && npm run sam-deploy-qa",
+    "sam-package-navprod": "sam package --template-file sam-template-prod.yml --output-template sam-packaged-navprod.yml --s3-bucket data-channels-processor-deployments-navprod",
+    "sam-deploy-navprod": "sam deploy --template-file ./sam-packaged-navprod.yml --stack-name cf-naviance-dc-ap-export-prod --capabilities CAPABILITY_IAM --region us-east-1",
+    "deploy-navprod": "npm run build && npm run pack && npm run sam-package-navprod && npm run sam-deploy-navprod && rm course-planner-export.zip"
   },
   "repository": {
     "type": "git",
@@ -47,8 +50,8 @@
     "typescript": "3.6.3"
   },
   "dependencies": {
-    "@academic-planner/apSDK": "1.4.0",
-    "@data-channels/dcSDK": "0.5.0-beta.19",
+    "@academic-planner/apSDK": "1.7.0",
+    "@data-channels/dcSDK": "0.5.5",
     "lodash": "4.17.15",
     "request": "2.88.0",
     "request-promise-native": "1.0.7"

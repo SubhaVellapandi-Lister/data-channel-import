@@ -20,7 +20,7 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: "./course-planner-import.zip"
+      CodeUri: "./course-planner-export.zip"
       FunctionName: cf-naviance-dc-ap-export-qa
       Handler: dist/index.exportHandler
       Timeout: 900
@@ -34,5 +34,12 @@ Resources:
           AUTH0_AUDIENCE: !Ref Auth0Audience
           AUTH0_CLIENTID: !Ref Auth0ClientId
           AUTH0_CLIENTSECRET: !Ref Auth0ClientSecret
+      Policies:
+      - Statement:
+        - Sid: SSMGetParameterPolicy
+          Effect: Allow
+          Action:
+          - ssm:GetParameter
+          Resource: arn:aws:ssm:*:*:parameter/academic-planner/*
 
 

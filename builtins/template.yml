@@ -16,3 +16,10 @@ Resources:
             - Action: [ 'lambda:InvokeFunction' ]
               Effect: Allow
               Resource: 'arn:aws:lambda:us-east-1:578210663060:function:cdk-data-channels-core-st-cfdatachannelsloggrabber-2FGI0R0FZRSI'
+
+        - Statement:
+          - Sid: SSMGetParameterPolicy
+            Effect: Allow
+            Action:
+            - ssm:GetParameter
+            Resource: 'arn:aws:ssm:*:*:parameter/data-channels/hello-*'

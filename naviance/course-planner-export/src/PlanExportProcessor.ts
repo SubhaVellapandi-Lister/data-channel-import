@@ -39,7 +39,7 @@ export class PlanExportProcessor extends BaseProcessor {
         'Requirements_All_Met',
         'Required_Credits_Total',
         'Required_Credits_Remaining',
-        'Credit_Discrepancy',
+        'Credit_Deficiency',
         'Completed_Credits',
         'Completed_Credits_Used',
         'Planned_Credits',
@@ -49,7 +49,7 @@ export class PlanExportProcessor extends BaseProcessor {
         'PoS_Requirements_All_Met',
         'PoS_Required_Credits_Total',
         'PoS_Required_Credits_Remaining',
-        'PoS_Credit_Discrepancy',
+        'PoS_Credit_Deficiency',
         'PoS_Completed_Credits',
         'PoS_Completed_Credits_Used',
         'PoS_Planned_Credits',
@@ -59,7 +59,7 @@ export class PlanExportProcessor extends BaseProcessor {
         'Pathway_Requirements_All_Met',
         'Pathway_Required_Credits_Total',
         'Pathway_Required_Credits_Remaining',
-        'Pathway_Credit_Discrepancy',
+        'Pathway_Credit_Deficiency',
         'Pathway_Completed_Credits',
         'Pathway_Completed_Credits_Used',
         'Pathway_Planned_Credits',
@@ -105,7 +105,7 @@ export class PlanExportProcessor extends BaseProcessor {
             PoS_Requirements_All_Met: '',
             PoS_Required_Credits_Total: '',
             PoS_Required_Credits_Remaining: '',
-            PoS_Credit_Discrepancy: 'FALSE',
+            PoS_Credit_Deficiency: 'FALSE',
             PoS_Completed_Credits_Used: '',
             PoS_Planned_Credits_Used: '',
             PoS_Completed_Credits: "0", // need to tweak once we are storing course histories
@@ -115,7 +115,7 @@ export class PlanExportProcessor extends BaseProcessor {
             Pathway_Requirements_All_Met: '',
             Pathway_Required_Credits_Total: '',
             Pathway_Required_Credits_Remaining: '',
-            Pathway_Credit_Discrepancy: 'FALSE',
+            Pathway_Credit_Deficiency: 'FALSE',
             Pathway_Completed_Credits_Used: '',
             Pathway_Planned_Credits_Used: '',
             Pathway_Completed_Credits: "0", // need to tweak once we are storing course histories
@@ -265,17 +265,18 @@ export class PlanExportProcessor extends BaseProcessor {
 
                 const planVersion = planSet.full.latestVersion();
                 const audit = planSet.full.latestAudit;
-                let planName = '';
-                let planStatus = '';
-                let isActive = '';
+                const meta = planSet.full.meta || {};
+                let planName =  meta['name'] || '';
+                let planStatus = meta['status'] || '';
+                let isActive = meta['isActive'] || '';
                 for (const ctx of planVersion.contexts) {
-                    if (ctx.product['name']) {
+                    if (!planName && ctx.product['name']) {
                         planName = ctx.product['name'];
                     }
-                    if (ctx.product['status']) {
+                    if (!planStatus && ctx.product['status']) {
                         planStatus = ctx.product['status'];
                     }
-                    if (ctx.product['isActive']) {
+                    if (isActive === '' && ctx.product['isActive']) {
                         isActive = ctx.product['isActive'].toString();
                     }
                 }
@@ -294,7 +295,7 @@ export class PlanExportProcessor extends BaseProcessor {
                     Updated_Date: planVersion.created,
                     Status: planStatus,
                     Is_Active: isActive,
-                    Credit_Discrepancy: 'FALSE',
+                    Credit_Deficiency: 'FALSE',
                     Completed_Credits_Used: audit.progress.creditsCompleted.toString(),
                     Planned_Credits_Used: audit.progress.creditsInPlan.toString(),
                     Completed_Credits: "0", // need to tweak once we are storing course histories

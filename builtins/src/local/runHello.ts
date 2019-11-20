@@ -1,5 +1,6 @@
-import { ConfigType, jobWithInlineChannel } from "@data-channels/dcSDK";
+import { ConfigType, JobStatus, jobWithInlineChannel } from "@data-channels/dcSDK";
 import { fileUrlsForJobExecution } from "@data-channels/dcSDK/dist/utils/fileUrls";
+import { s3DownloadURL, s3UploadURL } from "@data-channels/dcSDK/dist/utils/s3";
 import HelloWorld from "../processors/HelloWorld";
 
 const helloJob = {
@@ -8,7 +9,7 @@ const helloJob = {
         bucket: 'data-channels-work-sandbox'
     },
     currentStep: 'hello',
-    filesIn: [
+    /* filesIn: [
         {
             name: "helloIn",
             s3: {
@@ -25,7 +26,7 @@ const helloJob = {
                 key: 'testing/helloOut.csv'
             }
         }
-    ],
+    ], */
     steps: {
         hello: {
             finished: false
@@ -34,13 +35,16 @@ const helloJob = {
 };
 
 const helloChannel = {
-    flow: ['hello', 'helloRow'],
+    flow: ['hello'], // , 'helloRow'],
     steps: {
         hello: {
             method: "hello",
             processor: "data-channels-BuiltInProcessor",
-            granularity: "once"
-        },
+            granularity: "once",
+            parameters: {
+                someSecret: "${SSM:/data-channels/hello-secret}"
+            }
+        }/*,
         helloRow: {
             inputs: [
                 "helloIn"
@@ -51,7 +55,7 @@ const helloChannel = {
             ],
             processor: "data-channels-BuiltInProcessor",
             granularity: "row"
-        }
+        } */
     },
 };
 
@@ -83,10 +87,10 @@ const helloChannel = {
 
     jobConfig.inlineChannel = amendedChannelConfig;
     jobConfig.currentStep = null;
-    job.workspace!.fileUrls = await fileUrlsForJobExecution(jobConfig);
-    console.log(job.workspace!.fileUrls);
+    // job.workspace!.fileUrls = await fileUrlsForJobExecution(jobConfig);
+    // console.log(job.workspace!.fileUrls);
     const hello = new HelloWorld(job);
-    await hello.handle('lambdaRequestIdTesting');
+    await hello.processAll();
     console.log(JSON.stringify(hello.job, undefined, 2));
 
 })();

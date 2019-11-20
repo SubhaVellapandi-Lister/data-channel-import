@@ -5,6 +5,7 @@ import { getJWT, initServices } from "./Utils";
 export class SchoolsProcessor extends BaseProcessor {
 
     public async findSchools(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
+        console.log(`findSchools`, input.parameters);
         initServices(input.parameters!);
         let schools: string[] = [];
         if (input.parameters!['schools']) {
@@ -22,6 +23,7 @@ export class SchoolsProcessor extends BaseProcessor {
 
     private async getSchools(rootUrl: string): Promise<string[]> {
         const schoolIds = [];
+        console.log('getting schools', rootUrl);
         const JWT = await getJWT();
         const body = await request(
             rootUrl + '/tree?root=naviance&depth=1', { headers: { Authorization: JWT }, json: true});
@@ -31,6 +33,7 @@ export class SchoolsProcessor extends BaseProcessor {
                 schoolIds.push(schoolId);
             }
         }
+        console.log('schoolIds', schoolIds);
 
         return schoolIds;
     }

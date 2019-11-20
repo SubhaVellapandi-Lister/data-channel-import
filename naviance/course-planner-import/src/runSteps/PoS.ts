@@ -1,6 +1,6 @@
 import { JobStatus, jobWithInlineChannel } from "@data-channels/dcSDK";
 import _ from "lodash";
-import { PosProcessor } from "../PosProcessor";
+import { CPImportProcessor } from "../CPImportProcessor";
 
 const normalJob = {
     guid: '1234567890-pos-import',
@@ -54,7 +54,7 @@ async function processJob(jobToRun: any, namespace: string, filesIn: any[]) {
 
     const jobObj = jobWithInlineChannel(mjob, channelConfig);
 
-    const processor = new PosProcessor(jobObj, { storeFilesLocal: true });
+    const processor = new CPImportProcessor(jobObj, { storeFilesLocal: true });
 
     console.log(JSON.stringify(processor.job, undefined, 2));
     await processor.processAll();

@@ -8,6 +8,7 @@ export async function exportHandler(event: any): Promise<any> {
     await job.init();
     const step = job.channelStepDetails(job.currentStep!);
 
+    console.log(`Starting step ${step!.method}`);
     let processor: BaseProcessor;
     switch (step!.method) {
         case 'findSchools': {

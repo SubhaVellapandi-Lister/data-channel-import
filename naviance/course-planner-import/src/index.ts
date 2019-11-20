@@ -1,18 +1,21 @@
-import { jobWithInlineChannel } from "@data-channels/dcSDK";
-import { CourseImportProcessor } from "./Processor";
+import { IJobConfig, Job } from '@data-channels/dcSDK';
+import { CPImportProcessor } from './CPImportProcessor';
 
-export async function courseImportHandler(event: any): Promise<any> {
-    const jobConf = event.Job;
-    const channelConfig = Object.assign({}, jobConf.channel);
-    jobConf.channel = {};
+interface IDataChannelsEvent {
+  Job: IJobConfig;
+  TaskToken: string;
+}
 
-    const job = jobWithInlineChannel(jobConf, channelConfig);
-    const processor = new CourseImportProcessor(job);
-    await processor.handle(event.TaskToken);
+export async function lambdaHandler(event: IDataChannelsEvent): Promise<{ status: string }> {
+  const job = Job.fromConfig(event.Job);
+  await job.init();
+  const processor = new CPImportProcessor(job);
+  await processor.handle(event.TaskToken);
+  console.log('job status', `${job.status} ${job.statusMessage}`);
 
-    const response = {
-        status: "Work Done"
-    };
+  const response = {
+    status: 'Work Done',
+  };
 
-    return response;
+  return response;
 }
