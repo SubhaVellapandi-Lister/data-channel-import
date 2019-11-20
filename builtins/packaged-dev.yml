@@ -10,3 +10,16 @@ Resources:
       Handler: dist/index.BuiltInHandler
       Timeout: 300
       Runtime: nodejs10.x
+      Statement: [
+      {
+        Effect: "Allow",
+        Action: [
+          "lambda:InvokeFunction"
+        ],
+        Resource: {
+          Fn::Sub: [
+            "arn:aws:lambda:us-east-1:578210663060:function:cdk-data-channels-core-st-cfdatachannelsloggrabber-2FGI0R0FZRSI"
+          ]
+        }
+      }
+      ]

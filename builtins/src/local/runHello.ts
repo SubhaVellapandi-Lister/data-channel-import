@@ -1,6 +1,5 @@
-import { ConfigType, JobStatus, jobWithInlineChannel } from "@data-channels/dcSDK";
+import { ConfigType, jobWithInlineChannel } from "@data-channels/dcSDK";
 import { fileUrlsForJobExecution } from "@data-channels/dcSDK/dist/utils/fileUrls";
-import { s3DownloadURL, s3UploadURL } from "@data-channels/dcSDK/dist/utils/s3";
 import HelloWorld from "../processors/HelloWorld";
 
 const helloJob = {
@@ -87,7 +86,7 @@ const helloChannel = {
     job.workspace!.fileUrls = await fileUrlsForJobExecution(jobConfig);
     console.log(job.workspace!.fileUrls);
     const hello = new HelloWorld(job);
-    await hello.handle();
+    await hello.handle('lambdaRequestIdTesting');
     console.log(JSON.stringify(hello.job, undefined, 2));
 
 })();
