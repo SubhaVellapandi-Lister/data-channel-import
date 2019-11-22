@@ -37,7 +37,7 @@
     "@types/jest": "24.0.11",
     "@types/lodash": "4.14.117",
     "@types/node": "10.14.17",
-    "aws-sdk": "^2.492.0",
+    "aws-sdk": "2.492.0",
     "jest": "24.4.0",
     "mkdirp": "0.5.1",
     "shx": "0.3.2",
@@ -47,7 +47,7 @@
     "typescript": "3.6.3"
   },
   "dependencies": {
-    "@data-channels/dcSDK": "0.5.6-dchan52-2",
+    "@data-channels/dcSDK": "0.5.8",
     "lodash": "4.17.15",
     "request": "2.88.0"
   },
