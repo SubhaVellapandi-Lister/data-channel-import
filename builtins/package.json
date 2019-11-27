@@ -47,7 +47,7 @@
     "typescript": "3.6.3"
   },
   "dependencies": {
-    "@data-channels/dcSDK": "0.5.8",
+    "@data-channels/dcSDK": "0.6.0",
     "lodash": "4.17.15",
     "request": "2.88.0"
   },
