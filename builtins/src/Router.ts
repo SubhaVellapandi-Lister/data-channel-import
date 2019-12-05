@@ -4,7 +4,7 @@ import Translate from "./processors/Translate";
 import Validate from "./processors/Validate";
 
 export default class BuiltInRouter {
-    static async handleJobEvent(event: any, requestId: string) {
+    static async handleJobEvent(event: any, context: any) {
         const job = Job.fromConfig(event.Job);
         await job.init();
         const step = job.channelStepDetails(job.currentStep!);
@@ -29,6 +29,6 @@ export default class BuiltInRouter {
             }
         }
 
-        await processor!.handle(requestId, event.TaskToken);
+        await processor!.handle(context.awsRequestId , event.TaskToken);
     }
 }

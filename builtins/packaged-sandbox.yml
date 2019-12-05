@@ -1,12 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Data-Channels Builtins Lambda
 Transform: AWS::Serverless-2016-10-31
-
 Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: "./"
+      CodeUri: s3://data-channels-processor-deployments-sandbox/9bca1aad578f8b2bc56ca17d23f751ec
       FunctionName: data-channels-BuiltInProcessor
       Handler: dist/index.BuiltInHandler
       Timeout: 300
@@ -15,10 +14,10 @@ Resources:
       - Statement:
           Action: lambda:InvokeFunction
           Effect: Allow
-          Resource: 'arn:aws:lambda:*:*:function:cdk-data-channels-core-st-cfdatachannelsloggrabber'
+          Resource: arn:aws:lambda:*:*:function:cdk-data-channels-core-st-cfdatachannelsloggrabber
       - Statement:
-          - Sid: SSMGetParameterPolicy
-            Effect: Allow
-            Action:
-              - ssm:GetParameter
-            Resource: 'arn:aws:ssm:*:*:parameter/data-channels/hello-*'
+        - Sid: SSMGetParameterPolicy
+          Effect: Allow
+          Action:
+          - ssm:GetParameter
+          Resource: arn:aws:ssm:*:*:parameter/data-channels/hello-*

@@ -15,10 +15,10 @@
     "test": "npm run lint && npm run compile:once && npm run test:cov",
     "test:cov": "jest --coverage --no-cache --runInBand",
     "test:nocov": "jest --no-cache --runInBand",
-    "sam-package-sandbox": "sam package --output-template packaged-sandbox.yml --s3-bucket data-channels-processor-deployments-sandbox",
-    "sam-deploy-sandbox": "sam deploy --template-file ./packaged-sandbox.yml --stack-name data-channels-builtin-processor --capabilities CAPABILITY_IAM --region us-east-1",
+    "sam-package-sandbox": "sam package --output-template packaged-sandbox.yml --s3-bucket data-channels-processor-deployments-sandbox --profile data-channels-sandbox",
+    "sam-deploy-sandbox": "sam deploy --template-file ./packaged-sandbox.yml --stack-name data-channels-builtin-processor --capabilities CAPABILITY_IAM --region us-east-1 --profile data-channels-sandbox",
     "deploy-sandbox": "npm run build && sam build && npm run sam-package-sandbox && npm run sam-deploy-sandbox",
-    "sam-package-dev": "sam package --output-template packaged-dev.yml --s3-bucket data-channels-processor-deployments-dev",
+    "sam-package-dev": "sam package --output-template packaged-dev.yml --s3-bucket data-channels-processor-deployments-dev --profile data-channels-dev",
     "sam-deploy-dev": "sam deploy --template-file ./packaged-dev.yml --stack-name data-channels-builtin-processor-dev --capabilities CAPABILITY_IAM --region us-east-1",
     "deploy-dev": "npm run build && sam build && npm run sam-package-dev && npm run sam-deploy-dev"
   },
@@ -37,7 +37,7 @@
     "@types/jest": "24.0.11",
     "@types/lodash": "4.14.117",
     "@types/node": "10.14.17",
-    "aws-sdk": "^2.492.0",
+    "aws-sdk": "2.492.0",
     "jest": "24.4.0",
     "mkdirp": "0.5.1",
     "shx": "0.3.2",
@@ -49,7 +49,7 @@
   "dependencies": {
     "@data-channels/dcSDK": "0.7.0-beta.1",
     "lodash": "4.17.15",
-    "request": "^2.88.0"
+    "request": "2.88.0"
   },
   "jest": {
     "collectCoverageFrom": [
