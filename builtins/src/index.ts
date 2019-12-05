@@ -2,7 +2,7 @@ import BuiltInRouter from "./Router";
 
 export async function BuiltInHandler(event: any, context: any): Promise<any> {
 
-    await BuiltInRouter.handleJobEvent(event, context.awsRequestId);
+    await BuiltInRouter.handleJobEvent(event, context);
 
     const response = {
         status: "Work Done"
