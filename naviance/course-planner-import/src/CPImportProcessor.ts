@@ -256,6 +256,7 @@ export class CPImportProcessor extends BaseProcessor {
         if (existing) {
             const isSafe = existing.authorId === 'migration';
             existing.annotations = new Annotations(annoItems);
+            existing.setMetaValueForKey('activeSchools', annoItems['activeSchools'].value);
             if (isSafe || !input.parameters!['metadataOnly']) {
                 existing.statements = statements;
             } else {
@@ -267,6 +268,7 @@ export class CPImportProcessor extends BaseProcessor {
             console.log(`Updating ${programId} - ${existing.display}`);
         } else {
             program = new Program(programId, cObj['name'], new Annotations(annoItems), statements);
+            program.setMetaValueForKey('activeSchools', annoItems['activeSchools'].value);
             this.createdCount += 1;
             status = 'CREATED';
             console.log(`Creating ${programId} - ${program.display}`);
