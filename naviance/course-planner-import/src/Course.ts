@@ -21,24 +21,38 @@ import { getCombinedSubjectArea, getMigratedSubjectArea, ISubjectAreaLoad, loadE
 import { getRowVal, prereqCourseStatement, prereqCourseStatementFromJson } from "./Utils";
 
 export class CourseImport {
+    public static finalCourseId(courseId: string) {
+        return courseId.replace(/\s/g, '').replace(/\*/g, '').split('(')[0];
+    }
     public static courseFromRowData(
-        rowData: IRowData, singleHighschoolId: string,
-        subjectAreasLoaded: ISubjectAreaLoad, schoolsByCourse: { [key: string]: string[] }
+        rowData: IRowData,
+        singleHighschoolId: string,
+        subjectAreasLoaded: ISubjectAreaLoad,
+        schoolsByCourse: { [key: string]: string[] },
+        existingCourse: Course | undefined
     ): Course {
         const courseId = getRowVal(rowData, 'Course_ID') || getRowVal(rowData, 'Course_Code') || '';
+        const strippedCourseId = this.finalCourseId(courseId);
         const courseName = getRowVal(rowData, 'Course_Name') || getRowVal(rowData, 'Course_Title') || '';
         const stateId = getRowVal(rowData, 'State_ID') || getRowVal(rowData, 'State_Category_Code') || '';
         const credits = parseFloat(getRowVal(rowData, 'Credits') || getRowVal(rowData, 'Credit') || '0') || 0;
         const instructionalLevelCode = getRowVal(rowData, 'Instructional_Level') || 'UT';
         const instructionalLevel = instructionalLevelMap[instructionalLevelCode] || 'Untracked';
-        const rawStatusCode = (getRowVal(rowData, 'Status') || getRowVal(rowData, 'Active'));
-        const statusCode = (rawStatusCode === 'Y' || rawStatusCode === '1' || rawStatusCode === 'A') ?
+        const rawStatusCode = (getRowVal(rowData, 'Status') || getRowVal(rowData, 'Active')) || '';
+        const statusCode = (rawStatusCode === 'Y' || rawStatusCode === '1' ||
+            rawStatusCode === 'A' || rawStatusCode.toUpperCase() === 'ACTIVE') ?
              'ACTIVE' : 'INACTIVE';
         const isCte = getRowVal(rowData, 'CTE') === 'Y' ? 1 : 0;
         const isTechPrep = 0;
-        const schoolsList = schoolsByCourse[courseId] || [];
+        let schoolsList = schoolsByCourse[courseId] || [];
         if (!schoolsList.length && singleHighschoolId) {
             schoolsList.push(singleHighschoolId);
+        }
+        if (!schoolsList.length && existingCourse) {
+            const existSchools = existingCourse.annotations.getValue('schools');
+            if (existSchools) {
+                schoolsList = existSchools as string[];
+            }
         }
         const rowSub = getRowVal(rowData, 'Subject_Area') || getRowVal(rowData, 'SUBJECT_AREA_1') || '';
         const combinedSubjectArea = getCombinedSubjectArea(
@@ -66,6 +80,14 @@ export class CourseImport {
         const description = (getRowVal(rowData, 'Description') || '')
             .replace('\\n', ' ').replace(/\n/g, ' ').replace(/\"/g, "'").replace(/\r/g, '').replace('\\r', ' ');
 
+        let prereqString = getRowVal(rowData, 'Prereq_Text') || '';
+        if (!prereqString && existingCourse) {
+            const preq = existingCourse.annotations.getValue('prerequisites');
+            if (preq) {
+                prereqString = preq as string;
+            }
+        }
+
         const annoItems: IAnnotationItems = {
             id: { value: courseId, type: 'STRING', operator: AnnotationOperator.EQUALS },
             number: { value: courseId, type: 'STRING', operator: AnnotationOperator.EQUALS },
@@ -82,7 +104,7 @@ export class CourseImport {
             schools: { value: schoolsList, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
             description: { value: description, type: 'STRING', operator: AnnotationOperator.EQUALS },
             prerequisites: {
-                value: getRowVal(rowData, 'Prereq_Text') || '', type: 'STRING', operator: AnnotationOperator.EQUALS
+                value: prereqString, type: 'STRING', operator: AnnotationOperator.EQUALS
             }
         };
 
@@ -102,7 +124,8 @@ export class CourseImport {
             };
         }
 
-        const statements: CourseStatement[] = [];
+        const hasPreqColumns = rowData['Prereq_ID'] !== undefined || rowData['Coreq_ID'] !== undefined;
+        const statements: CourseStatement[] = existingCourse && !hasPreqColumns ? existingCourse.statements : [];
 
         if (getRowVal(rowData, 'Prereq_ID')) {
             const cs = prereqCourseStatement(getRowVal(rowData, 'Prereq_ID') || '');
@@ -118,8 +141,6 @@ export class CourseImport {
                 statements.push(cs);
             }
         }
-
-        const strippedCourseId = courseId.replace(/\s/g, '');
 
         const course = new Course(
             strippedCourseId,
@@ -169,7 +190,12 @@ export class CourseImport {
             description: { value: desc, type: 'STRING', operator: AnnotationOperator.EQUALS }
         };
 
-        const strippedCourseId = courseId.replace(/\s/g, '').split('(')[0];
+        const strippedCourseId = this.finalCourseId(courseId);
+
+        if (strippedCourseId.length === 0) {
+            // course ID is nothing but invalid characters, this has shown up in migrated data
+            return null;
+        }
 
         const statements: CourseStatement[] = [];
 
@@ -194,5 +220,60 @@ export class CourseImport {
             new Annotations(annoItems),
             statements
         );
+    }
+
+    public static async getBatchOfCourses(courseIds: string[], namespace: string): Promise<Course[]> {
+        const ns = new Namespace(namespace);
+        const existingPager = Course.find(ns, {
+            findCriteria: {
+                name: {
+                    operator: 'in',
+                    name: courseIds
+                }
+            }
+        });
+
+        return existingPager.all();
+    }
+
+    public static async processMappingsByBatch(
+        schoolsByCourse: { [key: string]: string[] }, namespace: string
+    ): Promise<number> {
+        const chunkSize = 20;
+        let updatesCount = 0;
+        const allCourseIds = Object.keys(schoolsByCourse);
+        const chunks = Array.from({ length: Math.ceil(allCourseIds.length / chunkSize) }, (_v, i) =>
+            allCourseIds.slice(i * chunkSize, i * chunkSize + chunkSize),
+        );
+        console.log(`Processing mappings on ${allCourseIds.length} courses in ${chunks.length} chunks of ${chunkSize}`);
+
+        for (const [chunkIdx, idChunk] of chunks.entries()) {
+            const courses = await this.getBatchOfCourses(idChunk, namespace);
+            let updatesNeeded: Course[] = [];
+            for (const foundCourse of courses) {
+                const schoolsList = schoolsByCourse[foundCourse.name];
+                if (!schoolsList) {
+                    continue;
+                }
+                const existSchools = foundCourse.annotations.getValue('schools') as string[];
+                if (!existSchools || JSON.stringify(schoolsList) !== JSON.stringify(existSchools)) {
+                    foundCourse.annotations.set(
+                        'schools', schoolsList, AnnotationOperator.EQUALS, undefined, 'LIST_STRING'
+                    );
+                    updatesNeeded.push(foundCourse);
+                }
+            }
+            console.log(`Batch ${chunkIdx}, ${updatesNeeded.length} updates needed`);
+
+            if (updatesNeeded.length > 0) {
+                updatesCount += updatesNeeded.length;
+                const b = new Batch({namespace: new Namespace(namespace) });
+                b.addItems(updatesNeeded);
+                await b.createOrUpdate();
+                updatesNeeded = [];
+            }
+        }
+
+        return updatesCount;
     }
 }

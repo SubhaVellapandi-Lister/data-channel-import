@@ -5,8 +5,8 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-navprod/5ca2f34ba98d76e90c0cc4c2dfda1fb7
-      FunctionName: cf-naviance-dc-ap-import-prod
+      CodeUri: s3://data-channels-processor-deployments-dev/9a5ab879106f00c8333231ca92269c00
+      FunctionName: cf-naviance-dc-ap-import-dev
       Handler: dist/index.lambdaHandler
       Timeout: 900
       MemorySize: 2048
@@ -17,4 +17,4 @@ Resources:
           Effect: Allow
           Action:
           - ssm:GetParameter
-          Resource: arn:aws:ssm:*:*:parameter/academic-planner-prod/*
+          Resource: arn:aws:ssm:*:*:parameter/academic-planner-dev/*

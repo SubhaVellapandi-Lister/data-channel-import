@@ -23,10 +23,29 @@ import uuidv5 from "uuid/v5";
 import { getRowVal, initRulesRepo, prereqCourseStatement } from "./Utils";
 
 export class PoSImport {
+    private static uuidSeed = 'ec3d4a8c-f8ac-47d3-bb77-abcadea819d9';
     private createdCount = 0;
     private updatedCount = 0;
     private namespace = '';
-    private uuidSeed = 'ec3d4a8c-f8ac-47d3-bb77-abcadea819d9';
+
+    private static courseIdIsValid(entry: object): boolean {
+        return entry['courseId']
+            && entry['courseId'].toString().replace(/\s/g, '').replace(/\*/g, '').split('(')[0].length > 0;
+    }
+
+    private static courseIdString(entry: object): string {
+        return entry['courseId'].toString().replace(/\s/g, '').replace(/\*/g, '').split('(')[0];
+    }
+
+    private static findCredits(source: object): number {
+        return source['minimumCredits']
+            || source['minimumCredit']
+            || source['minCredit']
+            || source['maximumCredits']
+            || source['maximumCredit']
+            || source['maxCredit']
+            || 0;
+    }
 
     public static annotations(cObj: any, singleHighSchoolId: string): IAnnotationItems {
         let classYears = cObj['eligibleClasses'];
@@ -34,6 +53,11 @@ export class PoSImport {
             classYears = [2019, 2020];
         }
         classYears.sort();
+
+        let groupRestrictions: string[] = [];
+        if (cObj['schoolStudentGroups']) {
+            groupRestrictions = cObj['schoolStudentGroups'].map((ssg: any) => ssg.id.toString());
+        }
 
         const published = cObj['published'] ? 1 : 0;
         const publishedSchools = cObj['publishedSchools'] || [];
@@ -58,7 +82,8 @@ export class PoSImport {
             descriptionPlainText: { value: description, type: 'STRING', operator: AnnotationOperator.EQUALS },
             activeSchools: { value: publishedSchools, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
             checkedSchools: { value: publishedSchools, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
-            publishedSchools: { value: publishedSchools, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS }
+            publishedSchools: { value: publishedSchools, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
+            groupRestrictions: { value: groupRestrictions, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS }
         };
     }
 
@@ -74,7 +99,7 @@ export class PoSImport {
                 id: reqId,
                 name: reqDetails['name'],
                 description: reqDetails['description'].replace(/\n/g, ' ').replace(/\r/g, ''),
-                credits: reqDetails['maximumCredits'] || 0
+                credits: this.findCredits(reqDetails)
             });
             const rules: ListExpression[] = [];
 
@@ -88,18 +113,18 @@ export class PoSImport {
             for (const rule of reqDetails['rules']) {
                 switch (rule['type']) {
                     case 1:
-                        pushRule(this.mandatedRule(rule));
+                        pushRule(this.mandatedRule(reqId, rule));
                         break;
                     case 2:
-                        pushRule(this.groupOfCoursesRule(rule));
+                        pushRule(this.groupOfCoursesRule(reqId, rule));
                         break;
                     case 3:
                     case 6:
-                        pushRule(this.choicesByGradeRule(rule));
+                        pushRule(this.choicesByGradeRule(reqId, rule));
                         break;
                     case 4:
                     case 5:
-                        pushRule(this.itemsFromListRule(rule));
+                        pushRule(this.itemsFromListRule(reqId, rule));
                         break;
                 }
             }
@@ -113,18 +138,22 @@ export class PoSImport {
         return statements;
     }
 
-    public static mandatedRule(rule: object): ListExpression | null {
+    public static mandatedRule(reqId: string, rule: object): ListExpression | null {
         const exprList: Expression[] = [];
         for (const entry of rule['entries']) {
-            if (!entry['courseId']) {
+            if (!this.courseIdIsValid(entry)) {
                 continue;
             }
-            const anno = { mandated: true };
             const gradeLevel = parseInt(entry['gradeLevel']);
+            const anno = {
+                mandated: true,
+                shareGroup: uuidv5(reqId + rule['pk'] + (gradeLevel ? gradeLevel.toString() : ''), this.uuidSeed)
+             };
+
             if (gradeLevel && gradeLevel > 0) {
                 anno['grade'] = gradeLevel;
             }
-            exprList.push(new Expression(entry['courseId'].toString(), Annotations.simple(anno)));
+            exprList.push(new Expression(this.courseIdString(entry), Annotations.simple(anno)));
         }
         if (!exprList.length) {
             return null;
@@ -137,16 +166,16 @@ export class PoSImport {
         return lexp;
     }
 
-    public static itemsFromListRule(rule: object): ListExpression | null {
+    public static itemsFromListRule(reqId: string, rule: object): ListExpression | null {
         const idents: string[] = [];
         const sortedEntries = rule['entries'];
         sortedEntries.sort((a: object, b: object) => a['priority'] - b['priority']);
         for (const entry of sortedEntries) {
-            if (!entry['courseId']) {
+            if (!this.courseIdIsValid(entry)) {
                 console.log('No course id for entry', entry);
                 continue;
             }
-            idents.push(entry['courseId'].toString());
+            idents.push(this.courseIdString(entry));
         }
 
         if (!idents.length) {
@@ -154,7 +183,11 @@ export class PoSImport {
         }
 
         const lexp = new ListExpression(
-            [new ListExpression(idents, undefined, Modifiers.simple({ credits: rule['minCredit']}))],
+            [new ListExpression(
+                idents,
+                Annotations.simple({shareGroup: uuidv5(reqId + rule['pk'], this.uuidSeed)}),
+                Modifiers.simple({ credits: this.findCredits(rule)})
+            )],
             Annotations.simple({
                 rule: 3
         }));
@@ -162,31 +195,63 @@ export class PoSImport {
         return lexp;
     }
 
-    public static groupOfCoursesRule(rule: object): ListExpression | null {
-        const idents: string[] = [];
-        const sortedEntries = rule['entries'];
-        sortedEntries.sort((a: object, b: object) => a['priority'] - b['priority']);
-        for (const entry of sortedEntries) {
-            if (entry['courseId']) {
-                idents.push(entry['courseId'].toString());
+    public static groupOfCoursesRule(reqId: string, rule: object): ListExpression | null {
+
+        const entriesBySequence: { [sequenceId: number]: object[] } = {};
+        for (const entry of rule['entries']) {
+            if (!entriesBySequence[entry.sequenceId]) {
+                entriesBySequence[entry.sequenceId] = [];
             }
+            entriesBySequence[entry.sequenceId].push(entry);
         }
-        if (!idents.length) {
+        const childLists: ListExpression[] = [];
+        const sequences = Object.keys(entriesBySequence).sort();
+        for (const sequenceId of sequences) {
+            const sortedEntries = entriesBySequence[sequenceId];
+            sortedEntries.sort((a: object, b: object) => a['priority'] - b['priority']);
+            const idents: string[] = [];
+            for (const entry of sortedEntries) {
+                if (this.courseIdIsValid(entry)) {
+                    idents.push(this.courseIdString(entry));
+                }
+            }
+            if (!idents.length) {
+                continue;
+            }
+            childLists.push(
+                new ListExpression(
+                    idents.map((cnum, idx) =>
+                        new Expression(
+                            cnum,
+                            Annotations.simple({ shareGroup: uuidv5(reqId + idx + cnum, this.uuidSeed)})
+                        )
+                    )
+                )
+            );
+        }
+
+        if (!childLists.length) {
             return null;
         }
+
         const lexp = new ListExpression(
-            [new ListExpression(idents)],
+            [childLists],
             Annotations.simple({
                 rule: 1
-        }));
+            }),
+            undefined,
+            undefined,
+            undefined,
+            1
+        );
 
         return lexp;
     }
 
-    public static choicesByGradeRule(rule: object): ListExpression | null {
+    public static choicesByGradeRule(reqId: string, rule: object): ListExpression | null {
         const entriesByGrade: { [grade: number]: object[] } = [];
         for (const entry of rule['entries']) {
-            if (!entry['courseId']) {
+            if (!this.courseIdIsValid(entry)) {
                 continue;
             }
             const gl = parseInt(entry['gradeLevel']);
@@ -209,11 +274,16 @@ export class PoSImport {
             for (const sequenceId of sequences) {
                 const entries = entriesBySequence[sequenceId]
                     .sort((a: object, b: object) => a['priority'] - b['priority']);
-                gradeExpressions.push(new ListExpression(
-                    entries.map((e: object) => e['courseId'].toString()),
-                    Annotations.simple({ grade: parseInt(grade) }),
-                    Modifiers.simple({ courses: 1 })
-                ));
+                if (entries.length) {
+                    gradeExpressions.push(new ListExpression(
+                        entries.map((e: object) => this.courseIdString(e)),
+                        Annotations.simple({
+                            grade: parseInt(grade),
+                            shareGroup: uuidv5(reqId + sequenceId + grade, this.uuidSeed)
+                        }),
+                        Modifiers.simple({ courses: 1 })
+                    ));
+                }
             }
         }
         if (!gradeExpressions.length) {

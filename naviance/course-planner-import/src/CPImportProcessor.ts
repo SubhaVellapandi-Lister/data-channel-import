@@ -17,14 +17,17 @@ import {
 import uuidv5 from "uuid/v5";
 import { CourseImport } from "./Course";
 import { PoSImport } from "./PoS";
+import { PlanImport } from "./StudentCoursePlan";
+import { StudentHistory } from "./StudentHistory";
 import { ISubjectAreaLoad, loadExistingSubjectAreas,
     parseSubjectAreaRow, saveDefaultAnnotationTypes, saveSubjectAreas } from "./SubjectAreas";
-import { getRowVal, initRulesRepo } from "./Utils";
+import { getRowVal, initRulesRepo, initServices } from "./Utils";
 
 export class CPImportProcessor extends BaseProcessor {
     /* PoS variables */
     private createdCount = 0;
     private updatedCount = 0;
+    private errorCount = 0;
     private namespace = '';
     private uuidSeed = 'ec3d4a8c-f8ac-47d3-bb77-abcadea819d9';
 
@@ -42,6 +45,14 @@ export class CPImportProcessor extends BaseProcessor {
     private singleHighschoolId = '';
     private historyStudentId = '';
     private historyForStudent: object[] = [];
+    private historyBatch: object[][] = [];
+    private historyBatchSize = 10;
+    private planBatch: object[] = [];
+    private planBatchSize = 10;
+    private schoolsLoaded = false;
+    private coursesLoaded = false;
+    private mappingsLoaded = false;
+    private allPrograms: Program[] = [];
 
     public async validate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
         // things to validate for
@@ -108,7 +119,8 @@ export class CPImportProcessor extends BaseProcessor {
 
     public async batchToAp(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
         if (input.data['IS_VALID'] === 'valid') {
-            if (input.name === 'mappingValidated') {
+            if (input.name.toUpperCase().startsWith('MAPPING')) {
+                this.mappingsLoaded = true;
                 const localId = getRowVal(input.data, 'School_ID') || '';
                 const schoolId =
                     this.navianceSchoolByLocalId[localId] ||
@@ -123,11 +135,13 @@ export class CPImportProcessor extends BaseProcessor {
                 if (!this.schoolsByCourse[courseId].includes(schoolId)) {
                     this.schoolsByCourse[courseId].push(schoolId);
                 }
-            } else if (input.name === 'schoolsValidated') {
+            } else if (input.name.toUpperCase().startsWith('SCHOOL')) {
+                this.schoolsLoaded = true;
                 const locSchoolId = getRowVal(input.data, 'Local_School_ID') || '';
                 const navSchoolId = getRowVal(input.data, 'Naviance_School_ID') || '';
                 this.navianceSchoolByLocalId[locSchoolId] = navSchoolId;
             } else {
+                this.coursesLoaded = true;
                 this.apBatch.push(input.data);
             }
         }
@@ -143,13 +157,34 @@ export class CPImportProcessor extends BaseProcessor {
 
     private async processBatch(): Promise<void> {
         this.batchCount += 1;
-        const b = new Batch({namespace: new Namespace(this.namespace)});
+        const namespace = new Namespace(this.namespace);
+        const b = new Batch({namespace});
         const courses: Course[] = [];
+        const existingByName: { [name: string]: Course} = {};
+        if (!this.mappingsLoaded && !this.apBatch[0]['JSON_OBJECT']) {
+            // csv import but no mapping file, try to keep existing mappings for courses
+            const batchCourseIds = this.apBatch
+                .map((rowData) => CourseImport.finalCourseId(
+                    getRowVal(rowData, 'Course_ID') || getRowVal(rowData, 'Course_Code') || '')
+                )
+                .filter((cid) => cid.length > 0);
+
+            const existingCourses = await CourseImport.getBatchOfCourses(batchCourseIds, this.namespace);
+            for (const existCourse of existingCourses) {
+                existingByName[existCourse.name] = existCourse;
+            }
+        }
         for (const rowData of this.apBatch) {
             const course = rowData['JSON_OBJECT'] ?
                 CourseImport.courseFromJSON(rowData) :
                 CourseImport.courseFromRowData(
-                    rowData, this.singleHighschoolId, this.subjectAreasLoaded, this.schoolsByCourse);
+                    rowData,
+                    this.singleHighschoolId,
+                    this.subjectAreasLoaded,
+                    this.schoolsByCourse,
+                    existingByName[CourseImport.finalCourseId(
+                        getRowVal(rowData, 'Course_ID') || getRowVal(rowData, 'Course_Code') || '')
+                    ]);
 
             if (!course) {
                 continue;
@@ -176,10 +211,17 @@ export class CPImportProcessor extends BaseProcessor {
             await this.processBatch();
         }
 
+        let mappingsUpdated = 0;
+        if (!this.coursesLoaded && this.mappingsLoaded) {
+            // only importing mappings
+            mappingsUpdated = await CourseImport.processMappingsByBatch(this.schoolsByCourse, this.namespace);
+        }
+
         return { results: {
             batchCount: this.batchCount,
             duplicatesSkipped: this.duplicatesSkipped,
-            coursesPushed: this.coursesPushed
+            coursesPushed: this.coursesPushed,
+            mappingsUpdated
         }};
     }
 
@@ -210,12 +252,15 @@ export class CPImportProcessor extends BaseProcessor {
 
         let program: Program;
         let status = 'UPDATED';
+        let saveAuthor = 'migration';
         if (existing) {
+            const isSafe = existing.authorId === 'migration';
             existing.annotations = new Annotations(annoItems);
-            if (!input.parameters!['metadataOnly']) {
+            if (isSafe || !input.parameters!['metadataOnly']) {
                 existing.statements = statements;
             } else {
                 console.log('Updating metadata only');
+                saveAuthor = 'migration-info-only';
             }
             program = existing;
             this.updatedCount += 1;
@@ -227,9 +272,17 @@ export class CPImportProcessor extends BaseProcessor {
             console.log(`Creating ${programId} - ${program.display}`);
         }
 
-        await program.save(new Namespace(this.namespace), 'migration');
+        if (input.parameters!['verbose']) {
+            console.log(program.toChute());
+        }
 
-        console.log(`SAVED ${programId} - ${program.display}`);
+        if (!statements.length) {
+            console.log(`Error ${programId} - no valid statements`);
+            status = 'ERROR';
+        } else {
+            await program.save(new Namespace(this.namespace), saveAuthor);
+            console.log(`SAVED ${programId} - ${program.display}`);
+        }
 
         return {
             outputs: {
@@ -251,7 +304,7 @@ export class CPImportProcessor extends BaseProcessor {
     }
 
     public async importHistories(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
-        if (input.index === 1) {
+        if (input.index === 1 || input.data['JSON_OBJECT'] === 'JSON_OBJECT') {
             return { outputs: {} };
         }
 
@@ -259,31 +312,80 @@ export class CPImportProcessor extends BaseProcessor {
         const cObj = JSON.parse(rowData['JSON_OBJECT']);
         const studentId = cObj['studentId'].toString();
         if (this.historyStudentId !== studentId && this.historyForStudent.length) {
-            const result = await PlanContext.createOrUpdateStudentRecords(
-                this.historyStudentId,
-                'migration',
-                this.namespace,
-                {},
-                this.historyForStudent.map((rec) => ({
-                    number: rec['courseId'],
-                    unique: rec['courseId'],
-                    credits: rec['earnedCredits']
-                }))
-            );
+            this.historyBatch.push([...this.historyForStudent]);
+            this.historyForStudent = [];
+            this.historyStudentId = studentId;
+
+            if (this.historyBatch.length >= this.historyBatchSize) {
+                const [createdCount, updatedCount] = await StudentHistory.processBatch(
+                    this.namespace, this.historyBatch);
+                this.createdCount += createdCount;
+                this.updatedCount += updatedCount;
+                console.log(`Processed batch of ${this.historyBatch.length} students`);
+                this.historyBatch = [];
+            }
         }
+        this.historyForStudent.push(cObj);
 
         return { outputs: {} };
     }
 
     public async before_importHistories(input: IStepBeforeInput) {
-        initRulesRepo(input.parameters!);
+        initServices(input.parameters!);
         this.namespace = `naviance.${input.parameters!['tenantId']}`;
+        if (input.parameters!['batchSize']) {
+            this.historyBatchSize = input.parameters!['batchSize'];
+        }
     }
 
     public async after_importHistories(input: IStepBeforeInput): Promise<IStepAfterOutput> {
+        if (this.historyBatch.length) {
+            await StudentHistory.processBatch(this.namespace, this.historyBatch);
+            console.log(`Processed batch of ${this.historyBatch.length} students`);
+        }
+
         return { results: {
             createdCount: this.createdCount,
             updatedCount: this.updatedCount
+        }};
+    }
+
+    public async importStudentCoursePlans(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
+        if (input.index === 1) {
+            return { outputs: {} };
+        }
+
+        const rowData = input.data;
+        if (rowData['JSON_OBJECT'] !== 'JSON_OBJECT') {
+            this.planBatch.push(JSON.parse(rowData['JSON_OBJECT']));
+        }
+        if (this.planBatch.length >= this.planBatchSize) {
+            const [creates, updates, errors] = await PlanImport.batchImportPlan(
+                this.namespace, this.planBatch, this.allPrograms);
+            this.createdCount += creates;
+            this.updatedCount += updates;
+            this.errorCount += errors;
+            this.planBatch = [];
+        }
+
+        return { outputs: {} };
+    }
+
+    public async before_importStudentCoursePlans(input: IStepBeforeInput) {
+        initServices(input.parameters!);
+        this.namespace = `naviance.${input.parameters!['tenantId']}`;
+        this.allPrograms = await PlanImport.allPrograms(input.parameters!['tenantId']);
+    }
+
+    public async after_importStudentCoursePlans(input: IStepBeforeInput): Promise<IStepAfterOutput> {
+        if (this.planBatch.length > 0) {
+            await PlanImport.batchImportPlan(this.namespace, this.planBatch, this.allPrograms);
+        }
+
+        return { results: {
+            createdCount: this.createdCount,
+            updatedCount: this.updatedCount,
+            errorCount: this.errorCount
         }};
     }
 }
