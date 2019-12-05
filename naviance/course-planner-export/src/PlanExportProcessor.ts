@@ -86,6 +86,7 @@ export class PlanExportProcessor extends BaseProcessor {
         const gradedRecIds: string[] = audit.studentRecords
             .filter((srec) => (srec.record as ICourseRecord).grade !== undefined)
             .map((srec) => srec.identifier);
+        let foundClusterId = '';
         const progNames = {
             Plan_Of_Study_Name: '',
             Plan_Of_Study_ID: '',
@@ -168,9 +169,7 @@ export class PlanExportProcessor extends BaseProcessor {
                 .reduce((credA, credB) => credA + credB, 0);
 
             if (clusterId) {
-                const clusterProgram = await this.findProgram(namespace, clusterId as string);
-                progNames.Cluster_Name = (clusterProgram.annotations.getValue('name') || '').toString();
-                progNames.Cluster_ID = clusterProgram.guid!;
+                foundClusterId = clusterId as string;
                 progNames.Pathway_Name = progName;
                 progNames.Pathway_ID = progId;
                 progNames.Pathway_Is_Published = this.booleanToString(published);
@@ -200,6 +199,16 @@ export class PlanExportProcessor extends BaseProcessor {
         }
 
         progNames.Required_Credits_Total = planTotalCreditsRequired.toString();
+
+        if (!foundClusterId && plan.meta) {
+            foundClusterId = plan.meta['clusterId'] as string;
+        }
+
+        if (foundClusterId) {
+            const clusterProgram = await this.findProgram(namespace, foundClusterId);
+            progNames.Cluster_Name = (clusterProgram.annotations.getValue('name') || '').toString();
+            progNames.Cluster_ID = clusterProgram.guid!;
+        }
 
         return progNames;
     }

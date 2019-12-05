@@ -90,7 +90,7 @@ const helloChannel = {
     // job.workspace!.fileUrls = await fileUrlsForJobExecution(jobConfig);
     // console.log(job.workspace!.fileUrls);
     const hello = new HelloWorld(job);
-    await hello.processAll('localrun');
+    await hello.processAll('');
     console.log(JSON.stringify(hello.job, undefined, 2));
 
 })();

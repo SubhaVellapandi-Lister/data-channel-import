@@ -1,6 +1,6 @@
 FROM hobsonspipe/centos-node-10-13-0
 
-RUN yum install -y zip expect && yum clean all
+RUN yum install -y expect && yum clean all
 
 WORKDIR /usr/src/app
 
@@ -18,7 +18,5 @@ RUN npm install && rm ~/.npmrc
 COPY . ./
 
 RUN npm run build
-RUN npm prune --production
-RUN zip -r dcbuiltins.zip .
 
-CMD node ./dist/index.js
+CMD node ./dist/dockerRun.js
