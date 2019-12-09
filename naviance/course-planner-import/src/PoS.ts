@@ -1,26 +1,13 @@
 import {
     AnnotationOperator,
     Annotations,
-    Batch,
-    Course,
     Expression,
     IAnnotationItems,
     ListExpression,
     Modifiers,
-    Namespace,
-    Program,
     TakeStatement
 } from "@academic-planner/apSDK";
-import {
-    BaseProcessor,
-    IRowData,
-    IRowProcessorInput,
-    IRowProcessorOutput,
-    IStepAfterOutput,
-    IStepBeforeInput
-} from "@data-channels/dcSDK";
 import uuidv5 from "uuid/v5";
-import { getRowVal, initRulesRepo, prereqCourseStatement } from "./Utils";
 
 export class PoSImport {
     private static uuidSeed = 'ec3d4a8c-f8ac-47d3-bb77-abcadea819d9';
@@ -95,17 +82,23 @@ export class PoSImport {
             const reqPk = cpReq['pk'] || cpReq['requirementId'];
             const reqDetails = cpReq['requirement'] || cpReq;
             const reqId = uuidv5(reqPk.toString(), uuidSeed);
+            const reqCredits = this.findCredits(reqDetails);
             const statementAnno = Annotations.simple({
                 id: reqId,
                 name: reqDetails['name'],
                 description: reqDetails['description'].replace(/\n/g, ' ').replace(/\r/g, ''),
-                credits: this.findCredits(reqDetails)
+                credits: reqCredits
             });
             const rules: ListExpression[] = [];
 
             function pushRule(expr: ListExpression | null) {
                 if (expr) {
-                    rules.push(expr);
+                    const wrappedExpr = new ListExpression(
+                        [expr],
+                        undefined,
+                        Modifiers.simple({credits: reqCredits})
+                    );
+                    rules.push(wrappedExpr);
                 } else {
                     console.log(`Empty rule`);
                 }
@@ -145,6 +138,7 @@ export class PoSImport {
                 continue;
             }
             const gradeLevel = parseInt(entry['gradeLevel']);
+            let gradeLevelModifier;
             const anno = {
                 mandated: true,
                 shareGroup: uuidv5(reqId + rule['pk'] + (gradeLevel ? gradeLevel.toString() : ''), this.uuidSeed)
@@ -152,8 +146,15 @@ export class PoSImport {
 
             if (gradeLevel && gradeLevel > 0) {
                 anno['grade'] = gradeLevel;
+                gradeLevelModifier = Modifiers.simple({gradeLevel});
             }
-            exprList.push(new Expression(this.courseIdString(entry), Annotations.simple(anno)));
+            exprList.push(
+                new Expression(
+                    this.courseIdString(entry),
+                    Annotations.simple(anno),
+                    gradeLevelModifier
+                )
+            );
         }
         if (!exprList.length) {
             return null;
@@ -274,14 +275,26 @@ export class PoSImport {
             for (const sequenceId of sequences) {
                 const entries = entriesBySequence[sequenceId]
                     .sort((a: object, b: object) => a['priority'] - b['priority']);
+                const gradeLevel = parseInt(grade);
+                const tempAnnotation = new Annotations({
+                    courses: {
+                        value: 1,
+                        operator: AnnotationOperator.LTE
+                    },
+                    gradeLevel: {
+                        value: gradeLevel,
+                        operator: AnnotationOperator.EQUALS
+                    }
+                });
+                const modifier = new Modifiers(tempAnnotation.items);
                 if (entries.length) {
                     gradeExpressions.push(new ListExpression(
                         entries.map((e: object) => this.courseIdString(e)),
                         Annotations.simple({
-                            grade: parseInt(grade),
+                            grade: gradeLevel,
                             shareGroup: uuidv5(reqId + sequenceId + grade, this.uuidSeed)
                         }),
-                        Modifiers.simple({ courses: 1 })
+                        modifier
                     ));
                 }
             }
