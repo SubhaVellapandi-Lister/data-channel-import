@@ -163,6 +163,10 @@ export class PlanExportProcessor extends BaseProcessor {
                 .filter((rec) => !gradedRecIds[rec.studentRecordId])
                 .map((rec) => rec.creditsUsed)
                 .reduce((credA, credB) => credA + credB, 0);
+            if (plan.studentPrincipleId === '403478658') {
+                console.log(rawAudit.program.name, rawAudit.program.auditResult.creditProgress);
+                console.log(rawAudit.program.auditResult.usedRecords);
+            }
             const completedCredits = rawAudit.program.auditResult.usedRecords
                 .filter((rec) => gradedRecIds[rec.studentRecordId])
                 .map((rec) => rec.creditsUsed)
@@ -313,7 +317,13 @@ export class PlanExportProcessor extends BaseProcessor {
                     Course_History: '' // need to tweak once we are storing course histories
                 };
 
-                Object.assign(rowData, await this.findProgramColumns(planSet.full));
+                try {
+                    Object.assign(rowData, await this.findProgramColumns(planSet.full));
+                } catch (error) {
+                    console.log(`Error ${schoolId} - ${planSet.slim.guid}`);
+                    console.log(error);
+                    continue;
+                }
                 Object.assign(rowData, configItems);
 
                 const flatRow = this.headers.map((headerName) => (rowData[headerName] || '').toString());

@@ -120,7 +120,7 @@ const programsJob = {
 (async () => {
     const job = jobWithInlineChannel(plansJob, plansChannelConfig);
     const plansProcessor = new PlanExportProcessor(job, { storeFilesLocal: true });
-    await plansProcessor.processAll();
+    await plansProcessor.processAll('');
     console.log(JSON.stringify(plansProcessor.job, undefined, 2));
 /*
     const progJob = jobWithInlineChannel(programsJob, programChannelsConfig);

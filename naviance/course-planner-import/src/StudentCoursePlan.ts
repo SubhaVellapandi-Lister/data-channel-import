@@ -59,7 +59,7 @@ export class PlanImport {
             APPROVAL_STATUS_REJECTED: 'In Progress',
             APPROVAL_STATUS_AWAITING_PARENT: 'Awaiting Parent Approval',
             APPROVAL_STATUS_PARENT_APPROVED: 'Approved by Parent',
-            APPROVAL_STATUS_PARENT_REJECT: 'Not Approved By Parent',
+            APPROVAL_STATUS_PARENT_REJECTED: 'Not Approved By Parent',
             APPROVAL_STATUS_SCHOOL_APPROVED: 'Approved by school',
             APPROVAL_STATUS_SCHOOL_REJECTED: 'Not Approved By School'
         };

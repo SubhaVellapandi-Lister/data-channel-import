@@ -60,7 +60,8 @@ export class CourseImport {
         );
         const grades: number[] = [];
         for (const g of [6, 7, 8, 9, 10, 11, 12]) {
-            if (getRowVal(rowData, `GR${g}`) === 'Y') {
+            const grVal = getRowVal(rowData, `GR${g}`);
+            if (grVal === 'Y' || grVal === 'TRUE') {
                 grades.push(g);
             }
         }

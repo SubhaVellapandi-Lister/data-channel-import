@@ -9,6 +9,7 @@ export default class BuiltInRouter {
         await job.init();
         const step = job.channelStepDetails(job.currentStep!);
 
+        console.log(`Job ${job.guid} - running ${step!.method}`);
         let processor: BaseProcessor;
         switch (step!.method) {
             case 'translate': {

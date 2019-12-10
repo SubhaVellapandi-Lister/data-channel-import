@@ -6,7 +6,7 @@ import {
 
 interface ITranslateConfig {
     headers: string[];
-    mapping: {
+    mapping?: {
         [name: string]: string;
     };
 }
@@ -15,6 +15,7 @@ export default class Translate extends BaseProcessor {
     private originalHeaders: string[] = [];
 
     public async translate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
+
         const config = input.parameters!['translateConfig'] as ITranslateConfig;
         if (input.index === 1) {
             this.originalHeaders = input.raw;
@@ -30,7 +31,7 @@ export default class Translate extends BaseProcessor {
         const newData: { [key: string]: string } = {};
         for (const [idx, val] of input.raw.entries()) {
             const curHeaderVal = this.originalHeaders[idx];
-            if (config.mapping[curHeaderVal]) {
+            if (config.mapping && config.mapping[curHeaderVal]) {
                 newData[config.mapping[curHeaderVal]] = val;
             } else {
                 newData[curHeaderVal] = val;

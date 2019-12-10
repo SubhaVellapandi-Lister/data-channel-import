@@ -5,7 +5,7 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-dev/9a5ab879106f00c8333231ca92269c00
+      CodeUri: s3://data-channels-processor-deployments-dev/2b2cbcab48fdc3a295e64495796d2041
       FunctionName: cf-naviance-dc-ap-import-dev
       Handler: dist/index.lambdaHandler
       Timeout: 900
@@ -18,3 +18,9 @@ Resources:
           Action:
           - ssm:GetParameter
           Resource: arn:aws:ssm:*:*:parameter/academic-planner-dev/*
+      - Statement:
+        - Sid: SSMGetParameterPolicy
+          Effect: Allow
+          Action:
+          - ssm:GetParameter
+          Resource: arn:aws:ssm:*:*:parameter/academic-planner-qa/*

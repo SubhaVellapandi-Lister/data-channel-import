@@ -3,7 +3,7 @@ import { PlanExportProcessor } from "./PlanExportProcessor";
 import { ProgramExportProcessor } from "./ProgramExportProcessor";
 import { SchoolsProcessor } from "./SchoolsProcessor";
 
-export async function exportHandler(event: any): Promise<any> {
+export async function exportHandler(event: any, context: any): Promise<any> {
     const job = Job.fromConfig(event.Job);
     await job.init();
     const step = job.channelStepDetails(job.currentStep!);
@@ -30,7 +30,7 @@ export async function exportHandler(event: any): Promise<any> {
         }
     }
 
-    await processor.handle(event.TaskToken);
+    await processor.handle(context.awsRequestId, event.TaskToken);
     console.log(`job ${job.guid} status ${job.status} ${job.statusMessage}`);
 
     const response = {
