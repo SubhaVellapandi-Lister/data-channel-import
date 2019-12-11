@@ -4,43 +4,62 @@ import {
     IRowProcessorOutput
 } from "@data-channels/dcSDK";
 
-interface ITranslateConfig {
-    headers: string[];
-    mapping?: {
-        [name: string]: string;
+export interface IValueMapping {
+    fromValue: string;
+    toValue: string;
+}
+
+export interface ITranslateConfig {
+    headerMappings?: {
+        [columnfromName: string]: string; // original name -> new name
+    };
+
+    valueMappings?: {
+        [columnName: string]: IValueMapping[]; // one or more value mappings for the given column
     };
 }
 
 export default class Translate extends BaseProcessor {
     private originalHeaders: string[] = [];
+    private newHeaders: string[] = [];
+
+    private mappedHeader(config: ITranslateConfig, original: string): string {
+        if (config.headerMappings && config.headerMappings[original]) {
+            return config.headerMappings[original];
+        }
+
+        return original;
+    }
 
     public async translate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
 
         const config = input.parameters!['translateConfig'] as ITranslateConfig;
         if (input.index === 1) {
             this.originalHeaders = input.raw;
+            this.newHeaders = this.originalHeaders.map((h) => this.mappedHeader(config, h));
 
             return {
                 index: input.index,
                 outputs: {
-                    [`${input.name}Translated`]: config.headers
+                    [`${input.name}Translated`]: this.newHeaders
                 }
             };
         }
 
-        const newData: { [key: string]: string } = {};
-        for (const [idx, val] of input.raw.entries()) {
-            const curHeaderVal = this.originalHeaders[idx];
-            if (config.mapping && config.mapping[curHeaderVal]) {
-                newData[config.mapping[curHeaderVal]] = val;
-            } else {
-                newData[curHeaderVal] = val;
-            }
-        }
-
+        const vmapConfig = config.valueMappings || {};
         const newRow: string[] = [];
-        for (const newHeaderVal of config.headers) {
-            newRow.push(newData[newHeaderVal] || '');
+        for (const [idx, val] of input.raw.entries()) {
+            const originalHeader = this.originalHeaders[idx];
+            const newHeader = this.newHeaders[idx];
+            const vmap = vmapConfig[newHeader] || vmapConfig[originalHeader] || [];
+            let value = val;
+            for (const mappedVal of vmap) {
+                if (mappedVal.fromValue === val) {
+                    value = mappedVal.toValue;
+                    break;
+                }
+            }
+            newRow.push(value);
         }
 
         return {

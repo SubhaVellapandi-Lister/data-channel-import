@@ -76,7 +76,10 @@ export class PoSImport {
 
     public static requirements(cObj: any, uuidSeed: string): TakeStatement[] {
         const statements: TakeStatement[] = [];
-        const cpRequirements = cObj['requirements'] || cObj['pathway']['requirements'];
+        let cpRequirements = cObj['requirements'] || [];
+        if (!cpRequirements.length && cObj['pathway']) {
+            cpRequirements = cObj['pathway']['requirements'] || [];
+        }
 
         for (const cpReq of cpRequirements) {
             const reqPk = cpReq['pk'] || cpReq['requirementId'];
@@ -93,12 +96,7 @@ export class PoSImport {
 
             function pushRule(expr: ListExpression | null) {
                 if (expr) {
-                    const wrappedExpr = new ListExpression(
-                        [expr],
-                        undefined,
-                        Modifiers.simple({credits: reqCredits})
-                    );
-                    rules.push(wrappedExpr);
+                    rules.push(expr);
                 } else {
                     console.log(`Empty rule`);
                 }
@@ -125,7 +123,13 @@ export class PoSImport {
                 console.log(`Skipping empty requirement ${reqDetails['name']}`);
                 continue;
             }
-            statements.push(new TakeStatement(rules, undefined, statementAnno));
+
+            const finalExp = new ListExpression(
+                rules,
+                undefined,
+                Modifiers.simple({credits: reqCredits})
+            );
+            statements.push(new TakeStatement(finalExp, undefined, statementAnno));
         }
 
         return statements;

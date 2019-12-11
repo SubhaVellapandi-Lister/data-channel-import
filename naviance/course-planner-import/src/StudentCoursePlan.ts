@@ -24,7 +24,9 @@ export class PlanImport {
         for (const planObj of batch) {
             batchPromises.push(this.importPlan(scope, planObj, programs));
         }
-        let [creates, updates, errors] = [0, 0 , 0];
+        let creates = 0;
+        let updates = 0;
+        let errors = 0;
         const results = await Promise.all(batchPromises);
         for (const result of results) {
             switch (result) {
@@ -71,7 +73,9 @@ export class PlanImport {
         const schoolId = planObj.planOfStudy.institutionId;
         const studentId = planObj.studentId.toString();
 
-        const existingForStudent = await StudentPlan.find(scope, {
+        const scopeHs = `naviance.${schoolId}`;
+
+        const existingForStudent = await StudentPlan.find(scopeHs, {
             findCriteria: {
                 studentPrincipleId: studentId
             }
@@ -129,7 +133,7 @@ export class PlanImport {
                 allowOverage: true
             },
             meta,
-            scope,
+            scopeHs,
             undefined,
             studentId
         );
@@ -155,7 +159,7 @@ export class PlanImport {
             plan = new StudentPlan(
                 studentId,
                 'migration',
-                scope,
+                scopeHs,
                 [ context ],
                 [pos],
                 courses,

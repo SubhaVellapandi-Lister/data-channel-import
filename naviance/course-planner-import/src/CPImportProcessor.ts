@@ -381,7 +381,11 @@ export class CPImportProcessor extends BaseProcessor {
 
     public async after_importStudentCoursePlans(input: IStepBeforeInput): Promise<IStepAfterOutput> {
         if (this.planBatch.length > 0) {
-            await PlanImport.batchImportPlan(this.namespace, this.planBatch, this.allPrograms);
+            const [creates, updates, errors] = await PlanImport.batchImportPlan(
+                this.namespace, this.planBatch, this.allPrograms);
+            this.createdCount += creates;
+            this.updatedCount += updates;
+            this.errorCount += errors;
         }
 
         return { results: {

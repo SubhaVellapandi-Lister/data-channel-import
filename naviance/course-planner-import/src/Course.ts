@@ -1,6 +1,7 @@
 import {
     AnnotationOperator,
     Annotations,
+    AnnotationValue,
     Batch,
     Course,
     CourseStatement,
@@ -24,6 +25,15 @@ export class CourseImport {
     public static finalCourseId(courseId: string) {
         return courseId.replace(/\s/g, '').replace(/\*/g, '').split('(')[0];
     }
+
+    public static fromExistingAnno(existing: Course | undefined, annoName: string): AnnotationValue | null {
+        if (existing && existing.annotations.getValue(annoName)) {
+            return existing.annotations.getValue(annoName);
+        }
+
+        return null;
+    }
+
     public static courseFromRowData(
         rowData: IRowData,
         singleHighschoolId: string,
@@ -34,15 +44,24 @@ export class CourseImport {
         const courseId = getRowVal(rowData, 'Course_ID') || getRowVal(rowData, 'Course_Code') || '';
         const strippedCourseId = this.finalCourseId(courseId);
         const courseName = getRowVal(rowData, 'Course_Name') || getRowVal(rowData, 'Course_Title') || '';
-        const stateId = getRowVal(rowData, 'State_ID') || getRowVal(rowData, 'State_Category_Code') || '';
+        const stateId = (getRowVal(rowData, 'State_ID')
+            || getRowVal(rowData, 'State_Category_Code')
+            || this.fromExistingAnno(existingCourse, 'stateId')
+            || '') as string;
         const credits = parseFloat(getRowVal(rowData, 'Credits') || getRowVal(rowData, 'Credit') || '0') || 0;
         const instructionalLevelCode = getRowVal(rowData, 'Instructional_Level') || 'UT';
-        const instructionalLevel = instructionalLevelMap[instructionalLevelCode] || 'Untracked';
-        const rawStatusCode = (getRowVal(rowData, 'Status') || getRowVal(rowData, 'Active')) || '';
+        const instructionalLevel = (
+            instructionalLevelMap[instructionalLevelCode]
+            || this.fromExistingAnno(existingCourse, 'instructionalLevel')
+            || 'Untracked'
+        ) as string;
+        const fileStatusCode = getRowVal(rowData, 'Status') || getRowVal(rowData, 'Active');
+        const rawStatusCode = fileStatusCode === undefined ? 'Y' : fileStatusCode;
         const statusCode = (rawStatusCode === 'Y' || rawStatusCode === '1' ||
             rawStatusCode === 'A' || rawStatusCode.toUpperCase() === 'ACTIVE') ?
              'ACTIVE' : 'INACTIVE';
-        const isCte = getRowVal(rowData, 'CTE') === 'Y' ? 1 : 0;
+        const cteRaw = getRowVal(rowData, 'CTE') || this.fromExistingAnno(existingCourse, 'cteCourse');
+        const isCte = cteRaw === 'Y' || cteRaw === 1 ? 1 : 0;
         const isTechPrep = 0;
         let schoolsList = schoolsByCourse[courseId] || [];
         if (!schoolsList.length && singleHighschoolId) {
@@ -78,18 +97,13 @@ export class CourseImport {
             }
         }
 
-        const description = (getRowVal(rowData, 'Description') || '')
+        const description = (
+            (getRowVal(rowData, 'Description') || this.fromExistingAnno(existingCourse, 'description') || '') as string)
             .replace('\\n', ' ').replace(/\n/g, ' ').replace(/\"/g, "'").replace(/\r/g, '').replace('\\r', ' ');
 
-        let prereqString = getRowVal(rowData, 'Prereq_Text') || '';
-        if (!prereqString && existingCourse) {
-            const preq = existingCourse.annotations.getValue('prerequisites');
-            if (preq) {
-                prereqString = preq as string;
-            }
-        }
+        const existingAnnoItems = existingCourse ? existingCourse.annotations.items : {};
 
-        const annoItems: IAnnotationItems = {
+        const annoItems: IAnnotationItems = Object.assign(existingAnnoItems, {
             id: { value: courseId, type: 'STRING', operator: AnnotationOperator.EQUALS },
             number: { value: courseId, type: 'STRING', operator: AnnotationOperator.EQUALS },
             name: { value: courseName, type: 'STRING', operator: AnnotationOperator.EQUALS },
@@ -104,10 +118,7 @@ export class CourseImport {
             instructionalLevel: { value: instructionalLevel, type: 'STRING', operator: AnnotationOperator.EQUALS },
             schools: { value: schoolsList, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
             description: { value: description, type: 'STRING', operator: AnnotationOperator.EQUALS },
-            prerequisites: {
-                value: prereqString, type: 'STRING', operator: AnnotationOperator.EQUALS
-            }
-        };
+        });
 
         if (getRowVal(rowData, 'Elective')) {
             const isElective = getRowVal(rowData, 'Elective') === 'Y' ? 1 : 0;
@@ -122,6 +133,12 @@ export class CourseImport {
         if (getRowVal(rowData, 'Course_Duration')) {
             annoItems['courseDuration'] = {
                 value: getRowVal(rowData, 'Course_Duration') || '', type: 'STRING', operator: AnnotationOperator.EQUALS
+            };
+        }
+
+        if (getRowVal(rowData, 'Prereq_Text') || '') {
+            annoItems['prerequisites'] = {
+                value: getRowVal(rowData, 'Prereq_Text') as string, type: 'STRING', operator: AnnotationOperator.EQUALS
             };
         }
 
