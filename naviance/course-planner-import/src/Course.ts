@@ -40,7 +40,7 @@ export class CourseImport {
         subjectAreasLoaded: ISubjectAreaLoad,
         schoolsByCourse: { [key: string]: string[] },
         existingCourse: Course | undefined
-    ): Course {
+    ): Course | null {
         const courseId = getRowVal(rowData, 'Course_ID') || getRowVal(rowData, 'Course_Code') || '';
         const strippedCourseId = this.finalCourseId(courseId);
         const courseName = getRowVal(rowData, 'Course_Name') || getRowVal(rowData, 'Course_Title') || '';
@@ -77,6 +77,11 @@ export class CourseImport {
         const combinedSubjectArea = getCombinedSubjectArea(
             rowSub, getRowVal(rowData, 'SCED_Subject_Area') || '', subjectAreasLoaded, stateId
         );
+        if (!combinedSubjectArea) {
+            console.log(`Error, subject area ${rowSub} not found, skipping ${courseId}`);
+
+            return null;
+        }
         const grades: number[] = [];
         for (const g of [6, 7, 8, 9, 10, 11, 12]) {
             const grVal = getRowVal(rowData, `GR${g}`);
@@ -241,6 +246,9 @@ export class CourseImport {
     }
 
     public static async getBatchOfCourses(courseIds: string[], namespace: string): Promise<Course[]> {
+        if (!courseIds.length) {
+            return [];
+        }
         const ns = new Namespace(namespace);
         const existingPager = Course.find(ns, {
             findCriteria: {

@@ -6,11 +6,11 @@ interface IDataChannelsEvent {
   TaskToken: string;
 }
 
-export async function lambdaHandler(event: IDataChannelsEvent): Promise<{ status: string }> {
+export async function lambdaHandler(event: IDataChannelsEvent, context: any): Promise<{ status: string }> {
   const job = Job.fromConfig(event.Job);
   await job.init();
   const processor = new CPImportProcessor(job);
-  await processor.handle(event.TaskToken);
+  await processor.handle(context.awsRequestId, event.TaskToken);
   console.log('job status', `${job.status} ${job.statusMessage}`);
 
   const response = {

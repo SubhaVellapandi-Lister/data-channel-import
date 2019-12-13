@@ -26,7 +26,8 @@ export function getCombinedSubjectArea(
         }
     }
 
-    return `${subName}_0_22`;
+    // return `${subName}_0_22`;
+    return '';
 }
 
 export function getMigratedSubjectArea(subName: string, categoryName: string) {
@@ -67,7 +68,9 @@ export async function loadExistingSubjectAreas(namespace: string): Promise<ISubj
     return results;
 }
 
-export function parseSubjectAreaRow(data: IRowData, subMap: { [key: string]: ISubjectAreaCodePair[]}): boolean {
+export function parseSubjectAreaRow(
+    data: IRowData, subMap: { [key: string]: ISubjectAreaCodePair[]}, noCreate: boolean = false
+): boolean {
     let created = false;
 
     if (data['JSON_OBJECT']) {
@@ -92,6 +95,9 @@ export function parseSubjectAreaRow(data: IRowData, subMap: { [key: string]: ISu
         }
     } else {
         // client file, no naviance code so look for sced
+        if (noCreate) {
+            return false;
+        }
         let rowSub = getRowVal(data, 'Subject_Area') || getRowVal(data, 'SUBJECT_AREA_1') || '';
         const rowSced = parseInt(getRowVal(data, 'SCED_Subject_Area') || '0') || 0;
 
@@ -201,6 +207,12 @@ export async function saveSubjectAreas(namespace: string, subLoad: ISubjectAreaL
         for (const codePair of subLoad.subjectAreaMapping[subName]) {
             subjectAreaValues.push(`${subName}_${codePair.csscCode}_${codePair.scedCode}`);
         }
+    }
+
+    if (!subjectAreaValues) {
+        console.log('Error creating/updating subjects, no values');
+
+        return false;
     }
 
     let createdAnnotationType = false;

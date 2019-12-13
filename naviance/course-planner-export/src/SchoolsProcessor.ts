@@ -29,7 +29,7 @@ export class SchoolsProcessor extends BaseProcessor {
             rootUrl + '/tree?root=naviance&depth=1', { headers: { Authorization: JWT }, json: true});
 
         for (const schoolId of Object.keys(body['naviance'])) {
-            if (schoolId.endsWith('DUS') || schoolId.endsWith('USPU')) {
+            if (schoolId.endsWith('DUS') || schoolId.endsWith('USPU') || schoolId.endsWith('USPR')) {
                 schoolIds.push(schoolId);
             }
         }

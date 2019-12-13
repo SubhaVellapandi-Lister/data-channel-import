@@ -183,6 +183,9 @@ export default class Validate extends BaseProcessor {
                     hasValidType = true;
                 }
             }
+            case ValidateDataType.String: {
+                hasValidType = true;
+            }
         }
 
         return hasValidType;

@@ -84,12 +84,16 @@ export class PoSImport {
         for (const cpReq of cpRequirements) {
             const reqPk = cpReq['pk'] || cpReq['requirementId'];
             const reqDetails = cpReq['requirement'] || cpReq;
+            if (!reqDetails['rules'].length && cpReq['rules']) {
+                // combined reqs get rules at higher level
+                reqDetails['rules'] = cpReq['rules'];
+            }
             const reqId = uuidv5(reqPk.toString(), uuidSeed);
             const reqCredits = this.findCredits(reqDetails);
             const statementAnno = Annotations.simple({
                 id: reqId,
                 name: reqDetails['name'],
-                description: reqDetails['description'].replace(/\n/g, ' ').replace(/\r/g, ''),
+                description: (reqDetails['description'] || '').replace(/\n/g, ' ').replace(/\r/g, ''),
                 credits: reqCredits
             });
             const rules: ListExpression[] = [];
@@ -115,6 +119,7 @@ export class PoSImport {
                         break;
                     case 4:
                     case 5:
+                    default:
                         pushRule(this.itemsFromListRule(reqId, rule));
                         break;
                 }
@@ -187,11 +192,14 @@ export class PoSImport {
             return null;
         }
 
+        const ruleCredits = this.findCredits(rule);
+        const mods = ruleCredits ? Modifiers.simple({ credits: ruleCredits}) : undefined;
+
         const lexp = new ListExpression(
             [new ListExpression(
                 idents,
                 Annotations.simple({shareGroup: uuidv5(reqId + rule['pk'], this.uuidSeed)}),
-                Modifiers.simple({ credits: this.findCredits(rule)})
+                mods
             )],
             Annotations.simple({
                 rule: 3

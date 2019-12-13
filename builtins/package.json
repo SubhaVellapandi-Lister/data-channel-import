@@ -20,7 +20,10 @@
     "deploy-sandbox": "npm run build && sam build && npm run sam-package-sandbox && npm run sam-deploy-sandbox",
     "sam-package-dev": "sam package --output-template packaged-dev.yml --s3-bucket data-channels-processor-deployments-dev --profile data-channels-dev",
     "sam-deploy-dev": "sam deploy --template-file ./packaged-dev.yml --stack-name data-channels-builtin-processor-dev --capabilities CAPABILITY_IAM --region us-east-1",
-    "deploy-dev": "npm run build && sam build && npm run sam-package-dev && npm run sam-deploy-dev"
+    "deploy-dev": "npm run build && sam build && npm run sam-package-dev && npm run sam-deploy-dev",
+    "sam-package-navprod": "sam package --output-template packaged-navprod.yml --s3-bucket data-channels-processor-deployments-navprod --profile data-channels-naviance-prod",
+    "sam-deploy-navprod": "sam deploy --template-file ./packaged-navprod.yml --stack-name data-channels-builtin-processor-navprod --capabilities CAPABILITY_IAM --region us-east-1",
+    "deploy-navprod": "npm run build && sam build && npm run sam-package-navprod && npm run sam-deploy-navprod"
   },
   "repository": {
     "type": "git",
@@ -47,7 +50,7 @@
     "typescript": "3.6.3"
   },
   "dependencies": {
-    "@data-channels/dcSDK": "0.8.2",
+    "@data-channels/dcSDK": "0.9.6-beta.1",
     "lodash": "4.17.15",
     "request": "2.88.0"
   },

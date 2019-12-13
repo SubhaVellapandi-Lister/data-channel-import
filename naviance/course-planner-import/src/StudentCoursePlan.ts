@@ -6,7 +6,8 @@ import {
 export enum PlanImportStatus {
     Errored = "Errored",
     Updated = "Updated",
-    Created = "Created"
+    Created = "Created",
+    Skipped = "Skipped"
 }
 
 export class PlanImport {
@@ -19,14 +20,17 @@ export class PlanImport {
         return programs.filter((p) => p.annotations.getValue('name') === name)[0];
     }
 
-    static async batchImportPlan(scope: string, batch: any[], programs: Program[]): Promise<[number, number, number]> {
+    static async batchImportPlan(
+        scope: string, batch: any[], programs: Program[], createOnly: boolean = false
+    ): Promise<[number, number, number, number]> {
         const batchPromises: Promise<PlanImportStatus>[] = [];
         for (const planObj of batch) {
-            batchPromises.push(this.importPlan(scope, planObj, programs));
+            batchPromises.push(this.importPlan(scope, planObj, programs, createOnly));
         }
         let creates = 0;
         let updates = 0;
         let errors = 0;
+        let skips = 0;
         const results = await Promise.all(batchPromises);
         for (const result of results) {
             switch (result) {
@@ -39,13 +43,19 @@ export class PlanImport {
                 case PlanImportStatus.Updated:
                     updates += 1;
                     break;
+                case PlanImportStatus.Skipped:
+                    skips += 1;
+                    break;
             }
         }
+        console.log(`${creates} creates, ${updates} updates, ${errors} errors, ${skips} skips`);
 
-        return [creates, updates, errors];
+        return [creates, updates, errors, skips];
     }
 
-    static async importPlan(scope: string, planObj: any, programs: Program[]): Promise<PlanImportStatus> {
+    static async importPlan(
+        scope: string, planObj: any, programs: Program[], createOnly: boolean
+    ): Promise<PlanImportStatus> {
         const pos = this.findProgram(planObj.planOfStudy.name, programs);
         if (!pos) {
             console.log(`Could not find program ${planObj.planOfStudy.name}`);
@@ -73,9 +83,7 @@ export class PlanImport {
         const schoolId = planObj.planOfStudy.institutionId;
         const studentId = planObj.studentId.toString();
 
-        const scopeHs = `naviance.${schoolId}`;
-
-        const existingForStudent = await StudentPlan.find(scopeHs, {
+        const existingForStudent = await StudentPlan.find(scope, {
             findCriteria: {
                 studentPrincipleId: studentId
             }
@@ -86,6 +94,10 @@ export class PlanImport {
         let existing: StudentPlan | undefined;
         for (const existPlan of existingForStudent) {
             if (existPlan.meta && existPlan.meta['name'] === name && existPlan.meta['migratedId'] === migratedId) {
+                if (createOnly) {
+                    return PlanImportStatus.Skipped;
+                }
+
                 console.log(`found name match, updating existing plan`);
                 existing = await existPlan.toStudentPlan();
                 break;
@@ -133,7 +145,7 @@ export class PlanImport {
                 allowOverage: true
             },
             meta,
-            scopeHs,
+            scope,
             undefined,
             studentId
         );
@@ -159,7 +171,7 @@ export class PlanImport {
             plan = new StudentPlan(
                 studentId,
                 'migration',
-                scopeHs,
+                scope,
                 [ context ],
                 [pos],
                 courses,

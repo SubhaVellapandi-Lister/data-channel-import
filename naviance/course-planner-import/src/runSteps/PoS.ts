@@ -57,7 +57,7 @@ async function processJob(jobToRun: any, namespace: string, filesIn: any[]) {
     const processor = new CPImportProcessor(jobObj, { storeFilesLocal: true });
 
     console.log(JSON.stringify(processor.job, undefined, 2));
-    await processor.processAll();
+    await processor.processAll('');
     console.log(JSON.stringify(processor.job, undefined, 2));
 }
 
