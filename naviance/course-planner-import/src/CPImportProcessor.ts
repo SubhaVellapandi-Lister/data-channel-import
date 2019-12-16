@@ -79,7 +79,7 @@ export class CPImportProcessor extends BaseProcessor {
         initRulesRepo(input.parameters!);
         this.namespace = input.parameters!['namespace'];
         if (!this.namespace) {
-            this.namespace = this.job.rawConfig.tenant ? this.job.rawConfig.tenant.name! : '0';
+            this.namespace = this.job.rawConfig.tenant?.name ?? '0';
         }
         console.log(`create subjects namespace ${this.namespace}`);
         this.subjectAreasLoaded = await loadExistingSubjectAreas(this.namespace);
@@ -218,7 +218,9 @@ export class CPImportProcessor extends BaseProcessor {
                     this.schoolsByCourse,
                     existingByName[CourseImport.finalCourseId(
                         getRowVal(rowData, 'Course_ID') || getRowVal(rowData, 'Course_Code') || '')
-                    ]);
+                    ],
+                    this.namespace
+                );
 
             if (!course) {
                 continue;

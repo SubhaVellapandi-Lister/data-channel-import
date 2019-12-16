@@ -16,13 +16,13 @@
     "test:cov": "jest --coverage --no-cache --runInBand",
     "test:nocov": "jest --no-cache --runInBand",
     "pack": "npm-pack-zip",
-    "sam-package-dev": "sam package --template-file sam-template-dev.yml --output-template sam-packaged-dev.yml --s3-bucket data-channels-processor-deployments-dev",
+    "sam-package-dev": "sam package --template-file sam-template-dev.yml --output-template-file sam-packaged-dev.yml --s3-bucket data-channels-processor-deployments-dev",
     "sam-deploy-dev": "sam deploy --template-file ./sam-packaged-dev.yml --stack-name cf-naviance-dc-ap-import-dev --capabilities CAPABILITY_IAM --region us-east-1",
     "deploy-dev": "npm run build && npm run pack && npm run sam-package-dev && npm run sam-deploy-dev && rm course-planner-import.zip",
-    "sam-package-prod": "sam package --template-file sam-template-prod.yml --output-template sam-packaged-prod.yml --s3-bucket data-channels-processor-deployments-dev",
+    "sam-package-prod": "sam package --template-file sam-template-prod.yml --output-template-file sam-packaged-prod.yml --s3-bucket data-channels-processor-deployments-dev",
     "sam-deploy-prod": "sam deploy --template-file ./sam-packaged-prod.yml --stack-name cf-naviance-dc-ap-import-prod --capabilities CAPABILITY_IAM --region us-east-1",
     "deploy-prod": "npm run build && npm run pack && npm run sam-package-prod && npm run sam-deploy-prod && rm course-planner-import.zip",
-    "sam-package-navprod": "sam package --template-file sam-template-prod.yml --output-template sam-packaged-navprod.yml --s3-bucket data-channels-processor-deployments-navprod",
+    "sam-package-navprod": "sam package --template-file sam-template-prod.yml --output-template-file sam-packaged-navprod.yml --s3-bucket data-channels-processor-deployments-navprod",
     "sam-deploy-navprod": "sam deploy --template-file ./sam-packaged-navprod.yml --stack-name cf-naviance-dc-ap-import-prod --capabilities CAPABILITY_IAM --region us-east-1",
     "deploy-navprod": "npm run build && npm run pack && npm run sam-package-navprod && npm run sam-deploy-navprod && rm course-planner-import.zip"
   },
@@ -47,9 +47,9 @@
     "npm-pack-zip": "^1.2.7",
     "shx": "0.3.2",
     "ts-jest": "24.0.0",
-    "ts-node": "8.0.2",
+    "ts-node": "8.5.4",
     "tslint": "5.11.0",
-    "typescript": "3.6.3"
+    "typescript": "3.7.3"
   },
   "dependencies": {
     "@academic-planner/apSDK": "1.10.0",
