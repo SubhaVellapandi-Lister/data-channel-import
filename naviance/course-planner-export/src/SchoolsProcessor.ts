@@ -1,10 +1,37 @@
-import { BaseProcessor, IFileProcessorInput, IFileProcessorOutput } from "@data-channels/dcSDK";
+import { BaseProcessor, IFileProcessorInput,
+    IFileProcessorOutput, IRowProcessorInput, IRowProcessorOutput, IStepAfterInput } from "@data-channels/dcSDK";
 import request from "request-promise-native";
 import { getJWT, initServices } from "./Utils";
 
 export class SchoolsProcessor extends BaseProcessor {
+    private schoolsByDistrict: { [dsId: string]: string[]} = {};
 
-    public async findSchools(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
+    public async findSchools(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
+        if (input.index === 1 || input.data['HasLegacyCP'] !== '1') {
+            return {
+                outputs: {}
+            };
+        }
+
+        const hsId = input.data['Id'].replace(/\s+/g, '');
+
+        if (input.data['DistrictId'] && input.data['DistrictId'].length > 4) {
+            // has a district
+            const dsId = input.data['DistrictId'].replace(/\s+/g, '');
+            if (!this.schoolsByDistrict[dsId]) {
+                this.schoolsByDistrict[dsId] = [];
+            }
+            this.schoolsByDistrict[dsId].push(hsId);
+        } else {
+            this.schoolsByDistrict[hsId] = [hsId];
+        }
+
+        return {
+            outputs: {}
+        };
+    }
+
+    public async after_findSchools(input: IStepAfterInput) {
         console.log(`findSchools`, input.parameters);
         initServices(input.parameters!);
         let schools: string[] = [];
@@ -14,9 +41,17 @@ export class SchoolsProcessor extends BaseProcessor {
             schools = await this.getSchools(input.parameters!['rulesRepoUrl']);
         }
 
+        const fullDistrictList: { [dsId: string]: string[]} = {};
+        for (const schoolId of schools) {
+            if (this.schoolsByDistrict[schoolId]) {
+                fullDistrictList[schoolId] = this.schoolsByDistrict[schoolId];
+            }
+        }
+
         return {
             results: {
-                schools
+                schools,
+                hsMapping: fullDistrictList
             }
         };
     }

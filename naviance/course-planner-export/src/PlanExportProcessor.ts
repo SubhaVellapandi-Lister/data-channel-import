@@ -81,7 +81,7 @@ export class PlanExportProcessor extends BaseProcessor {
         return this.programsByName[name];
     }
 
-    private async findProgramColumns(plan: StudentPlan): Promise<object> {
+    private async findProgramColumns(plan: StudentPlan, dsId: string): Promise<object> {
         const audit = plan.latestAudit;
         const gradedRecIds: string[] = audit.studentRecords
             .filter((srec) => (srec.record as ICourseRecord).grade !== undefined)
@@ -122,7 +122,7 @@ export class PlanExportProcessor extends BaseProcessor {
             Pathway_Completed_Credits: "0", // need to tweak once we are storing course histories
             Pathway_Planned_Credits: ''
         };
-        const namespace = new Namespace(plan.scope.replace('namespace.', ''));
+        const namespace = new Namespace(dsId);
         let planTotalCreditsRequired = 0;
         for (const progRef of plan.programs) {
             const program = await this.findProgram(namespace, progRef.name);
@@ -225,27 +225,11 @@ export class PlanExportProcessor extends BaseProcessor {
         initServices(input.parameters!);
     }
 
-    public async exportPlans(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
-        const schoolId = Object.keys(input.outputs)[0];
-
-        this.writeOutputRow(input.outputs[schoolId].writeStream, this.headers);
-        let plansExported = 0;
-
-        console.log(`processing school ${schoolId}`);
-        this.programsByName = {};
-        const pager = StudentPlan.find(`naviance.${schoolId}`);
-
-        const namespace = new Namespace(schoolId);
-        const config = await RawStorage.findOne({namespace, itemName: schoolId });
-        let configItems: { [name: string]: string } = {};
-        if (config && config.json) {
-            configItems = {
-                Approval_Requirement: config.json['approvalRequirement'] || '',
-                Pathway_Label: config.json['labels']['pathway'] || '',
-                Cluster_Label: config.json['labels']['cluster'] || ''
-            };
-        }
-
+    private async processHighschool(
+        dsId: string, hsId: string, configItems: { [name: string]: string }
+    ): Promise<string[][]> {
+        const results: string[][] = [];
+        const pager = StudentPlan.find(`naviance.${hsId}`);
         let page = await pager.page(1);
 
         const sleep = (milliseconds: number) => {
@@ -274,8 +258,6 @@ export class PlanExportProcessor extends BaseProcessor {
                 return {slim, full: full!};
             });
             for await (const planSet of pageOfPlans) {
-                plansExported += 1;
-
                 const planVersion = planSet.full.latestVersion();
                 const audit = planSet.full.latestAudit;
                 const meta = planSet.full.meta || {};
@@ -299,7 +281,7 @@ export class PlanExportProcessor extends BaseProcessor {
                     .reduce((credA, credB) => credA + credB, 0);
 
                 const rowData = {
-                    Tenant_ID: schoolId,
+                    Tenant_ID: dsId,
                     GUID: planSet.slim.guid,
                     Plan_Name: planName,
                     Student_ID:  planSet.slim.studentPrincipleId,
@@ -318,18 +300,16 @@ export class PlanExportProcessor extends BaseProcessor {
                 };
 
                 try {
-                    Object.assign(rowData, await this.findProgramColumns(planSet.full));
+                    Object.assign(rowData, await this.findProgramColumns(planSet.full, dsId));
                 } catch (error) {
-                    console.log(`Error ${schoolId} - ${planSet.slim.guid}`);
+                    console.log(`Error ${hsId} - ${planSet.slim.guid}`);
                     console.log(error);
                     continue;
                 }
                 Object.assign(rowData, configItems);
 
                 const flatRow = this.headers.map((headerName) => (rowData[headerName] || '').toString());
-
-                this.writeOutputRow(input.outputs[schoolId].writeStream, flatRow);
-                console.log(`${schoolId} - ${planSet.slim.guid}`);
+                results.push(flatRow);
             }
             try {
                 page = await pager.next();
@@ -340,7 +320,42 @@ export class PlanExportProcessor extends BaseProcessor {
             }
         }
 
-        this.plansExported[schoolId] = plansExported;
+        return results;
+    }
+
+    public async exportPlans(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
+        const schoolId = Object.keys(input.outputs)[0];
+        const hsMapping = this.job.steps['findSchools'].output!['hsMapping'] as { [dsId: string]: string[]};
+        let highschoolsToProcess = [schoolId];
+        if (hsMapping[schoolId]) {
+            highschoolsToProcess = hsMapping[schoolId];
+        }
+        console.log(`district ${schoolId} processing schools ${highschoolsToProcess}`);
+
+        this.writeOutputRow(input.outputs[schoolId].writeStream, this.headers);
+
+        this.programsByName = {};
+
+        const namespace = new Namespace(schoolId);
+        const config = await RawStorage.findOne({namespace, itemName: schoolId });
+        let configItems: { [name: string]: string } = {};
+        if (config && config.json) {
+            configItems = {
+                Approval_Requirement: config.json['approvalRequirement'] || '',
+                Pathway_Label: config.json['labels']['pathway'] || '',
+                Cluster_Label: config.json['labels']['cluster'] || ''
+            };
+        }
+
+        for (const hsId of highschoolsToProcess) {
+            console.log(`processing school ${schoolId}`);
+
+            const results = await this.processHighschool(schoolId, hsId, configItems);
+            for (const flatRow of results) {
+                this.writeOutputRow(input.outputs[schoolId].writeStream, flatRow);
+            }
+            this.plansExported[hsId] = results.length;
+        }
 
         return {};
     }

@@ -188,6 +188,34 @@ program
         console.log(`${ids.length} schools`);
     });
 
+function failedCat(id: string): boolean {
+    if (catalogLog[id].catalog && (
+        !catalogLog[id].catalog!.status || catalogLog[id].catalog!.status === JobStatus.Failed
+    )) {
+        return true;
+    }
+
+    return false;
+}
+
+function failedPlanOfStudy(id: string): boolean {
+    if ((catalogLog[id].catalog && catalogLog[id].catalog!.objects! > 0 && !catalogLog[id].pos) ||
+        (catalogLog[id].pos && !catalogLog[id].pos!.status) ||
+        (catalogLog[id].pos && catalogLog[id].pos!.status === JobStatus.Failed)) {
+        return true;
+    }
+
+    return false;
+}
+
+function failedTimeout(id: string): boolean {
+    if ((catalogLog[id].catalog && catalogLog[id].catalog!.skippedForTime)) {
+        return true;
+    }
+
+    return false;
+}
+
 program
     .command('catalog.stats')
     .option('--highschools')
@@ -206,23 +234,16 @@ program
         let totalSkippedForTime = 0;
         const errorIds = [];
         for (const id of Object.keys(catalogLog)) {
-            let failedCatalog = false;
-            if (catalogLog[id].catalog && (
-                !catalogLog[id].catalog!.status || catalogLog[id].catalog!.status === JobStatus.Failed
-                )) {
-                failedCatalog = true;
+            const failedCatalog = failedCat(id);
+            if (failedCatalog) {
                 totalFailedCat += 1;
             }
-            let failedPoS = false;
-            if ((catalogLog[id].catalog && catalogLog[id].catalog!.objects! > 0 && !catalogLog[id].pos) ||
-                (catalogLog[id].pos && !catalogLog[id].pos!.status) ||
-                (catalogLog[id].pos && catalogLog[id].pos!.status === JobStatus.Failed)) {
-                failedPoS = true;
+            const failedPoS = failedPlanOfStudy(id);
+            if (failedPoS) {
                 totalFailedPos += 1;
             }
-            let skippedForTime = false;
-            if ((catalogLog[id].catalog && catalogLog[id].catalog!.skippedForTime)) {
-                skippedForTime = true;
+            const skippedForTime = failedTimeout(id);
+            if (skippedForTime) {
                 totalSkippedForTime += 1;
             }
             if (failedCatalog || failedPoS || skippedForTime) {
@@ -259,6 +280,198 @@ program
         console.log(
             `skippedForTime ${totalSkippedForTime}, catalog fail ${totalFailedCat}, pos fail ${totalFailedPos}`);
 
+    });
+
+async function processBatch(idBatch: string[], logName: string, tenantType: string, noCatalog?: boolean) {
+    console.log(`starting batch of ${idBatch.length}: ${idBatch}`);
+    const shouldProcessPos: {[key: string]: boolean} = {};
+    let processingIds: string[] = [];
+    for (const id of idBatch) {
+        console.log(`starting catalog inst ${id}`);
+        catalogLog[id] = {};
+        shouldProcessPos[id] = true;
+        if (catalogExcludes.includes(id) || noCatalog) {
+            console.log(`skipping ${id} catalog`);
+        } else {
+            const createBody = jobExecutionBody({
+                channel: 'naviance/migrateCourseCatalog',
+                product: 'naviance',
+                parameters:
+                    `namespace=${id},tenantId=${id},tenantType=${tenantType},batchSize=50`
+            });
+            const job = await createjob(JSON.stringify(createBody), true);
+            catalogLog[id].catalog = {
+                guid: job.guid
+            };
+            console.log(`created job ${job.guid}`);
+            saveCatalogLog(logName);
+            processingIds.push(id);
+        }
+    }
+
+    const startTime = new Date().getTime() / 1000;
+    await sleep(5000);
+    spin.text = `waiting catalog on jobs`;
+    spin.start();
+    while (processingIds.length) {
+        const curTime = new Date().getTime() / 1000;
+        if (curTime > startTime + (60 * 20)) {
+            console.log(`timing out on batch, failing remaining jobs for: ${processingIds}`);
+            for (const failId of processingIds) {
+                catalogLog[failId].catalog!.status = JobStatus.Failed;
+                shouldProcessPos[failId] = false;
+            }
+            saveCatalogLog(logName);
+            break;
+        }
+
+        for (const checkId of processingIds) {
+            const resultJob = await ServiceInterfacer.getInstance()
+                .getJob(catalogLog[checkId].catalog!.guid);
+            if (resultJob.status === JobStatus.Completed || resultJob.status === JobStatus.Failed) {
+                let courseCount = 0;
+                let skippedForTime = 0;
+                if (resultJob.status === JobStatus.Completed) {
+                    courseCount = resultJob.steps['batchToAp'].output!['coursesPushed'];
+                    skippedForTime = resultJob.steps['batchToAp'].output!['skippedForTime'] || 0;
+                }
+                catalogLog[checkId].catalog = {
+                    guid: resultJob.guid,
+                    status: resultJob.status,
+                    statusMsg: resultJob.statusMsg || '',
+                    created: resultJob.created,
+                    completed: resultJob.completed,
+                    objects: courseCount,
+                    skippedForTime
+                };
+                saveCatalogLog(logName);
+                if (resultJob.status === JobStatus.Failed) {
+                    shouldProcessPos[checkId] = false;
+                }
+                if (!resultJob.steps['validate'].metrics || !resultJob.steps['validate'].metrics.inputs ||
+                    resultJob.steps['validate'].metrics.inputs['CourseCatalog'].totalRows < 2) {
+                    shouldProcessPos[checkId] = false;
+                }
+
+                processingIds.splice( processingIds.indexOf(checkId), 1 );
+                console.log(`${checkId} ${courseCount} courses loaded`);
+                console.log(`${checkId} catalog ${resultJob.status}, ${processingIds.length} jobs left`);
+                if (resultJob.status === JobStatus.Failed) {
+                    console.log(`${checkId} catalog: ${resultJob.statusMsg}`);
+                }
+            }
+        }
+        await sleep(5000);
+    }
+    spin.stop();
+
+    const posIds = Object.keys(shouldProcessPos).filter((id) => shouldProcessPos[id]);
+
+    for (const posId of posIds) {
+        console.log(`starting PoS inst ${posId}`);
+        let channel = 'naviance/migrateDistrictPoS';
+        let parameters = `namespace=${posId},districtId=${posId},chunkSize=16`;
+        if (tenantType === 'highschool') {
+            channel = 'naviance/migrateHighschoolPoS';
+            parameters = `namespace=${posId},highschoolId=${posId}`;
+        }
+        const posBody = jobExecutionBody({
+            channel,
+            product: 'naviance',
+            parameters
+        });
+        const posjob = await createjob(JSON.stringify(posBody), true);
+        console.log(`created job ${posjob.guid}`);
+        catalogLog[posId].pos = {
+            guid: posjob.guid
+        };
+        saveCatalogLog(logName);
+    }
+
+    const posStartTime = new Date().getTime() / 1000;
+    await sleep(5000);
+    spin.text = `waiting on pos jobs`;
+    spin.start();
+    processingIds = [...posIds];
+    while (processingIds.length) {
+        const curTime = new Date().getTime() / 1000;
+        if (curTime > posStartTime + (60 * 20)) {
+            console.log(`timing out on batch, failing remaining jobs for: ${processingIds}`);
+            for (const failId of processingIds) {
+                catalogLog[failId].pos!.status = JobStatus.Failed;
+            }
+            saveCatalogLog(logName);
+            break;
+        }
+
+        for (const checkId of processingIds) {
+            const resultJob = await ServiceInterfacer.getInstance()
+                .getJob(catalogLog[checkId].pos!.guid);
+            if (resultJob.status === JobStatus.Completed || resultJob.status === JobStatus.Failed) {
+                let posCount = 0;
+                if (resultJob.status === JobStatus.Completed) {
+                    posCount = resultJob.steps['importPoS'].output!['createdCount']
+                        + resultJob.steps['importPoS'].output!['updatedCount'];
+                }
+                catalogLog[checkId].pos = {
+                    guid: resultJob.guid,
+                    status: resultJob.status,
+                    statusMsg: resultJob.statusMsg || '',
+                    created: resultJob.created,
+                    completed: resultJob.completed,
+                    objects: posCount
+                };
+                saveCatalogLog(logName);
+                processingIds.splice( processingIds.indexOf(checkId), 1 );
+                console.log(`${checkId} ${posCount} pos loaded`);
+                console.log(`${checkId} pos ${resultJob.status}, ${processingIds.length} jobs left`);
+                if (resultJob.status === JobStatus.Failed) {
+                    console.log(`${checkId} pos: ${resultJob.statusMsg}`);
+                }
+            }
+        }
+        await sleep(5000);
+    }
+    spin.stop();
+}
+
+program
+    .command('catalog.runFailures')
+    .option('--starting <startingId>')
+    .option('--highschools')
+    .action(async (dsPath, hsPath, cmd) => {
+        initConnection(program);
+        let logName = 'catalogLog.json';
+        let tenantType = 'district';
+        if (cmd.highschools) {
+            logName = 'hsCatalog.json';
+            tenantType = 'highschool';
+        }
+        loadCatalogLog(logName);
+
+        const allIds = Object.keys(catalogLog);
+        allIds.sort();
+
+        let foundStarting = false;
+        for (const id of allIds) {
+            if (cmd.starting && id === cmd.starting) {
+                foundStarting = true;
+                continue;
+            }
+            if (cmd.starting && !foundStarting) {
+                continue;
+            }
+            const failedCatalog = failedCat(id);
+            const failedPoS = failedPlanOfStudy(id);
+            const skippedForTime = failedTimeout(id);
+
+            if (failedCatalog || failedPoS || skippedForTime) {
+                console.log(
+                    `retrying ${id}, failed cat: ${failedCat}, failed pos: ${failedPoS}, skipped: ${skippedForTime}`);
+                await processBatch([id], logName, tenantType, failedPoS);
+                await sleep(5000);
+            }
+        }
     });
 
 program
@@ -330,159 +543,8 @@ program
             }
             idBatch.push(dsId);
             if (idBatch.length >= batchSize) {
-                console.log(`starting batch of ${batchSize}: ${idBatch}`);
-                const shouldProcessPos: {[key: string]: boolean} = {};
-                let processingIds: string[] = [];
-                for (const id of idBatch) {
-                    console.log(`starting catalog inst ${id}`);
-                    catalogLog[id] = {};
-                    shouldProcessPos[id] = true;
-                    if (catalogExcludes.includes(id)) {
-                        console.log(`skipping ${id} catalog`);
-                    } else {
-                        const createBody = jobExecutionBody({
-                            channel: 'naviance/migrateCourseCatalog',
-                            product: 'naviance',
-                            parameters:
-                                `namespace=${id},tenantId=${id},tenantType=${tenantType},batchSize=50`
-                        });
-                        const job = await createjob(JSON.stringify(createBody), true);
-                        catalogLog[id].catalog = {
-                            guid: job.guid
-                        };
-                        console.log(`created job ${job.guid}`);
-                        saveCatalogLog(logName);
-                        processingIds.push(id);
-                    }
-                }
-
-                const startTime = new Date().getTime() / 1000;
+                await processBatch(idBatch, logName, tenantType);
                 await sleep(5000);
-                spin.text = `waiting catalog on jobs`;
-                spin.start();
-                while (processingIds.length) {
-                    const curTime = new Date().getTime() / 1000;
-                    if (curTime > startTime + (60 * 20)) {
-                        console.log(`timing out on batch, failing remaining jobs for: ${processingIds}`);
-                        for (const failId of processingIds) {
-                            catalogLog[failId].catalog!.status = JobStatus.Failed;
-                            shouldProcessPos[failId] = false;
-                        }
-                        saveCatalogLog(logName);
-                        break;
-                    }
-
-                    for (const checkId of processingIds) {
-                        const resultJob = await ServiceInterfacer.getInstance()
-                            .getJob(catalogLog[checkId].catalog!.guid);
-                        if (resultJob.status === JobStatus.Completed || resultJob.status === JobStatus.Failed) {
-                            let courseCount = 0;
-                            let skippedForTime = 0;
-                            if (resultJob.status === JobStatus.Completed) {
-                                courseCount = resultJob.steps['batchToAp'].output!['coursesPushed'];
-                                skippedForTime = resultJob.steps['batchToAp'].output!['skippedForTime'] || 0;
-                            }
-                            catalogLog[checkId].catalog = {
-                                guid: resultJob.guid,
-                                status: resultJob.status,
-                                statusMsg: resultJob.statusMsg || '',
-                                created: resultJob.created,
-                                completed: resultJob.completed,
-                                objects: courseCount,
-                                skippedForTime
-                            };
-                            saveCatalogLog(logName);
-                            if (resultJob.status === JobStatus.Failed) {
-                                shouldProcessPos[checkId] = false;
-                            }
-                            if (!resultJob.steps['validate'].metrics || !resultJob.steps['validate'].metrics.inputs ||
-                                resultJob.steps['validate'].metrics.inputs['CourseCatalog'].totalRows < 2) {
-                                shouldProcessPos[checkId] = false;
-                            }
-
-                            processingIds.splice( processingIds.indexOf(checkId), 1 );
-                            console.log(`${checkId} ${courseCount} courses loaded`);
-                            console.log(`${checkId} catalog ${resultJob.status}, ${processingIds.length} jobs left`);
-                            if (resultJob.status === JobStatus.Failed) {
-                                console.log(`${checkId} catalog: ${resultJob.statusMsg}`);
-                            }
-                        }
-                    }
-                    await sleep(5000);
-                }
-                spin.stop();
-
-                const posIds = Object.keys(shouldProcessPos).filter((id) => shouldProcessPos[id]);
-
-                for (const posId of posIds) {
-                    console.log(`starting PoS inst ${posId}`);
-                    let channel = 'naviance/migrateDistrictPoS';
-                    let parameters = `namespace=${posId},districtId=${posId},chunkSize=16`;
-                    if (tenantType === 'highschool') {
-                        channel = 'naviance/migrateHighschoolPoS';
-                        parameters = `namespace=${posId},highschoolId=${posId}`;
-                    }
-                    const posBody = jobExecutionBody({
-                        channel,
-                        product: 'naviance',
-                        parameters
-                    });
-                    const posjob = await createjob(JSON.stringify(posBody), true);
-                    console.log(`created job ${posjob.guid}`);
-                    catalogLog[posId].pos = {
-                        guid: posjob.guid
-                    };
-                    saveCatalogLog(logName);
-                }
-
-                const posStartTime = new Date().getTime() / 1000;
-                await sleep(5000);
-                spin.text = `waiting on pos jobs`;
-                spin.start();
-                processingIds = [...posIds];
-                while (processingIds.length) {
-                    const curTime = new Date().getTime() / 1000;
-                    if (curTime > posStartTime + (60 * 20)) {
-                        console.log(`timing out on batch, failing remaining jobs for: ${processingIds}`);
-                        for (const failId of processingIds) {
-                            catalogLog[failId].pos!.status = JobStatus.Failed;
-                        }
-                        saveCatalogLog(logName);
-                        break;
-                    }
-
-                    for (const checkId of processingIds) {
-                        const resultJob = await ServiceInterfacer.getInstance()
-                            .getJob(catalogLog[checkId].pos!.guid);
-                        if (resultJob.status === JobStatus.Completed || resultJob.status === JobStatus.Failed) {
-                            let posCount = 0;
-                            if (resultJob.status === JobStatus.Completed) {
-                                posCount = resultJob.steps['importPoS'].output!['createdCount']
-                                    + resultJob.steps['importPoS'].output!['updatedCount'];
-                            }
-                            catalogLog[checkId].pos = {
-                                guid: resultJob.guid,
-                                status: resultJob.status,
-                                statusMsg: resultJob.statusMsg || '',
-                                created: resultJob.created,
-                                completed: resultJob.completed,
-                                objects: posCount
-                            };
-                            saveCatalogLog(logName);
-                            processingIds.splice( processingIds.indexOf(checkId), 1 );
-                            console.log(`${checkId} ${posCount} pos loaded`);
-                            console.log(`${checkId} pos ${resultJob.status}, ${processingIds.length} jobs left`);
-                            if (resultJob.status === JobStatus.Failed) {
-                                console.log(`${checkId} pos: ${resultJob.statusMsg}`);
-                            }
-                        }
-                    }
-                    await sleep(5000);
-                }
-                spin.stop();
-
-                await sleep(30);
-
                 idBatch = [];
             }
         }
