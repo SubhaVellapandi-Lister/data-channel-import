@@ -54,9 +54,9 @@ export default class Validate extends BaseProcessor {
             if (config.includeLogInData) {
                 dataFileHeaders = [...dataFileHeaders, statusName, infoName];
             } else if (config.includeDataInLog) {
-                logFileHeaders = [...dataFileHeaders, statusName, infoName];
+                logFileHeaders = ['Row', ...dataFileHeaders, statusName, infoName];
             } else {
-                logFileHeaders = [statusName, infoName];
+                logFileHeaders = ['Row', dataFileHeaders[0], statusName, infoName];
             }
 
             const headerOutputs: { [name: string]: RowOutputValue } = {
@@ -143,9 +143,9 @@ export default class Validate extends BaseProcessor {
         }
 
         if (logOutputName) {
-            let logOutputRow = [validationStatus, validationErrors.join('; ')];
+            let logOutputRow = [input.index.toString(), input.raw[0], validationStatus, validationErrors.join('; ')];
             if (config.includeDataInLog) {
-                logOutputRow = [...input.raw, validationStatus, validationErrors.join('; ')];
+                logOutputRow = [input.index.toString(), ...input.raw, validationStatus, validationErrors.join('; ')];
             }
             outputs[logOutputName] = logOutputRow;
         }

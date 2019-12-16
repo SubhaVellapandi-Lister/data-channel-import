@@ -179,9 +179,11 @@ export async function saveDefaultAnnotationTypes(namespace: string) {
         }
     };
 
+    console.log('looking for existing annotations');
     const existingPager = AnnotationType.find(new Namespace(namespace));
     const existing = await existingPager.all();
     const existingNames = existing.map((anno) => anno.name);
+    console.log('found existing annotation names', existingNames);
 
     for (const annoName of Object.keys(annoTypeData)) {
         if (existingNames.includes(annoName)) {
@@ -196,7 +198,13 @@ export async function saveDefaultAnnotationTypes(namespace: string) {
             }),
             details['value']
         );
-        await newAnno.save(new Namespace(namespace), 'import');
+        console.log('saving', annoName);
+        try {
+            await newAnno.save(new Namespace(namespace), 'import');
+        } catch (err) {
+            console.log(`save error`, err);
+            await newAnno.save(new Namespace(namespace), 'import');
+        }
     }
 }
 
@@ -218,6 +226,8 @@ export async function saveSubjectAreas(namespace: string, subLoad: ISubjectAreaL
     let createdAnnotationType = false;
     if (subLoad.foundSubArea) {
         subLoad.foundSubArea.values = subjectAreaValues;
+        console.log(`subject areas object exists, updating`);
+        console.log(subLoad.foundSubArea.guid);
     } else {
         createdAnnotationType = true;
         subLoad.foundSubArea = new AnnotationType(
@@ -228,8 +238,14 @@ export async function saveSubjectAreas(namespace: string, subLoad: ISubjectAreaL
             }),
             subjectAreaValues
         );
+        console.log('creating subject areas object');
     }
-    await subLoad.foundSubArea!.save(new Namespace(namespace));
+    try {
+        await subLoad.foundSubArea!.save(new Namespace(namespace));
+    } catch (err) {
+        console.log(`save error`, err);
+        await subLoad.foundSubArea!.save(new Namespace(namespace));
+    }
 
     return createdAnnotationType;
 }

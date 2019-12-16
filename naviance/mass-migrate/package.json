@@ -1,0 +1,82 @@
+{
+    "name": "@data-channels/mass-migrate-cli",
+    "version": "0.5.0",
+    "description": "CLI for interacting with data channels services",
+    "main": "dist/index.js",
+    "publishConfig": {
+        "registry": "https://hobsons.jfrog.io/hobsons/api/npm/hobsons-platform-team/"
+    },
+    "scripts": {
+        "build": "npm run compile && shx chmod +x dist/cli.js",
+        "prepublish": "npm run build",
+        "compile": "tsc --outDir dist",
+        "watch:compile": "npm run compile -- --watch",
+        "lint": "tslint --project tsconfig.json",
+        "test": "npm run lint && npm run test:cov",
+        "test:cov": "jest --coverage --no-cache --runInBand",
+        "test:nocov": "jest --no-cache --runInBand"
+    },
+    "bin": {
+        "migrate": "dist/cli.js"
+    },
+    "author": "Hobsons",
+    "license": "ISC",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Hobsons/data-channels.git"
+    },
+    "bugs": {
+        "url": "https://github.com/Hobsons/data-channels/issues"
+    },
+    "homepage": "https://github.com/Hobsons/data-channels#readme",
+    "dependencies": {
+        "@data-channels/dcSDK": "0.9.3",
+        "cli-table3": "0.5.1",
+        "csv-parser": "2.3.2",
+        "lodash": "4.17.15",
+        "ora": "3.2.0",
+        "prompts": "2.0.3",
+        "request": "2.88.0",
+        "request-promise-native": "1.0.7",
+        "treeify": "1.1.0"
+    },
+    "devDependencies": {
+        "@types/commander": "2.12.2",
+        "@types/jest": "24.0.11",
+        "@types/node": "10.12.2",
+        "@types/request-promise-native": "1.0.15",
+        "jest": "24.5.0",
+        "shx": "0.3.2",
+        "ts-jest": "24.0.0",
+        "ts-node": "7.0.1",
+        "tslint": "5.16.0",
+        "typescript": "3.7.2"
+    },
+    "jest": {
+        "collectCoverageFrom": [
+            "src/**/*.ts",
+            "!<rootDir>/node_modules/",
+            "!src/**/__*__/*.ts",
+            "!src/types/*.d.ts",
+            "!src/migration/*.ts",
+            "!src/index.ts"
+        ],
+        "moduleFileExtensions": [
+            "ts",
+            "tsx",
+            "js",
+            "jsx",
+            "json",
+            "node"
+        ],
+        "roots": [
+            "src"
+        ],
+        "testURL": "http://localhost",
+        "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.ts$",
+        "transform": {
+            "^.+\\.tsx?$": "ts-jest"
+        },
+        "verbose": true
+    }
+}

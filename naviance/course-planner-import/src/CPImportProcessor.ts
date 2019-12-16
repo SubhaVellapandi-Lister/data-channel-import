@@ -1,6 +1,6 @@
 import {
     Annotations,
-    Batch,
+    Batch, ChuteToObject,
     Course,
     Namespace,
     PlanContext,
@@ -56,6 +56,8 @@ export class CPImportProcessor extends BaseProcessor {
     private allPrograms: Program[] = [];
     private scope: string = '';
     private hasRows: boolean = false;
+    private startTstamp: number = 0;
+    private skippedForTime: number = 0;
 
     public async validate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
         // things to validate for
@@ -121,6 +123,7 @@ export class CPImportProcessor extends BaseProcessor {
     }
 
     public async before_batchToAp(input: IStepBeforeInput) {
+        this.startTstamp = new Date().getTime();
         initRulesRepo(input.parameters!);
         this.namespace = input.parameters!['namespace'];
         if (!this.namespace) {
@@ -136,6 +139,15 @@ export class CPImportProcessor extends BaseProcessor {
     }
 
     public async batchToAp(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
+        const curTime = new Date().getTime();
+        if ((curTime - this.startTstamp) > (1000 * 60 * 12)) {
+            this.skippedForTime += 1;
+
+            return {
+                outputs: {}
+            };
+        }
+
         if (input.index === 1) {
             return {
                 outputs: {}
@@ -219,11 +231,35 @@ export class CPImportProcessor extends BaseProcessor {
             }
             this.seenCourseIds[course.name] = course.name;
             courses.push(course);
-            this.coursesPushed += 1;
         }
-        b.addItems(courses);
-        console.log('COURSES', courses.length);
-        await b.createOrUpdate();
+        const validCourses: Course[] = [];
+        for (const c of courses) {
+            try {
+                ChuteToObject.fromString(c.toChute());
+                validCourses.push(c);
+            } catch (err) {
+                console.log(`Error with course: ${c.name}`);
+                console.log(err);
+            }
+        }
+        this.coursesPushed += validCourses.length;
+        b.addItems(validCourses);
+
+        console.log('COURSES', validCourses.length);
+
+        try {
+            const res = await b.createOrUpdate();
+        } catch (err) {
+            console.log(`error processing batch, will try one-by-one`);
+            console.log(err);
+            for (const newCourse of validCourses) {
+                try {
+                    await Course.createOrUpdate(newCourse, namespace);
+                } catch (err) {
+                    console.log(`could not save courseId ${newCourse.name}`);
+                }
+            }
+        }
         this.apBatch = [];
     }
 
@@ -243,7 +279,8 @@ export class CPImportProcessor extends BaseProcessor {
             batchCount: this.batchCount,
             duplicatesSkipped: this.duplicatesSkipped,
             coursesPushed: this.coursesPushed,
-            mappingsUpdated
+            mappingsUpdated,
+            skippedForTime: this.skippedForTime
         }};
     }
 

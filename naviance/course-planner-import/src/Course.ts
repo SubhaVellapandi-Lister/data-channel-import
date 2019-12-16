@@ -23,7 +23,7 @@ import { getRowVal, prereqCourseStatement, prereqCourseStatementFromJson } from 
 
 export class CourseImport {
     public static finalCourseId(courseId: string) {
-        return courseId.replace(/\s/g, '').replace(/\*/g, '').split('(')[0];
+        return courseId.replace(/\s/g, '').replace(/\*/g, '').replace(/\?/g, '').split('(')[0];
     }
 
     public static fromExistingAnno(existing: Course | undefined, annoName: string): AnnotationValue | null {
@@ -191,15 +191,23 @@ export class CourseImport {
 
             return null;
         }
+        if (courseId.includes(',')) {
+            console.log(`Course ID cannot contain comma`);
+
+            return null;
+        }
         const schoolList = cObj['schools'] || [];
         if (!schoolList.length && cObj['highschoolId']) {
             schoolList.push(cObj['highschoolId']);
         }
 
+        const name = cObj['name'].replace('\\n', ' ').replace(/\n/g, ' ')
+            .replace(/\"/g, "'").replace(/\r/g, '').replace('\\r', ' ');
+
         const annoItems: IAnnotationItems = {
             id: { value: courseId, type: 'STRING', operator: AnnotationOperator.EQUALS },
             number: { value: courseId, type: 'STRING', operator: AnnotationOperator.EQUALS },
-            name: { value: cObj['name'], type: 'STRING', operator: AnnotationOperator.EQUALS },
+            name: { value: name, type: 'STRING', operator: AnnotationOperator.EQUALS },
             grades: { value: cObj['grades'], type: 'LIST_INTEGER', operator: AnnotationOperator.EQUALS },
             status: { value: cObj['status'], type: 'STRING', operator: AnnotationOperator.EQUALS },
             credits: { value: cObj['credits'], type: 'DECIMAL', operator: AnnotationOperator.EQUALS },

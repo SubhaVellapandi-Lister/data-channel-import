@@ -67,7 +67,7 @@ export function prereqCourseStatementFromJson(preqList: string[][]): CourseState
     const preqString =
         preqList.map((andList) => andList.length > 1 ? `(${andList.join(' and ')})` : andList[0]).join(' or ');
 
-    return prereqCourseStatement(preqString);
+    return prereqCourseStatement(preqString.replace(',', ' AND '));
 }
 
 export function getRowVal(rowData: IRowData, colName: string) {
