@@ -243,10 +243,12 @@ program
 
             if (courses > 0 || pos > 0) {
                 success += 1;
+                console.log(id);
             }
 
         }
 
+        console.log('errors');
         errorIds.sort();
         for (const id of errorIds) {
             console.log(id);
