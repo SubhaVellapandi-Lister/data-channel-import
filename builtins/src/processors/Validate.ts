@@ -36,6 +36,7 @@ export interface IValidateConfig {
     validInfoColumnName?: string; // log informational message column name
     includeDataInLog?: boolean; // let log include all the data columns in addition to the log columns
     includeLogInData?: boolean; // instead of separate log file, put log columns in the data file
+    extraLogFile?: string;
 }
 
 export default class Validate extends BaseProcessor {
@@ -45,7 +46,16 @@ export default class Validate extends BaseProcessor {
         const statusName = config.validStatusColumnName || 'Validation_Status';
         const infoName = config.validInfoColumnName || 'Validation_Info';
         const dataOutputName = `${input.name}Validated`;
-        const logOutputName = config.includeLogInData ? '' : 'log';
+        const logNames: string[] = [];
+
+        if (!config.includeLogInData) {
+            logNames.push('log');
+        }
+
+        if (config.extraLogFile) {
+            logNames.push(config.extraLogFile);
+        }
+
         let dataFileHeaders: string[] = [];
         let logFileHeaders: string[] = [];
 
@@ -62,7 +72,8 @@ export default class Validate extends BaseProcessor {
             const headerOutputs: { [name: string]: RowOutputValue } = {
                 [dataOutputName]: dataFileHeaders
             };
-            if (logOutputName) {
+
+            for (const logOutputName of logNames) {
                 headerOutputs[logOutputName] = logFileHeaders;
             }
 
@@ -142,7 +153,7 @@ export default class Validate extends BaseProcessor {
             outputs[dataOutputName] = dataOutputRow;
         }
 
-        if (logOutputName) {
+        for (const logOutputName of logNames) {
             let logOutputRow = [input.index.toString(), input.raw[0], validationStatus, validationErrors.join('; ')];
             if (config.includeDataInLog) {
                 logOutputRow = [input.index.toString(), ...input.raw, validationStatus, validationErrors.join('; ')];
