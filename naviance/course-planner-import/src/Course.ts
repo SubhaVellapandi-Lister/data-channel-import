@@ -39,7 +39,8 @@ export class CourseImport {
         singleHighschoolId: string,
         subjectAreasLoaded: ISubjectAreaLoad,
         schoolsByCourse: { [key: string]: string[] },
-        existingCourse: Course | undefined
+        existingCourse: Course | undefined,
+        defaultSchool?: string
     ): Course | null {
         const courseId = getRowVal(rowData, 'Course_ID') || getRowVal(rowData, 'Course_Code') || '';
         const strippedCourseId = this.finalCourseId(courseId);
@@ -73,6 +74,11 @@ export class CourseImport {
                 schoolsList = existSchools as string[];
             }
         }
+
+        if (schoolsList.length === 0 && defaultSchool) {
+            schoolsList = [defaultSchool];
+        }
+
         const rowSub = getRowVal(rowData, 'Subject_Area') || getRowVal(rowData, 'SUBJECT_AREA_1') || '';
         const combinedSubjectArea = getCombinedSubjectArea(
             rowSub, getRowVal(rowData, 'SCED_Subject_Area') || '', subjectAreasLoaded, stateId
