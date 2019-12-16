@@ -56,7 +56,7 @@ export class CourseImport {
             || this.fromExistingAnno(existingCourse, 'instructionalLevel')
             || 'Untracked'
         ) as string;
-        const fileStatusCode = getRowVal(rowData, 'Status') || getRowVal(rowData, 'Active');
+        const fileStatusCode = getRowVal(rowData, 'Status') ?? getRowVal(rowData, 'Active');
         const rawStatusCode = fileStatusCode === undefined ? 'Y' : fileStatusCode;
         const statusCode = (rawStatusCode === 'Y' || rawStatusCode === '1' ||
             rawStatusCode === 'A' || rawStatusCode.toUpperCase() === 'ACTIVE') ?
