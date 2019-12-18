@@ -340,15 +340,16 @@ export class PlanExportProcessor extends BaseProcessor {
         const config = await RawStorage.findOne({namespace, itemName: schoolId });
         let configItems: { [name: string]: string } = {};
         if (config && config.json) {
+            const labels = config.json['labels'] || {};
             configItems = {
                 Approval_Requirement: config.json['approvalRequirement'] || '',
-                Pathway_Label: config.json['labels']['pathway'] || '',
-                Cluster_Label: config.json['labels']['cluster'] || ''
+                Pathway_Label: labels['pathway'] || '',
+                Cluster_Label: labels['cluster'] || ''
             };
         }
 
         for (const hsId of highschoolsToProcess) {
-            console.log(`processing school ${schoolId}`);
+            console.log(`processing school ${hsId}`);
 
             const results = await this.processHighschool(schoolId, hsId, configItems);
             for (const flatRow of results) {

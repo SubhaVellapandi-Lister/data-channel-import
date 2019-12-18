@@ -80,6 +80,13 @@ const catalogExcludes = [
     '16025USPU'
 ];
 
+const totalSkips = [
+    '0610260DUS',
+    '0614760DUS',
+    '11974USPU',
+    '12712USPU'
+];
+
 export interface ISubInst {
     id: string;
     name: string;
@@ -461,6 +468,10 @@ program
             if (cmd.starting && !foundStarting) {
                 continue;
             }
+
+            if (totalSkips.includes(id)) {
+                continue;
+            }
             const failedCatalog = failedCat(id);
             const failedPoS = failedPlanOfStudy(id);
             const skippedForTime = failedTimeout(id);
@@ -541,6 +552,11 @@ program
             if (cmd.starting && !foundStarting) {
                 continue;
             }
+
+            if (totalSkips.includes(dsId)) {
+                continue;
+            }
+
             idBatch.push(dsId);
             if (idBatch.length >= batchSize) {
                 await processBatch(idBatch, logName, tenantType);
