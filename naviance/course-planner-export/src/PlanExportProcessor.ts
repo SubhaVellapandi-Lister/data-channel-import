@@ -1,7 +1,7 @@
-import { ICourseRecord } from "@academic-planner/academic-planner-common";
+import { ICourseRecord, IPlan } from "@academic-planner/academic-planner-common";
 import {
     Namespace, Program,
-    RawStorage, StudentPlan
+    RawStorage, SlimStudentPlan, StudentPlan
 } from "@academic-planner/apSDK";
 import {
     BaseProcessor,
@@ -11,6 +11,11 @@ import {
     IStepBeforeInput
 } from "@data-channels/dcSDK";
 import { initServices } from "./Utils";
+
+interface IPlanSet {
+    slim: SlimStudentPlan;
+    full?: StudentPlan;
+}
 
 export class PlanExportProcessor extends BaseProcessor {
     private headers = [
@@ -225,6 +230,17 @@ export class PlanExportProcessor extends BaseProcessor {
         initServices(input.parameters!);
     }
 
+    private async getFullPlan(slim: SlimStudentPlan): Promise<IPlanSet> {
+        try {
+            const full = await slim.toStudentPlan();
+
+            return { slim, full};
+
+        } catch (err) {
+            return { slim };
+        }
+    }
+
     private async processHighschool(
         dsId: string, hsId: string, configItems: { [name: string]: string }
     ): Promise<string[][]> {
@@ -236,16 +252,25 @@ export class PlanExportProcessor extends BaseProcessor {
             return new Promise((resolve) => setTimeout(resolve, milliseconds));
         };
 
+        console.log(`got first page ${page.length}`);
         while (page.length) {
-            const pageOfPlans = page.map(async (slim) => {
+            const planGetPromises: Promise<IPlanSet>[] = [];
+            for (const slim of page) {
+                planGetPromises.push(this.getFullPlan(slim));
+            }
+            console.log('requested slim plans');
+            const pageOfPlans = await Promise.all(planGetPromises);
+            console.log(`got ${pageOfPlans.filter((p) => p.full !== undefined).length} plans`);
+            /*const pageOfPlans = page.map(async (slim) => {
                 let full: StudentPlan;
-                let retries = 5;
+                let retries = 1; // 2;
+
                 while (retries > 0) {
                     try {
-                        full = await slim.toStudentPlan();
+                        full = await
                         break;
                     } catch {
-                        console.log(`ERROR GETTING FULL PLAN, RETRYING WITH ${retries} RETRIES...`);
+                        console.log(`ERROR GETTING FULL PLAN for ${slim.guid}, RETRYING WITH ${retries} RETRIES...`);
                         await sleep(1000);
                         retries -= 1;
                     }
@@ -256,8 +281,12 @@ export class PlanExportProcessor extends BaseProcessor {
                 }
 
                 return {slim, full: full!};
-            });
+            }); */
+
             for await (const planSet of pageOfPlans) {
+                if (!planSet.full) {
+                    continue;
+                }
                 const planVersion = planSet.full.latestVersion();
                 const audit = planSet.full.latestAudit;
                 const meta = planSet.full.meta || {};
@@ -352,6 +381,8 @@ export class PlanExportProcessor extends BaseProcessor {
             console.log(`processing school ${hsId}`);
 
             const results = await this.processHighschool(schoolId, hsId, configItems);
+
+            console.log(`finished ${hsId}`);
             for (const flatRow of results) {
                 this.writeOutputRow(input.outputs[schoolId].writeStream, flatRow);
             }

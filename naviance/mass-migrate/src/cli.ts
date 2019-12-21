@@ -446,7 +446,7 @@ program
     .command('catalog.runFailures')
     .option('--starting <startingId>')
     .option('--highschools')
-    .action(async (dsPath, hsPath, cmd) => {
+    .action(async (cmd) => {
         initConnection(program);
         let logName = 'catalogLog.json';
         let tenantType = 'district';
@@ -478,9 +478,9 @@ program
 
             if (failedCatalog || failedPoS || skippedForTime) {
                 console.log(
-                    `retrying ${id}, failed cat: ${failedCat}, failed pos: ${failedPoS}, skipped: ${skippedForTime}`);
+                    `retrying ${id}, failed cat: ${failedCatalog}, failed pos: ${failedPoS}, skipped: ${skippedForTime}`);
                 await processBatch([id], logName, tenantType, failedPoS);
-                await sleep(5000);
+                await sleep(10000);
             }
         }
     });
@@ -593,10 +593,12 @@ async function loadHighschoolPlans(districtId: string, hsId: string, chunksPerJo
             product: 'naviance',
             parameters:
                 // tslint:disable-next-line:max-line-length
-                `chunkStart=${chunkStartParm},numChunks=${chunksPerJob},namespace=${districtId},scope=${hsId},tenantType=highschool,tenantId=${hsId},createOnly=true`
+                `chunkStart=${chunkStartParm},numChunks=${chunksPerJob},namespace=${districtId},scope=${hsId},tenantType=highschool,tenantId=${hsId}`
+                // ,createOnly=true
         });
         const job = await createjob(JSON.stringify(createBody), true);
-        await waitOnJobExecution(job, undefined);
+        const result = await waitOnJobExecution(job, undefined);
+        console.log(result.steps['importStudentCoursePlans'].output);
     }
 }
 

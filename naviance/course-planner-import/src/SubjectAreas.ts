@@ -217,7 +217,7 @@ export async function saveSubjectAreas(namespace: string, subLoad: ISubjectAreaL
         }
     }
 
-    if (!subjectAreaValues) {
+    if (!subjectAreaValues.length) {
         console.log('Error creating/updating subjects, no values');
 
         return false;
