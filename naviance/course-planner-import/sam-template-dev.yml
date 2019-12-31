@@ -14,6 +14,10 @@ Resources:
       Runtime: nodejs10.x
       Policies:
       - Statement:
+          Action: lambda:InvokeFunction
+          Effect: Allow
+          Resource: arn:aws:lambda:*:*:function:cdk-data-channels-core-st-cfdatachannelsloggrabber
+      - Statement:
         - Sid: SSMGetParameterPolicy
           Effect: Allow
           Action:
