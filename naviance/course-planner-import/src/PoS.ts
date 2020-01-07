@@ -54,6 +54,7 @@ export class PoSImport {
         }
 
         const description = cObj['description'].replace(/\n/g, ' ').replace(/\r/g, '');
+        const activeSchools = cObj['status'] ? publishedSchools : [];
 
         return {
             name: { value: cObj['name'], type: 'STRING', operator: AnnotationOperator.EQUALS },
@@ -67,7 +68,7 @@ export class PoSImport {
             classYearTo: { value: classYears.slice(-1)[0], type: 'DECIMAL', operator: AnnotationOperator.EQUALS },
             description: { value: description, type: 'STRING', operator: AnnotationOperator.EQUALS },
             descriptionPlainText: { value: description, type: 'STRING', operator: AnnotationOperator.EQUALS },
-            activeSchools: { value: publishedSchools, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
+            activeSchools: { value: activeSchools, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
             checkedSchools: { value: publishedSchools, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
             publishedSchools: { value: publishedSchools, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS },
             groupRestrictions: { value: groupRestrictions, type: 'LIST_STRING', operator: AnnotationOperator.EQUALS }

@@ -342,9 +342,24 @@ export class CPImportProcessor extends BaseProcessor {
         if (!statements.length) {
             console.log(`Error ${programId} - no valid statements`);
             status = 'ERROR';
+            this.errorCount += 1;
         } else {
-            await program.save(new Namespace(this.namespace), saveAuthor);
-            console.log(`SAVED ${programId} - ${program.display}`);
+            let retries = 2;
+            while (retries > 0) {
+                try {
+                    await program.save(new Namespace(this.namespace), saveAuthor);
+                    console.log(`SAVED ${programId} - ${program.display}`);
+                } catch (err) {
+                    console.log('error saving', err);
+                    console.log('retrying...');
+                    retries -= 1;
+                }
+            }
+
+            if (retries === 0) {
+                status = 'ERROR';
+                this.errorCount += 1;
+            }
         }
 
         return {
@@ -362,7 +377,8 @@ export class CPImportProcessor extends BaseProcessor {
     public async after_importPoS(input: IStepBeforeInput): Promise<IStepAfterOutput> {
         return { results: {
             createdCount: this.createdCount,
-            updatedCount: this.updatedCount
+            updatedCount: this.updatedCount,
+            errorCount: this.errorCount
         }};
     }
 
@@ -424,6 +440,7 @@ export class CPImportProcessor extends BaseProcessor {
         }
         const createOnly = input.parameters!['createOnly'] === true;
         if (this.planBatch.length >= this.planBatchSize) {
+            const batchStartTime = new Date().getTime();
             const [creates, updates, errors, skips] = await PlanImport.batchImportPlan(
                 this.scope, this.planBatch, this.allPrograms, createOnly);
             this.createdCount += creates;
@@ -431,6 +448,14 @@ export class CPImportProcessor extends BaseProcessor {
             this.errorCount += errors;
             this.skipCount += skips;
             this.planBatch = [];
+
+            const secondsTaken = (new Date().getTime() - batchStartTime) / 1000;
+            const workItems = creates + updates + errors;
+            if (workItems > 0) {
+                const secondPerWorkItem = secondsTaken / workItems;
+            }
+            console.log(`Ran batch in ${secondsTaken} seconds`);
+            console.log(`${creates} creates, ${updates} updates, ${errors} errors, ${skips} skips`);
         }
 
         return { outputs: {} };
@@ -446,6 +471,10 @@ export class CPImportProcessor extends BaseProcessor {
             this.scope = this.namespace;
         }
         this.allPrograms = await PlanImport.allPrograms(input.parameters!['namespace']);
+
+        if (input.parameters!['planBatchSize']) {
+            this.planBatchSize = input.parameters!['planBatchSize'];
+        }
     }
 
     public async after_importStudentCoursePlans(input: IStepBeforeInput): Promise<IStepAfterOutput> {

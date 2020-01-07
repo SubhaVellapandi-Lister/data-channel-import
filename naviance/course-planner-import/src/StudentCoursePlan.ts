@@ -3,6 +3,8 @@ import {
     Program, SlimStudentPlan, StudentPlan
 } from "@academic-planner/apSDK";
 
+import { sleep } from "./Utils";
+
 export enum PlanImportStatus {
     Errored = "Errored",
     Updated = "Updated",
@@ -24,14 +26,47 @@ export class PlanImport {
         scope: string, batch: any[], programs: Program[], createOnly: boolean = false
     ): Promise<[number, number, number, number]> {
         const batchPromises: Promise<PlanImportStatus>[] = [];
-        for (const planObj of batch) {
-            batchPromises.push(this.importPlan(scope, planObj, programs, createOnly));
+
+        const batchAllExistingPager = StudentPlan.findByStudentNames({
+            findCriteria : {
+                isDeleted : false,
+                scope,
+                expand: 'meta',
+                students: batch.map((planObj) => ({
+                    studentPrincipleId: planObj.studentId.toString(),
+                    studentName: ''
+                }))
+            }
+        });
+
+        const existingStartTime = new Date().getTime();
+        const batchAllExisting = await batchAllExistingPager.all();
+        const existingFindSeconds = (new Date().getTime() - existingStartTime) / 1000;
+        console.log(
+        `Found ${batchAllExisting.length} existing plans for ${batch.length} batch records in ${existingFindSeconds}`
+        );
+
+        const queueStartTime = new Date().getTime();
+        for (const [idx, planObj] of batch.entries()) {
+            if (idx && idx % 10 === 0) {
+                // take quick sleep between batches of 10 to not overwhelm planning engine
+                await sleep(1000);
+            }
+            const studentId = planObj.studentId.toString();
+            const existingPlans = batchAllExisting.filter((plan) => plan.studentPrincipleId === studentId);
+            batchPromises.push(this.importPlan(scope, planObj, programs, createOnly, existingPlans));
         }
+        const queueSeconds = (new Date().getTime() - queueStartTime) / 1000;
+        console.log(`started promises in ${queueSeconds} seconds`);
         let creates = 0;
         let updates = 0;
         let errors = 0;
         let skips = 0;
+
+        const awaitStartTime = new Date().getTime();
         const results = await Promise.all(batchPromises);
+        const awaitSeconds = (new Date().getTime() - awaitStartTime) / 1000;
+        console.log(`finished plans in ${awaitSeconds} seconds`);
         for (const result of results) {
             switch (result) {
                 case PlanImportStatus.Created:
@@ -54,7 +89,7 @@ export class PlanImport {
     }
 
     static async importPlan(
-        scope: string, planObj: any, programs: Program[], createOnly: boolean
+        scope: string, planObj: any, programs: Program[], createOnly: boolean, existingForStudent: SlimStudentPlan[]
     ): Promise<PlanImportStatus> {
         const pos = this.findProgram(planObj.planOfStudy.name, programs);
         if (!pos) {
@@ -83,23 +118,18 @@ export class PlanImport {
         const schoolId = planObj.planOfStudy.institutionId;
         const studentId = planObj.studentId.toString();
 
-        const existingForStudent = await StudentPlan.find(scope, {
-            findCriteria: {
-                studentPrincipleId: studentId
-            }
-        }).all();
-
         console.log(`found ${existingForStudent.length} existing plans for ${studentId}, looking for name ${name}`);
 
         let existing: StudentPlan | undefined;
         for (const existPlan of existingForStudent) {
-            if (existPlan.meta && existPlan.meta['name'] === name && existPlan.meta['migratedId'] === migratedId) {
+            const full = await existPlan.toStudentPlan();
+            if (full.meta && full.meta['name'] === name && full.meta['migratedId'] === migratedId) {
                 if (createOnly) {
                     return PlanImportStatus.Skipped;
                 }
 
                 console.log(`found name match, updating existing plan`);
-                existing = await existPlan.toStudentPlan();
+                existing = full;
                 break;
             }
         }

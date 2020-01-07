@@ -131,6 +131,9 @@ export class PlanExportProcessor extends BaseProcessor {
         let planTotalCreditsRequired = 0;
         for (const progRef of plan.programs) {
             const program = await this.findProgram(namespace, progRef.name);
+            if (!program) {
+                continue;
+            }
             const progName = (program.annotations.getValue('name') || '').toString();
             const rawAudit = audit.rawAudit.programs.filter((progDet) => progDet.program.name === program.name)[0];
             if (!rawAudit) {

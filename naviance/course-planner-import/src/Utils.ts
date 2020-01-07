@@ -88,3 +88,7 @@ export function getRowVal(rowData: IRowData, colName: string) {
 
     return val;
 }
+
+export async function sleep(milliseconds: number) {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
