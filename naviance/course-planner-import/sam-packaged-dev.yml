@@ -5,13 +5,17 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-dev/c833dd007ea7f4d42fbff72aca7fcf4f
+      CodeUri: s3://data-channels-processor-deployments-dev/77054559f8b80fc094c0f6a40aedd631
       FunctionName: cf-naviance-dc-ap-import-dev
       Handler: dist/index.lambdaHandler
       Timeout: 900
       MemorySize: 2048
       Runtime: nodejs10.x
       Policies:
+      - Statement:
+          Action: lambda:InvokeFunction
+          Effect: Allow
+          Resource: arn:aws:lambda:*:*:function:cdk-data-channels-core-st-cfdatachannelsloggrabber
       - Statement:
         - Sid: SSMGetParameterPolicy
           Effect: Allow

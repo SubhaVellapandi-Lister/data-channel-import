@@ -50,6 +50,7 @@ export class CPImportProcessor extends BaseProcessor {
     private historyBatchSize = 10;
     private planBatch: object[] = [];
     private planBatchSize = 10;
+    private planBatchDelay = 1;
     private schoolsLoaded = false;
     private coursesLoaded = false;
     private mappingsLoaded = false;
@@ -349,6 +350,7 @@ export class CPImportProcessor extends BaseProcessor {
                 try {
                     await program.save(new Namespace(this.namespace), saveAuthor);
                     console.log(`SAVED ${programId} - ${program.display}`);
+                    break;
                 } catch (err) {
                     console.log('error saving', err);
                     console.log('retrying...');
@@ -390,6 +392,9 @@ export class CPImportProcessor extends BaseProcessor {
         const rowData = input.data;
         const cObj = JSON.parse(rowData['JSON_OBJECT']);
         const studentId = cObj['studentId'].toString();
+        if (!this.historyStudentId.length) {
+            this.historyStudentId = studentId;
+        }
         if (this.historyStudentId !== studentId && this.historyForStudent.length) {
             this.historyBatch.push([...this.historyForStudent]);
             this.historyForStudent = [];
@@ -418,8 +423,14 @@ export class CPImportProcessor extends BaseProcessor {
     }
 
     public async after_importHistories(input: IStepBeforeInput): Promise<IStepAfterOutput> {
+        if (this.historyForStudent.length) {
+            this.historyBatch.push([...this.historyForStudent]);
+        }
         if (this.historyBatch.length) {
-            await StudentHistory.processBatch(this.namespace, this.historyBatch);
+            const [createdCount, updatedCount] = await StudentHistory.processBatch(
+                this.namespace, this.historyBatch);
+            this.createdCount += createdCount;
+            this.updatedCount += updatedCount;
             console.log(`Processed batch of ${this.historyBatch.length} students`);
         }
 
@@ -442,7 +453,7 @@ export class CPImportProcessor extends BaseProcessor {
         if (this.planBatch.length >= this.planBatchSize) {
             const batchStartTime = new Date().getTime();
             const [creates, updates, errors, skips] = await PlanImport.batchImportPlan(
-                this.scope, this.planBatch, this.allPrograms, createOnly);
+                this.scope, this.planBatch, this.allPrograms, createOnly, this.planBatchDelay);
             this.createdCount += creates;
             this.updatedCount += updates;
             this.errorCount += errors;
@@ -453,8 +464,9 @@ export class CPImportProcessor extends BaseProcessor {
             const workItems = creates + updates + errors;
             if (workItems > 0) {
                 const secondPerWorkItem = secondsTaken / workItems;
+                this.planBatchDelay = secondPerWorkItem * 8;
             }
-            console.log(`Ran batch in ${secondsTaken} seconds`);
+            console.log(`Ran batch in ${secondsTaken} seconds, setting delay to ${this.planBatchDelay} seconds`);
             console.log(`${creates} creates, ${updates} updates, ${errors} errors, ${skips} skips`);
         }
 
@@ -479,8 +491,9 @@ export class CPImportProcessor extends BaseProcessor {
 
     public async after_importStudentCoursePlans(input: IStepBeforeInput): Promise<IStepAfterOutput> {
         if (this.planBatch.length > 0) {
+            const createOnly = input.parameters!['createOnly'] === true;
             const [creates, updates, errors, skips] = await PlanImport.batchImportPlan(
-                this.scope, this.planBatch, this.allPrograms);
+                this.scope, this.planBatch, this.allPrograms, createOnly, this.planBatchDelay);
             this.createdCount += creates;
             this.updatedCount += updates;
             this.errorCount += errors;

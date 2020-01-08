@@ -104,8 +104,8 @@ export class PlanExportProcessor extends BaseProcessor {
             Num_Requirements_Met: audit.progress.statementsMet.toString(),
             Num_Requirements_Total: audit.progress.statementsTotal.toString(),
             Requirements_All_Met: (audit.progress.statementsMet === audit.progress.statementsTotal).toString(),
-            Required_Credits_Total: audit.progress.creditsRequired.toString(),
-            Required_Credits_Remaining: audit.progress.creditsRemaining.toString(),
+            Required_Credits_Total: (audit.progress.creditsRequired || 0).toString(),
+            Required_Credits_Remaining: (audit.progress.creditsRemaining || 0).toString(),
             PoS_Num_Requirements_Met: '',
             PoS_Num_Requirements_Total: '',
             PoS_Requirements_All_Met: '',
@@ -160,7 +160,7 @@ export class PlanExportProcessor extends BaseProcessor {
                     }
                 }
                 if (!foundAnnoCreds) {
-                    creditsTotal += stmt.auditResult.creditProgress.creditsRequired;
+                    creditsTotal += stmt.auditResult.creditProgress.creditsRequired || 0;
                 }
             }
             planTotalCreditsRequired += creditsTotal;
@@ -171,10 +171,6 @@ export class PlanExportProcessor extends BaseProcessor {
                 .filter((rec) => !gradedRecIds[rec.studentRecordId])
                 .map((rec) => rec.creditsUsed)
                 .reduce((credA, credB) => credA + credB, 0);
-            if (plan.studentPrincipleId === '403478658') {
-                console.log(rawAudit.program.name, rawAudit.program.auditResult.creditProgress);
-                console.log(rawAudit.program.auditResult.usedRecords);
-            }
             const completedCredits = rawAudit.program.auditResult.usedRecords
                 .filter((rec) => gradedRecIds[rec.studentRecordId])
                 .map((rec) => rec.creditsUsed)
@@ -187,7 +183,7 @@ export class PlanExportProcessor extends BaseProcessor {
                 progNames.Pathway_Is_Published = this.booleanToString(published);
                 progNames.Pathway_Num_Requirements_Met = statementsMet.toString();
                 progNames.Pathway_Num_Requirements_Total = statements.length.toString();
-                progNames.Pathway_Required_Credits_Remaining = audit.progress.creditsRemaining.toString();
+                progNames.Pathway_Required_Credits_Remaining = (audit.progress.creditsRemaining || 0).toString();
                 progNames.Pathway_Required_Credits_Total = creditsTotal.toString();
                 progNames.Pathway_Requirements_All_Met = this.booleanToString(statements.length === statementsMet);
                 progNames.Pathway_Completed_Credits_Used = rawAudit.progress.credits.creditsGradedUsed.toString();
@@ -200,7 +196,7 @@ export class PlanExportProcessor extends BaseProcessor {
                 progNames.Plan_Of_Study_Is_Published = this.booleanToString(published);
                 progNames.PoS_Num_Requirements_Met = statementsMet.toString();
                 progNames.PoS_Num_Requirements_Total = statements.length.toString();
-                progNames.PoS_Required_Credits_Remaining = audit.progress.creditsRemaining.toString();
+                progNames.PoS_Required_Credits_Remaining = (audit.progress.creditsRemaining || 0).toString();
                 progNames.PoS_Required_Credits_Total = creditsTotal.toString();
                 progNames.PoS_Requirements_All_Met = this.booleanToString(statements.length === statementsMet);
                 progNames.PoS_Completed_Credits_Used = rawAudit.progress.credits.creditsGradedUsed.toString();

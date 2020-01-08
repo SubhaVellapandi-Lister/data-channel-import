@@ -18,11 +18,8 @@ export class StudentHistory {
                 gradeLevel: rec.gradeLevel,
                 termId: rec.term,
                 grade: rec.gradeAwarded || rec.score || undefined,
-            })).filter((stuRec) => stuRec.number.length > 0);
-            console.log(studentId);
-            if (studentId === '36192153') {
-                console.log(courses);
-            }
+            })).filter((stuRec) => stuRec.number && stuRec.number.length > 0);
+
             batchPromises.push(PlanContext.createOrUpdateStudentRecords(
                 studentId,
                 'migration',

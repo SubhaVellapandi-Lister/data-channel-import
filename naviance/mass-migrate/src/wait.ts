@@ -13,41 +13,39 @@ export async function sleep(milliseconds: number) {
     return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-export async function waitOnJobExecution(job: IJobConfig, download?: string, verbose?: boolean): Promise<IJobConfig> {
+export async function waitOnJobExecution(
+    job: IJobConfig, showSpin: boolean = true, timeoutSeconds: number = 1200
+): Promise<IJobConfig> {
     let latestJob = job;
     let lastStep = job.currentStep;
     const startTime = new Date().getTime();
+    console.log(`Waiting on job ${job.guid}`);
     while (latestJob.status === JobStatus.Started) {
-        spin.text = `Job ${job.guid} is running (${(new Date().getTime() - startTime) / 1000} seconds elapsed)...`;
-        spin.start();
-        await sleep(3000);
-        latestJob = await ServiceInterfacer.getInstance().getJob(latestJob.guid, download !== undefined);
-        spin.stop();
+        if (showSpin) {
+            spin.text = `Job ${job.guid} is running (${(new Date().getTime() - startTime) / 1000} seconds elapsed)...`;
+            spin.start();
+        }
+        await sleep(5000);
+        latestJob = await ServiceInterfacer.getInstance().getJob(latestJob.guid);
+        if (showSpin) {
+            spin.stop();
+        }
         if (lastStep !== latestJob.currentStep) {
             lastStep = latestJob.currentStep;
-            if (verbose) {
-                printJobStep(lastStep!, latestJob.steps[lastStep!]);
-            }
+        }
+
+        const secondsTaken = (new Date().getTime() - startTime) / 1000;
+        if (secondsTaken >= timeoutSeconds) {
+            console.log(`Timing out job ${job.guid}`);
+
+            return latestJob;
         }
     }
+
+    const totalSeconds = (new Date().getTime() - startTime) / 1000;
+
     if (latestJob.status === JobStatus.Completed) {
-        console.log(`Job ${job.guid} complete`);
-        if (download !== undefined && latestJob.filesOut) {
-            let directory = `data-channels-job-${job.guid}`;
-            if (download.length) {
-                directory = download;
-            }
-            mkdirSync(directory, { recursive: true });
-            for (const fileInfo of latestJob.filesOut) {
-                if (fileInfo.s3!.downloadURL) {
-                    spin.text = `Downloading ${fileInfo.name}...`;
-                    spin.start();
-                    await downloadFile(fileInfo.s3!.downloadURL!, path.join(directory, `${fileInfo.name}.csv`));
-                    spin.stop();
-                }
-            }
-            console.log(`Output files downloaded to ${directory}`);
-        }
+        console.log(`Job ${job.guid} complete - took ${totalSeconds} seconds`);
     }
     if (latestJob.status === JobStatus.Failed) {
         console.log(`Job ${job.guid} failed:`, latestJob.statusMsg);

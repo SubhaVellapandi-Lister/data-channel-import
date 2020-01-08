@@ -84,8 +84,7 @@ export interface ISubInst {
 export interface IInstitution {
     catalog?: IProcessing;
     pos?: IProcessing;
-    student?: IProcessing[];
-    studentStat?: IStudentStat;
+    student?: { [hsId: string]: IStudentPlans };
 }
 
 export interface IMigration {
@@ -101,12 +100,15 @@ export interface IProcessing {
     objects?: number;
     errors?: number;
     skippedForTime?: number;
+    hsId?: string;
 }
 
-export interface IStudentStat {
-    numJobsNeeded: number;
-    numBatches: number;
-    numPlansTotal: number;
+export interface IStudentPlans {
+    jobs: IProcessing[];
+    numJobsNeeded?: number;
+    numBatches?: number;
+    numPlansTotal?: number;
+    error?: boolean;
 }
 
 let catalogLog: IMigration = {};
@@ -139,11 +141,15 @@ async function getLogS3(name: string): Promise<IMigration | null> {
 
 async function loadCatalogLog(name: string) {
 
+    console.log('getting', name);
     const log = await getLogS3(name);
     if (log) {
         catalogLog = log;
+        console.log('got', name);
 
         return;
+    } else {
+        console.log('could not load catalog log from s3');
     }
 
     try {
@@ -152,7 +158,7 @@ async function loadCatalogLog(name: string) {
         const s = new Readable();
         s.push(logstring.toString());
         s.push(null);
-        await s3Writeable(LOG_BUCKET_NAME, `${LOG_PREFIX}/${name}.json`, s);
+       // await s3Writeable(LOG_BUCKET_NAME, `${LOG_PREFIX}/${name}.json`, s);
     } catch (err) {
         console.log('could not load catalog log');
     }
@@ -502,7 +508,9 @@ async function waitOnPoS(processingIds: string[], logName: string) {
     }
 }
 
-async function processBatch(idBatch: string[], logName: string, tenantType: string, noCatalog?: boolean) {
+async function processBatch(
+    idBatch: string[], logName: string, tenantType: string, noCatalog?: boolean, noSpin?: boolean
+) {
     console.log(`starting batch of ${idBatch.length}: ${idBatch}`);
     const shouldProcessPos: {[key: string]: boolean} = {};
     let processingIds: string[] = [];
@@ -519,13 +527,17 @@ async function processBatch(idBatch: string[], logName: string, tenantType: stri
     }
 
     await sleep(5000);
-    spin.text = `waiting catalog on jobs`;
-    spin.start();
+    if (!noSpin) {
+        spin.text = `waiting catalog on jobs`;
+        spin.start();
+    }
     const failedCatIds = await waitOnCourseCatalog(processingIds, logName);
     for (const failId of failedCatIds) {
         shouldProcessPos[failId] = false;
     }
-    spin.stop();
+    if (!noSpin) {
+        spin.stop();
+    }
 
     const posIds = Object.keys(shouldProcessPos).filter((id) => shouldProcessPos[id]);
 
@@ -534,11 +546,15 @@ async function processBatch(idBatch: string[], logName: string, tenantType: stri
     }
 
     await sleep(5000);
-    spin.text = `waiting on pos jobs`;
-    spin.start();
+    if (!noSpin) {
+        spin.text = `waiting on pos jobs`;
+        spin.start();
+    }
     processingIds = [...posIds];
     await waitOnPoS(processingIds, logName);
-    spin.stop();
+    if (!noSpin) {
+        spin.stop();
+    }
 }
 
 program
@@ -582,6 +598,23 @@ program
                 await sleep(10000);
             }
         }
+    });
+
+program
+    .command('catalog.loadOne [dsId]')
+    .option('--highschool')
+    .option('--no-spin')
+    .option('--no-catalog')
+    .action(async (dsId, cmd) => {
+        initConnection(program);
+        let logName = 'catalogLog.json';
+        let tenantType = 'district';
+        if (cmd.highschool) {
+            tenantType = 'highschool';
+            logName = 'hsCatalog.json';
+        }
+        await loadCatalogLog(logName);
+        await processBatch([dsId], logName, tenantType, cmd.noCatalog, cmd.noSpin);
     });
 
 program
@@ -665,7 +698,35 @@ program
         }
     });
 
-async function loadHighschoolPlans(districtId: string, hsId: string, chunksPerJob: number) {
+function setStudentPlanJobStatus(districtId: string, hsId: string, guid: string, value: IProcessing) {
+    if (!catalogLog[districtId].student) {
+        catalogLog[districtId].student = {};
+    }
+
+    if (!catalogLog[districtId].student![hsId]) {
+        catalogLog[districtId].student![hsId] = {
+            jobs: []
+        };
+    }
+
+    for (const [idx, job] of catalogLog[districtId].student![hsId].jobs.entries()) {
+        if (job.guid === guid) {
+            catalogLog[districtId].student![hsId].jobs[idx] = value;
+
+            return;
+        }
+    }
+
+    catalogLog[districtId].student![hsId].jobs.push(value);
+}
+
+async function loadHighschoolPlans(
+    districtId: string, hsId: string, chunksPerJob: number, planBatchSize: number, showSpin: boolean, logName: string
+) {
+    if (!catalogLog[districtId].student) {
+        catalogLog[districtId].student = {};
+    }
+
     const lookupBody = jobExecutionBody({
         channel: 'naviance/getStudentCoursePlan',
         product: 'naviance',
@@ -673,16 +734,32 @@ async function loadHighschoolPlans(districtId: string, hsId: string, chunksPerJo
             `tenantType=highschool,tenantId=${hsId}`
     });
     const lookupJob = await createjob(JSON.stringify(lookupBody), true);
-    const lookupResult = await waitOnJobExecution(lookupJob, undefined);
-    if (lookupResult.status === JobStatus.Failed) {
+    const lookupResult = await waitOnJobExecution(lookupJob, showSpin);
+    if (lookupResult.status === JobStatus.Failed || lookupResult.status === JobStatus.Started) {
         console.log(`lookup job failed - ${lookupJob.guid}`);
+
+        catalogLog[districtId].student![hsId] = {
+            jobs: [],
+            error: true
+        };
+        await saveCatalogLog(logName, districtId);
 
         return;
     }
+
     const planCount = lookupResult.steps['getStudentCoursePlan'].output!['historyRecordsFound'] as number;
     const totalChunks = lookupResult.steps['getStudentCoursePlan'].output!['totalChunks'] as number;
     console.log(`${totalChunks} total student chunks, ${planCount} plans`);
     const numJobs = Math.ceil(totalChunks / chunksPerJob);
+    catalogLog[districtId].student![hsId] = {
+        jobs: [],
+        numBatches: totalChunks,
+        numJobsNeeded: numJobs,
+        numPlansTotal: planCount,
+        error: false
+    };
+    await saveCatalogLog(logName, districtId);
+
     console.log(`will need to run ${numJobs} jobs to process this school`);
     for (let jobChunkIdx = 0; jobChunkIdx < numJobs; jobChunkIdx++) {
         const chunkStartParm = jobChunkIdx * chunksPerJob;
@@ -692,20 +769,102 @@ async function loadHighschoolPlans(districtId: string, hsId: string, chunksPerJo
             product: 'naviance',
             parameters:
                 // tslint:disable-next-line:max-line-length
-                `chunkStart=${chunkStartParm},numChunks=${chunksPerJob},namespace=${districtId},scope=${hsId},tenantType=highschool,tenantId=${hsId},planBatchSize=30`
+                `chunkStart=${chunkStartParm},numChunks=${chunksPerJob},namespace=${districtId},scope=${hsId},tenantType=highschool,tenantId=${hsId},planBatchSize=${planBatchSize}`
                 // ,createOnly=true
         });
         const job = await createjob(JSON.stringify(createBody), true);
-        const result = await waitOnJobExecution(job, undefined);
-        console.log(result.steps['importStudentCoursePlans'].output);
+        setStudentPlanJobStatus(districtId, hsId, job.guid, {
+            guid: lookupJob.guid
+        });
+        await saveCatalogLog(logName, districtId);
+        const result = await waitOnJobExecution(job, showSpin);
+
+        const processingResult: IProcessing = {
+            guid: result.guid,
+            status: result.status,
+            statusMsg: result.statusMsg || '',
+            created: result.created,
+            completed: result.completed
+        };
+
+        if (result.status === JobStatus.Completed) {
+            const metrics = result.steps['importStudentCoursePlans'].output as any;
+            processingResult.objects = metrics.createdCount + metrics.updatedCount;
+            processingResult.errors = metrics.errorCount;
+        } else {
+            catalogLog[districtId].student![hsId].error = true;
+        }
+        setStudentPlanJobStatus(districtId, hsId, job.guid, processingResult);
+        await saveCatalogLog(logName, districtId);
     }
 }
 
 program
+    .command('studentPlan.status')
+    .action(async () => {
+        let totalDistricts = 0;
+        let districts = 0;
+        let totalHighschools = 0;
+        let highschools = 0;
+        let districtErrors = 0;
+        let hsErrors = 0;
+        let totalPlans = 0;
+        await loadCatalogLog('catalogLog.json');
+
+        for (const dsId of Object.keys(catalogLog)) {
+            if (!catalogLog[dsId].pos) {
+                continue;
+            }
+            totalDistricts += 1;
+            if (catalogLog[dsId].student) {
+                districts += 1;
+                for (const hsId of Object.keys(catalogLog[dsId].student!)) {
+                    const hsInfo = catalogLog[dsId].student![hsId];
+                    if (hsInfo.error) {
+                        console.log('ERROR', dsId, hsId);
+                        districtErrors += 1;
+                    } else {
+                        totalPlans += hsInfo.numPlansTotal || 0;
+                    }
+                }
+            }
+        }
+
+        await loadCatalogLog('hsCatalog.json');
+
+        for (const dsId of Object.keys(catalogLog)) {
+            if (!catalogLog[dsId].pos) {
+                continue;
+            }
+            totalHighschools += 1;
+            if (catalogLog[dsId].student) {
+                highschools += 1;
+                for (const hsId of Object.keys(catalogLog[dsId].student!)) {
+                    const hsInfo = catalogLog[dsId].student![hsId];
+                    if (hsInfo.error) {
+                        hsErrors += 1;
+                        console.log('ERROR', hsId);
+                    } else {
+                        totalPlans += hsInfo.numPlansTotal || 0;
+                    }
+                }
+            }
+        }
+
+        console.log(`${totalPlans} plans total`);
+        console.log(`${districts}/${totalDistricts} districts processed, ${districtErrors} errors`);
+        console.log(`${highschools}/${totalHighschools} highschools processed, ${hsErrors} errors`);
+    });
+
+program
     .command('studentPlan.load <districtId> <hsPath>')
     .option('--starting <startingId>')
+    .option('--chunk-size <chunkSize>')
+    .option('--plan-batch-size <planBatchSize>')
+    .option('--no-spin')
     .action(async (districtId, hsPath, cmd) => {
         initConnection(program);
+        await loadCatalogLog('catalogLog.json');
 
         const hsRows = await csvRows(hsPath);
 
@@ -745,9 +904,22 @@ program
                     console.log(`skipping elementary school ${hsId} ${name}`);
                     continue;
                 }
+                if (catalogLog[districtId].student &&
+                    catalogLog[districtId].student![hsId] &&
+                    !catalogLog[districtId].student![hsId].error) {
+                    console.log(`skipping ${hsId} as it appears complete already`);
+                    continue;
+                }
                 processedCount += 1;
                 console.log(`${processedCount} of ${totalSchoolCount}`, dsId, hsId, name);
-                await loadHighschoolPlans(districtId, hsId, 40);
+                await loadHighschoolPlans(
+                    districtId,
+                    hsId,
+                    parseInt(cmd.chunkSize) || 40,
+                    parseInt(cmd.planBatchSize) || 30,
+                    !cmd.noSpin,
+                    'catalogLog.json'
+                );
             }
         }
     });
@@ -755,10 +927,25 @@ program
 program
     .command('studentPlan.loadhs <hsId> [dsId]')
     .option('--chunk-size <chunkSize>')
+    .option('--plan-batch-size <planBatchSize>')
+    .option('--no-spin')
     .action(async (hsId, dsId, cmd) => {
         initConnection(program);
 
-        await loadHighschoolPlans(dsId || hsId, hsId, parseInt(cmd.chunkSize) || 40);
+        let logName = 'catalogLog.json';
+        if (!dsId) {
+            logName = 'hsCatalog.json';
+        }
+        await loadCatalogLog(logName);
+
+        await loadHighschoolPlans(
+            dsId || hsId,
+            hsId,
+            parseInt(cmd.chunkSize) || 40,
+            parseInt(cmd.planBatchSize) || 30,
+            !cmd.noSpin,
+            logName
+        );
     });
 
 program.parse(process.argv);

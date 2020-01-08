@@ -23,7 +23,7 @@ export class PlanImport {
     }
 
     static async batchImportPlan(
-        scope: string, batch: any[], programs: Program[], createOnly: boolean = false
+        scope: string, batch: any[], programs: Program[], createOnly: boolean, planBatchDelay: number
     ): Promise<[number, number, number, number]> {
         const batchPromises: Promise<PlanImportStatus>[] = [];
 
@@ -50,7 +50,7 @@ export class PlanImport {
         for (const [idx, planObj] of batch.entries()) {
             if (idx && idx % 10 === 0) {
                 // take quick sleep between batches of 10 to not overwhelm planning engine
-                await sleep(1000);
+                await sleep(planBatchDelay * 1000);
             }
             const studentId = planObj.studentId.toString();
             const existingPlans = batchAllExisting.filter((plan) => plan.studentPrincipleId === studentId);
