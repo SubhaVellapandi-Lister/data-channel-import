@@ -2,7 +2,7 @@
 import {ConfigType, IJobConfig, Job, JobStatus, s3Readable, s3Writeable, ServiceInterfacer} from "@data-channels/dcSDK";
 import Table from 'cli-table3';
 import program from 'commander';
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, chmod } from "fs";
 import { Readable } from 'stream';
 import {csvRows} from "./file";
 import {createjob, deletejob, findjob, findjobs, jobExecutionBody, updatejob} from "./job";
@@ -96,7 +96,28 @@ const districtPriority = [
     '0619540DUS',
     '4823910DUS',
     '0634620DUS',
-    '4814280DUS'
+    '4814280DUS',
+
+    '1200330DUS',
+    '3704620DUS',
+    '2400330DUS',
+    '1201770DUS',
+    '4835100DUS',
+    '0408340DUS',
+    '0407570DUS',
+    '3700030DUS',
+    '0806900DUS',
+    '4838730DUS',
+    '4816740DUS',
+    '0506120DUS',
+    '4807830DUS',
+    '5307710DUS',
+    '4827030DUS',
+    '0613920DUS',
+    '1713710DUS',
+    '5303960DUS',
+    '4703030DUS',
+    '5305910DUS'
 ];
 
 export interface ISubInst {
@@ -841,7 +862,8 @@ async function loadHighschoolPlans(
 
 program
     .command('studentPlan.status')
-    .action(async () => {
+    .option('--details')
+    .action(async (cmd) => {
         let totalDistricts = 0;
         let districts = 0;
         let totalHighschools = 0;
@@ -851,13 +873,20 @@ program
         let totalPlans = 0;
         await loadCatalogLog('catalogLog.json');
 
-        for (const dsId of Object.keys(catalogLog)) {
+        const priority = districtPriority;
+        const dsByPriority = Object.keys(catalogLog).sort(
+            (a, b) => (priority.indexOf(a) === -1 ? 999999 : priority.indexOf(a))
+            - (priority.indexOf(b) === -1 ? 999999 : priority.indexOf(b))
+        );
+
+        for (const dsId of dsByPriority) {
             if (!catalogLog[dsId].pos) {
                 continue;
             }
             totalDistricts += 1;
             if (catalogLog[dsId].student) {
                 districts += 1;
+                let dsTotalPlans = 0;
                 for (const hsId of Object.keys(catalogLog[dsId].student!)) {
                     const hsInfo = catalogLog[dsId].student![hsId];
                     if (hsInfo.error) {
@@ -865,7 +894,11 @@ program
                         districtErrors += 1;
                     } else {
                         totalPlans += hsInfo.numPlansTotal || 0;
+                        dsTotalPlans += hsInfo.numPlansTotal || 0;
                     }
+                }
+                if (cmd.details) {
+                    console.log(`${dsId} ${dsTotalPlans} total plans`);
                 }
             }
         }
@@ -886,6 +919,9 @@ program
                         console.log('ERROR', hsId);
                     } else {
                         totalPlans += hsInfo.numPlansTotal || 0;
+                        if (cmd.details) {
+                            console.log(`${hsId} ${hsInfo.numPlansTotal || 0} total plans`);
+                        }
                     }
                 }
             }
