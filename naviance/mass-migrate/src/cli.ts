@@ -73,6 +73,32 @@ const totalSkips = [
     '12712USPU'
 ];
 
+const studentPlanSkips = [
+    '5101260DUS',
+    '15295USPU',
+    '11974USPU',
+    '0611820DUS',
+    '5103460DUS',
+    '0902070DUS',
+    '20456USPU',
+
+    '4814730DUS',
+    '7802531DUS',
+    '180567USPU'
+];
+
+const districtPriority = [
+    '1201440DUS',
+    '0804800DUS',
+    '2400510DUS',
+    '0802910DUS',
+    '0602820DUS',
+    '0619540DUS',
+    '4823910DUS',
+    '0634620DUS',
+    '4814280DUS'
+];
+
 export interface ISubInst {
     id: string;
     name: string;
@@ -387,10 +413,10 @@ async function processCourseCatalog(id: string, logName: string, tenantType: str
 async function processPoS(posId: string, logName: string, tenantType: string) {
     console.log(`starting PoS inst ${posId}`);
     let channel = 'naviance/migrateDistrictPoS';
-    let parameters = `namespace=${posId},districtId=${posId},chunkSize=16`;
+    let parameters = `namespace=${posId},districtId=${posId},chunkSize=16,metadataOnly=true`;
     if (tenantType === 'highschool') {
         channel = 'naviance/migrateHighschoolPoS';
-        parameters = `namespace=${posId},highschoolId=${posId}`;
+        parameters = `namespace=${posId},highschoolId=${posId},metadataOnly=true`;
     }
     const posBody = jobExecutionBody({
         channel,
@@ -750,7 +776,16 @@ async function loadHighschoolPlans(
     const planCount = lookupResult.steps['getStudentCoursePlan'].output!['historyRecordsFound'] as number;
     const totalChunks = lookupResult.steps['getStudentCoursePlan'].output!['totalChunks'] as number;
     console.log(`${totalChunks} total student chunks, ${planCount} plans`);
-    const numJobs = Math.ceil(totalChunks / chunksPerJob);
+    let finalChunksPerJob = chunksPerJob;
+    let numJobs = Math.ceil(totalChunks / chunksPerJob);
+    if (planCount < 250 && numJobs > 1) {
+        numJobs = 1;
+        finalChunksPerJob = totalChunks;
+    }
+    if (planCount < 500 && numJobs > 2) {
+        numJobs = 2;
+        finalChunksPerJob = Math.ceil(totalChunks / 2);
+    }
     catalogLog[districtId].student![hsId] = {
         jobs: [],
         numBatches: totalChunks,
@@ -758,18 +793,23 @@ async function loadHighschoolPlans(
         numPlansTotal: planCount,
         error: false
     };
+
     await saveCatalogLog(logName, districtId);
+
+    if (planCount === 0) {
+        return;
+    }
 
     console.log(`will need to run ${numJobs} jobs to process this school`);
     for (let jobChunkIdx = 0; jobChunkIdx < numJobs; jobChunkIdx++) {
-        const chunkStartParm = jobChunkIdx * chunksPerJob;
-        console.log(`running ${chunksPerJob} chunks starting at chunk ${chunkStartParm}`);
+        const chunkStartParm = jobChunkIdx * finalChunksPerJob;
+        console.log(`running ${finalChunksPerJob} chunks starting at chunk ${chunkStartParm}`);
         const createBody = jobExecutionBody({
             channel: 'naviance/migrateStudentCoursePlan',
             product: 'naviance',
             parameters:
                 // tslint:disable-next-line:max-line-length
-                `chunkStart=${chunkStartParm},numChunks=${chunksPerJob},namespace=${districtId},scope=${hsId},tenantType=highschool,tenantId=${hsId},planBatchSize=${planBatchSize}`
+                `chunkStart=${chunkStartParm},numChunks=${finalChunksPerJob},namespace=${districtId},scope=${hsId},tenantType=highschool,tenantId=${hsId},planBatchSize=${planBatchSize}`
                 // ,createOnly=true
         });
         const job = await createjob(JSON.stringify(createBody), true);
@@ -922,6 +962,91 @@ program
                 );
             }
         }
+    });
+
+program
+    .command('studentPlan.loadAll')
+    .option('--highschools')
+    .option('--chunk-size <chunkSize>')
+    .option('--plan-batch-size <planBatchSize>')
+    .option('--no-spin')
+    .option('--count <count>')
+    .action(async (cmd) => {
+        initConnection(program);
+        let tenantType = 'district';
+        let logName = 'catalogLog.json';
+        if (cmd.highschools) {
+            tenantType = 'highschool';
+            logName = 'hsCatalog.json';
+        }
+        await loadCatalogLog(logName);
+
+        const hsRows = await csvRows('Highschools.csv');
+
+        const priority = districtPriority;
+        const dsByPriority = Object.keys(catalogLog).sort(
+            (a, b) => (priority.indexOf(a) === -1 ? 999999 : priority.indexOf(a))
+            - (priority.indexOf(b) === -1 ? 999999 : priority.indexOf(b))
+        );
+
+        let runCount = 0;
+        for (const dsId of dsByPriority) {
+            let runnable = false;
+            if (studentPlanSkips.includes(dsId)) {
+                console.log('total skipping', dsId);
+                continue;
+            }
+            if (!catalogLog[dsId].pos || catalogLog[dsId].pos!.status !== JobStatus.Completed) {
+                console.log('skipping because failed PoS migrate', dsId);
+                continue;
+            }
+
+            if (logName === 'catalogLog.json') {
+                // district
+                if (new Date(catalogLog[dsId].pos!.completed!.toString()) <  new Date('2020-01-08')) {
+                    // loading PoS first
+                    await processBatch([dsId], logName, tenantType, true, cmd.noSpin);
+                }
+
+                console.log('looking at', dsId);
+
+                for (const row of hsRows.slice(1)) {
+                    const [ hsId, name, dassigned, hasCp, xId] = row;
+
+                    if (dsId === xId) {
+                        if (catalogLog[dsId].student &&
+                            catalogLog[dsId].student![hsId] &&
+                            !catalogLog[dsId].student![hsId].error) {
+                            continue;
+                        }
+
+                        console.log(`loading hs ${hsId}`);
+
+                        runnable = true;
+
+                        await loadHighschoolPlans(
+                            dsId,
+                            hsId,
+                            parseInt(cmd.chunkSize) || 40,
+                            parseInt(cmd.planBatchSize) || 30,
+                            !cmd.noSpin,
+                            logName
+                        );
+                    }
+                }
+
+            }
+
+            if (runnable) {
+                runCount += 1;
+            }
+
+            if (parseInt(cmd.count) && runCount >= parseInt(cmd.count)) {
+                console.log(`Processed ${runCount} institutions, quitting`);
+                break;
+            }
+        }
+
     });
 
 program
