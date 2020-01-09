@@ -640,7 +640,7 @@ program
             logName = 'hsCatalog.json';
         }
         await loadCatalogLog(logName);
-        await processBatch([dsId], logName, tenantType, cmd.noCatalog, cmd.noSpin);
+        await processBatch([dsId], logName, tenantType, !cmd.catalog, !cmd.spin);
     });
 
 program
@@ -957,7 +957,7 @@ program
                     hsId,
                     parseInt(cmd.chunkSize) || 40,
                     parseInt(cmd.planBatchSize) || 30,
-                    !cmd.noSpin,
+                    cmd.spin,
                     'catalogLog.json'
                 );
             }
@@ -1005,7 +1005,7 @@ program
                 // district
                 if (new Date(catalogLog[dsId].pos!.completed!.toString()) <  new Date('2020-01-08')) {
                     // loading PoS first
-                    await processBatch([dsId], logName, tenantType, true, cmd.noSpin);
+                    await processBatch([dsId], logName, tenantType, true, !cmd.spin);
                 }
 
                 console.log('looking at', dsId);
@@ -1029,7 +1029,7 @@ program
                             hsId,
                             parseInt(cmd.chunkSize) || 40,
                             parseInt(cmd.planBatchSize) || 30,
-                            !cmd.noSpin,
+                            cmd.spin,
                             logName
                         );
                     }
@@ -1068,7 +1068,7 @@ program
             hsId,
             parseInt(cmd.chunkSize) || 40,
             parseInt(cmd.planBatchSize) || 30,
-            !cmd.noSpin,
+            cmd.spin,
             logName
         );
     });
