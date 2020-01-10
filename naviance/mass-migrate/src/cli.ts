@@ -901,8 +901,6 @@ program
         let totalPlans = 0;
         await loadCatalogLog('catalogLog.json');
 
-        console.log(JSON.stringify(catalogLog[]))
-
         const priority = districtPriority;
         const dsByPriority = Object.keys(catalogLog).sort(
             (a, b) => (priority.indexOf(a) === -1 ? 999999 : priority.indexOf(a))
