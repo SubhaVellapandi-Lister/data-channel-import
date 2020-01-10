@@ -108,7 +108,7 @@ const districtPriority = [
     '3700030DUS',
     '0806900DUS',
     '4838730DUS',
-    '4816740DUS',
+   // '4816740DUS',
     '0506120DUS',
     '4807830DUS',
     '5307710DUS',
