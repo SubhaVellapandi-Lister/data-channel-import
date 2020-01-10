@@ -191,7 +191,12 @@ export class PlanImport {
                 plan.meta = meta;
                 plan.programs = [pos];
                 plan.authorPrincipleId = 'migration';
-                await plan.save();
+                try {
+                    await plan.save();
+                } catch (err) {
+                    sleep(500);
+                    await plan.save();
+                }
                 console.log(`updated ${plan.guid} - migrated from ${migratedId}`);
                 importStatus = PlanImportStatus.Updated;
             } else {
@@ -207,8 +212,16 @@ export class PlanImport {
                 courses,
                 meta
             );
-            const saved = await plan.save();
-            console.log(`created ${saved.guid} - migrated from ${migratedId}`);
+            let guid = '';
+            try {
+                const saved = await plan.save();
+                guid = saved.guid;
+            } catch (err) {
+                sleep(500);
+                const saved = await plan.save();
+                guid = saved.guid;
+            }
+            console.log(`created ${guid} - migrated from ${migratedId}`);
         }
 
         return importStatus;

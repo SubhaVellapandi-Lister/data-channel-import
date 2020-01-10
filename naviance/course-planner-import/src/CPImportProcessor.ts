@@ -319,6 +319,15 @@ export class CPImportProcessor extends BaseProcessor {
             const isSafe = existing.authorId === 'migration';
             existing.annotations = new Annotations(annoItems);
             existing.setMetaValueForKey('activeSchools', annoItems['activeSchools'].value);
+            if (!isSafe && input.parameters!['safeOnly']) {
+                console.log('Skipping unsafe update');
+
+                return {
+                    outputs: {
+                        default: [ programId, existing.name, 'SKIPPED' ]
+                    }
+                };
+            }
             if (isSafe || !input.parameters!['metadataOnly']) {
                 existing.statements = statements;
             } else {

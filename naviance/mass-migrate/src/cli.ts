@@ -434,10 +434,10 @@ async function processCourseCatalog(id: string, logName: string, tenantType: str
 async function processPoS(posId: string, logName: string, tenantType: string) {
     console.log(`starting PoS inst ${posId}`);
     let channel = 'naviance/migrateDistrictPoS';
-    let parameters = `namespace=${posId},districtId=${posId},chunkSize=16,metadataOnly=true`;
+    let parameters = `namespace=${posId},districtId=${posId},chunkSize=16,safeOnly=true`;
     if (tenantType === 'highschool') {
         channel = 'naviance/migrateHighschoolPoS';
-        parameters = `namespace=${posId},highschoolId=${posId},metadataOnly=true`;
+        parameters = `namespace=${posId},highschoolId=${posId},safeOnly=true`;
     }
     const posBody = jobExecutionBody({
         channel,
