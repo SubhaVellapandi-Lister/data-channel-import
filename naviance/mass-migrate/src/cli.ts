@@ -108,7 +108,7 @@ const districtPriority = [
     '3700030DUS',
     '0806900DUS',
     '4838730DUS',
-   // '4816740DUS',
+    '4816740DUS',
     '0506120DUS',
     '4807830DUS',
     '5307710DUS',
@@ -901,6 +901,8 @@ program
         let totalPlans = 0;
         await loadCatalogLog('catalogLog.json');
 
+        console.log(JSON.stringify(catalogLog[]))
+
         const priority = districtPriority;
         const dsByPriority = Object.keys(catalogLog).sort(
             (a, b) => (priority.indexOf(a) === -1 ? 999999 : priority.indexOf(a))
@@ -966,6 +968,7 @@ program
     .option('--chunk-size <chunkSize>')
     .option('--plan-batch-size <planBatchSize>')
     .option('--no-spin')
+    .option('--fix-errors')
     .action(async (districtId, hsPath, cmd) => {
         initConnection(program);
         await loadCatalogLog('catalogLog.json');
@@ -1014,6 +1017,15 @@ program
                     console.log(`skipping ${hsId} as it appears complete already`);
                     continue;
                 }
+
+                if (!cmd.fixErrors &&
+                    catalogLog[districtId].student &&
+                    catalogLog[districtId].student![hsId] &&
+                    catalogLog[districtId].student![hsId].error) {
+                    console.log(`skipping ${hsId} as it previously errored out`);
+                    continue;
+                }
+
                 processedCount += 1;
                 console.log(`${processedCount} of ${totalSchoolCount}`, dsId, hsId, name);
                 await loadHighschoolPlans(
