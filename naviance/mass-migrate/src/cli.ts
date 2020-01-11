@@ -1045,6 +1045,7 @@ program
     .option('--plan-batch-size <planBatchSize>')
     .option('--no-spin')
     .option('--count <count>')
+    .option('--fix-errors')
     .action(async (cmd) => {
         initConnection(program);
         let tenantType = 'district';
@@ -1091,6 +1092,14 @@ program
                         if (catalogLog[dsId].student &&
                             catalogLog[dsId].student![hsId] &&
                             !catalogLog[dsId].student![hsId].error) {
+                            continue;
+                        }
+
+                        if (!cmd.fixErrors &&
+                            catalogLog[dsId].student &&
+                            catalogLog[dsId].student![hsId] &&
+                            catalogLog[dsId].student![hsId].error) {
+                            console.log(`skipping ${hsId} as it previously errored out`);
                             continue;
                         }
 
