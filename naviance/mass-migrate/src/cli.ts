@@ -145,7 +145,31 @@ const districtPriority = [
     '0512660DUS',
     '3620490DUS',
     '0621000DUS',
-    '0607230DUS'
+    '0607230DUS',
+
+    '3904610DUS',
+    '4815910DUS',
+    '5303540DUS',
+    '0610050DUS',
+    '1812810DUS',
+    '2714220DUS',
+    '0804410DUS',
+    '0604440DUS',
+    '5101800DUS',
+    '2614610DUS',
+    '3175270DUS',
+    '7803099DUS',
+    '0636840DUS',
+    '0509000DUS',
+    '1808820DUS',
+    '0635700DUS',
+    '4842960DUS',
+    '4844730DUS',
+    '4015720DUS',
+    '1908220DUS',
+    '7802592DUS',
+    '0511850DUS',
+    '2918300DUS'
 ];
 
 export interface ISubInst {
@@ -834,6 +858,14 @@ async function loadHighschoolPlans(
     if (planCount < 500 && numJobs > 2) {
         numJobs = 2;
         finalChunksPerJob = Math.ceil(totalChunks / 2);
+    }
+
+    if (planCount && numJobs) {
+        const plansPerJob = planCount / numJobs;
+        if (plansPerJob > 400) {
+            numJobs = Math.ceil(planCount / 400);
+            finalChunksPerJob = Math.ceil(totalChunks / numJobs);
+        }
     }
     catalogLog[districtId].student![hsId] = {
         jobs: [],
