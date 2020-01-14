@@ -2,10 +2,11 @@
 import {ConfigType, IJobConfig, Job, JobStatus, s3Readable, s3Writeable, ServiceInterfacer} from "@data-channels/dcSDK";
 import Table from 'cli-table3';
 import program from 'commander';
-import { readFileSync, writeFileSync, chmod } from "fs";
+import { chmod, readFileSync, writeFileSync } from "fs";
 import { Readable } from 'stream';
 import {csvRows} from "./file";
 import {createjob, deletejob, findjob, findjobs, jobExecutionBody, updatejob} from "./job";
+import {planningSplitDistricts} from "./schools";
 import {initConnection} from "./utils/config";
 import spin from "./utils/spinner";
 import {sleep, waitOnJobExecution} from "./wait";
@@ -424,6 +425,30 @@ program
     });
 
 program
+    .command('info <id>')
+    .action(async (id, cmd) => {
+        let logName = 'catalogLog.json';
+        await loadCatalogLog(logName);
+
+        let item: IInstitution | null = null;
+        if (catalogLog[id]) {
+            item = catalogLog[id];
+        } else {
+            logName = 'hsCatalog.json';
+            await loadCatalogLog(logName);
+            if (catalogLog[id]) {
+                item = catalogLog[id];
+            }
+        }
+
+        if (item) {
+            console.log(JSON.stringify(item, undefined, 2));
+        } else {
+            console.log(`no migration history found for ${id}`);
+        }
+    });
+
+program
     .command('catalog.progress')
     .option('--highschools')
     .action(async (cmd) => {
@@ -829,7 +854,22 @@ program
             logName = 'hsCatalog.json';
         }
         await loadCatalogLog(logName);
-        await processBatch([dsId], logName, tenantType, !cmd.catalog, !cmd.spin);
+        let toLoad = [dsId];
+        if (planningSplitDistricts.includes(dsId)) {
+            const hsRows = await csvRows('Highschools.csv');
+            toLoad = [];
+            for (const row of hsRows) {
+                if (row[1].toUpperCase().includes('ELEMENTARY')) {
+                    continue;
+                }
+                if (row[4] === dsId) {
+                    toLoad.push(row[0]);
+                }
+            }
+            console.log('Split District', dsId);
+            console.log(toLoad);
+        }
+        await processBatch(toLoad, logName, tenantType, !cmd.catalog, !cmd.spin);
     });
 
 program
@@ -1109,17 +1149,18 @@ program
     });
 
 program
-    .command('studentPlan.load <districtId> <hsPath>')
+    .command('studentPlan.load <districtId>')
     .option('--starting <startingId>')
     .option('--chunk-size <chunkSize>')
     .option('--plan-batch-size <planBatchSize>')
     .option('--no-spin')
     .option('--fix-errors')
-    .action(async (districtId, hsPath, cmd) => {
+    .option('--force')
+    .action(async (districtId, cmd) => {
         initConnection(program);
         await loadCatalogLog('catalogLog.json');
 
-        const hsRows = await csvRows(hsPath);
+        const hsRows = await csvRows('Highschools.csv');
 
         let totalSchoolCount = 0;
         let foundStarting = false;
@@ -1157,7 +1198,8 @@ program
                     console.log(`skipping elementary school ${hsId} ${name}`);
                     continue;
                 }
-                if (catalogLog[districtId].student &&
+                if (!cmd.force &&
+                    catalogLog[districtId].student &&
                     catalogLog[districtId].student![hsId] &&
                     !catalogLog[districtId].student![hsId].error) {
                     console.log(`skipping ${hsId} as it appears complete already`);

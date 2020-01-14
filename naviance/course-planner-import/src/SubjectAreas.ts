@@ -121,6 +121,14 @@ export function parseSubjectAreaRow(
                 }
             }
             if (!exists) {
+                for (const codePair of subMap[rowSub]) {
+                    if (!codePair.scedCode) {
+                        exists = true;
+                        codePair.scedCode = rowSced;
+                    }
+                }
+            }
+            if (!exists) {
                 subMap[rowSub].push({ csscCode: 0, scedCode: rowSced});
                 created = true;
             }
