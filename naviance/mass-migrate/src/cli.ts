@@ -1069,7 +1069,12 @@ program
                     !catalogLog[dsId].pos ||
                     new Date(catalogLog[dsId].pos!.completed!.toString()) <  new Date('2020-01-08')) {
                     // loading PoS first
-                    await processBatch([dsId], logName, tenantType, true, !cmd.spin);
+                    await processBatch(
+                        [dsId],
+                        logName,
+                        tenantType,
+                        catalogLog[dsId] && catalogLog[dsId].catalog !== undefined,
+                        !cmd.spin);
                 }
 
                 for (const row of hsRows.slice(1)) {

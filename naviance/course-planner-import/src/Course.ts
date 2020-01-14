@@ -187,7 +187,7 @@ export class CourseImport {
         const instructLev = cObj['instructionalLevel'] || 'Untracked';
         const isCte = cObj['cteCourse'] === true ? 1 : 0;
         const isTechPrep = cObj['techPrepCourse'] === true ? 1 : 0;
-        const subName = cObj['subjectArea'] ? cObj['subjectArea']['name'] : 'Unknown';
+        const subName = cObj['subjectArea'] ? cObj['subjectArea']['name'].trim() : 'Unknown';
         const subCategory = cObj['subjectArea'] ? cObj['subjectArea']['category'] : 'Basic Skills';
         const combinedSubjectArea = getMigratedSubjectArea(subName, subCategory);
         const desc = cObj['description'] || cObj['_description'];
