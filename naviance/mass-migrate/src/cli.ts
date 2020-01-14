@@ -6,7 +6,7 @@ import { chmod, readFileSync, writeFileSync } from "fs";
 import { Readable } from 'stream';
 import {csvRows} from "./file";
 import {createjob, deletejob, findjob, findjobs, jobExecutionBody, updatejob} from "./job";
-import {planningSplitDistricts} from "./schools";
+import {planningDistricts, planningHighschools, planningSplitDistricts} from "./schools";
 import {initConnection} from "./utils/config";
 import spin from "./utils/spinner";
 import {sleep, waitOnJobExecution} from "./wait";
@@ -86,207 +86,6 @@ const studentPlanSkips = [
     '4814730DUS',
     '7802531DUS',
     '180567USPU'
-];
-
-const districtPriority = [
-    '1201440DUS',
-    '0804800DUS',
-    '2400510DUS',
-    '0802910DUS',
-    '0602820DUS',
-    '0619540DUS',
-    '4823910DUS',
-    '0634620DUS',
-    '4814280DUS',
-
-    '1200330DUS',
-    '3704620DUS',
-    '2400330DUS',
-    '1201770DUS',
-    '4835100DUS',
-    '0408340DUS',
-    '0407570DUS',
-    '3700030DUS',
-    '0806900DUS',
-    '4838730DUS',
-    '4816740DUS',
-    '0506120DUS',
-    '4807830DUS',
-    '5307710DUS',
-
-    '4827030DUS',
-    '0613920DUS',
-    '1713710DUS',
-    '5303960DUS',
-    '4703030DUS',
-    '5305910DUS',
-    '1711370DUS',
-    '5300390DUS',
-    '4005490DUS',
-    '5103640DUS',
-    '4829850DUS',
-    '2012000DUS',
-    '2513230DUS',
-    '4841220DUS',
-    '5100090DUS',
-    '1805670DUS',
-    '4807890DUS',
-    '1810650DUS',
-    '2634470DUS',
-    '0613890DUS',
-    '5302670DUS',
-    '4501110DUS',
-    '7802505DUS',
-    '3904490DUS',
-    '4100023DUS',
-    '1720610DUS',
-    '1804770DUS',
-    '0629610DUS',
-    '0629850DUS',
-    '0512660DUS',
-    '3620490DUS',
-    '0621000DUS',
-    '0607230DUS',
-
-    '3904610DUS',
-    '4815910DUS',
-    '5303540DUS',
-    '0610050DUS',
-    '1812810DUS',
-    '2714220DUS',
-    '0804410DUS',
-    '0604440DUS',
-    '5101800DUS',
-    '2614610DUS',
-    '3175270DUS',
-    '7803099DUS',
-    '0636840DUS',
-    '0509000DUS',
-    '1808820DUS',
-    '0635700DUS',
-    '4842960DUS',
-    '4844730DUS',
-    '4015720DUS',
-    '1908220DUS',
-    '7802592DUS',
-    '0511850DUS',
-    '2918300DUS',
-
-
-    '3619230DUS',
-    '4822530DUS',
-    '1903690DUS',
-    '0627720DUS',
-    '2707290DUS',
-    '2400540DUS',
-    '1732910DUS',
-    '0402860DUS',
-    '4816530DUS',
-    '4500900DUS',
-    '1200930DUS',
-    '5304860DUS',
-    '0635430DUS',
-    '1803270DUS',
-    '1808910DUS',
-    '4813230DUS',
-    '0600032DUS',
-    '0503060DUS',
-    '5103390DUS',
-    '0904230DUS',
-    '3417610DUS',
-    '1813080DUS',
-    '0900510DUS',
-    '4030240DUS',
-    '0640590DUS',
-    '0903810DUS',
-    '2916400DUS',
-    '3700450DUS',
-    '2627240DUS',
-    '1812360DUS',
-    '3404320DUS',
-    '3416080DUS',
-    '1705220DUS',
-    '0601770DUS',
-    '0622740DUS',
-    '1915450DUS',
-    '1706540DUS',
-    '4207230DUS',
-    '1726880DUS',
-    '0511970DUS',
-    '3500010DUS',
-    '3904549DUS',
-    '1733420DUS',
-    '2912300DUS',
-    '3401260DUS',
-    '4819950DUS',
-    '0635250DUS',
-    '7802652DUS',
-    '0806150DUS',
-    '4900390DUS',
-    '4700900DUS',
-    '7802651DUS',
-    '5300240DUS',
-    '1930930DUS',
-    '0625320DUS',
-    '3625170DUS',
-    '1729890DUS',
-    '0503690DUS',
-    '4824100DUS',
-    '4111290DUS',
-    '5101620DUS',
-    '4900750DUS',
-    '3402490DUS',
-    '2733330DUS',
-    '4003630DUS',
-    '3905043DUS',
-    '0904590DUS',
-    '1706420DUS',
-    '2930450DUS',
-    '7800033DUS',
-    '1800630DUS',
-    '5102360DUS',
-    '1802640DUS',
-    '1800150DUS',
-    '4702190DUS',
-    '1743960DUS',
-    '1725320DUS',
-    '2504320DUS',
-    '4110520DUS',
-    '4831760DUS',
-    '1928680DUS',
-    '0904680DUS',
-    '2009180DUS',
-    '0642140DUS',
-    '0903750DUS',
-    '0904560DUS',
-    '2605850DUS',
-    '4702700DUS',
-    '3904800DUS',
-    '3605460DUS',
-    '1907860DUS',
-    '0806810DUS',
-    '0903030DUS',
-    '1811970DUS',
-    '4826190DUS',
-    '2923700DUS',
-    '4225590DUS',
-    '2923430DUS',
-    '2102040DUS',
-    '2922530DUS',
-    '5309100DUS',
-    '2009390DUS',
-    '2003200DUS',
-    '0803330DUS',
-    '3904700DUS',
-    '4838220DUS',
-    '0602670DUS',
-    '5101860DUS',
-    '1805790DUS',
-    '0639630DUS',
-    '2635910DUS',
-    '7802622DUS',
-    '4830060DUS',
-    '0900060DUS'
 ];
 
 export interface ISubInst {
@@ -756,7 +555,7 @@ async function processBatch(
     let processingIds: string[] = [];
     for (const id of idBatch) {
         console.log(`starting catalog inst ${id}`);
-        catalogLog[id] = {};
+        catalogLog[id] = catalogLog[id] || {};
         shouldProcessPos[id] = true;
         if (catalogExcludes.includes(id) || noCatalog) {
             console.log(`skipping ${id} catalog`);
@@ -1089,7 +888,7 @@ program
         let totalPlans = 0;
         await loadCatalogLog('catalogLog.json');
 
-        const priority = districtPriority;
+        const priority = planningDistricts;
         const dsByPriority = Object.keys(catalogLog).sort(
             (a, b) => (priority.indexOf(a) === -1 ? 999999 : priority.indexOf(a))
             - (priority.indexOf(b) === -1 ? 999999 : priority.indexOf(b))
@@ -1248,32 +1047,30 @@ program
 
         const hsRows = await csvRows('Highschools.csv');
 
-        const priority = districtPriority;
-        const dsByPriority = Object.keys(catalogLog).sort(
-            (a, b) => (priority.indexOf(a) === -1 ? 999999 : priority.indexOf(a))
-            - (priority.indexOf(b) === -1 ? 999999 : priority.indexOf(b))
-        );
-
         let runCount = 0;
-        for (const dsId of dsByPriority) {
+        for (const dsId of planningDistricts) {
             let runnable = false;
             if (studentPlanSkips.includes(dsId)) {
-                console.log('total skipping', dsId);
+                console.log(dsId, 'total skipping');
                 continue;
             }
-            if (!catalogLog[dsId].pos || catalogLog[dsId].pos!.status !== JobStatus.Completed) {
-                console.log('skipping because failed PoS migrate', dsId);
+            if (planningSplitDistricts.includes(dsId)) {
+                console.log(dsId, 'skipping split district');
+                continue;
+            }
+            if (catalogLog[dsId] && catalogLog[dsId].pos && (catalogLog[dsId].pos!.status !== JobStatus.Completed)) {
+                console.log(dsId, 'skipping because failed PoS migrate', dsId);
                 continue;
             }
 
             if (logName === 'catalogLog.json') {
                 // district
-                if (new Date(catalogLog[dsId].pos!.completed!.toString()) <  new Date('2020-01-08')) {
+                if (!catalogLog[dsId] ||
+                    !catalogLog[dsId].pos ||
+                    new Date(catalogLog[dsId].pos!.completed!.toString()) <  new Date('2020-01-08')) {
                     // loading PoS first
                     await processBatch([dsId], logName, tenantType, true, !cmd.spin);
                 }
-
-                console.log('looking at', dsId);
 
                 for (const row of hsRows.slice(1)) {
                     const [ hsId, name, dassigned, hasCp, xId] = row;
@@ -1307,8 +1104,18 @@ program
                         );
                     }
                 }
-
             }
+
+            let planCount = 0;
+            let hsCount = 0;
+            if (catalogLog[dsId].student) {
+                for (const hsPlan of Object.values(catalogLog[dsId].student!)) {
+                    hsCount += 1;
+                    planCount += hsPlan.numPlansTotal || 0;
+                }
+            }
+
+            console.log('--> ', dsId,  `${hsCount} highschools, ${planCount} plans`);
 
             if (runnable) {
                 runCount += 1;
