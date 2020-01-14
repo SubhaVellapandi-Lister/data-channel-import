@@ -1077,6 +1077,11 @@ program
                         !cmd.spin);
                 }
 
+                if (catalogLog[dsId] && catalogLog[dsId].pos && catalogLog[dsId].pos!.objects === 0) {
+                    console.log(dsId, 'skipping because no PoS', dsId);
+                    continue;
+                }
+
                 for (const row of hsRows.slice(1)) {
                     const [ hsId, name, dassigned, hasCp, xId] = row;
 
