@@ -429,7 +429,7 @@ async function processPoS(posId: string, logName: string, tenantType: string) {
     let parameters = `namespace=${posId},districtId=${posId},chunkSize=16,safeOnly=true`;
     if (tenantType === 'highschool') {
         channel = 'naviance/migrateHighschoolPoS';
-        parameters = `namespace=${posId},highschoolId=${posId},safeOnly=true`;
+        parameters = `namespace=${posId},highschoolId=${posId},safeOnly=true,tenantType=highschool`;
     }
     const posBody = jobExecutionBody({
         channel,
