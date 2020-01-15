@@ -26,6 +26,7 @@ export interface IValidateConfig {
             validTypes?: ValidateDataType[]; // list of valid types, if not one of these it's invalid
             validWithWarningTypes?: ValidateDataType[]; // if one of these, considered valid, but with a warning
             validValues?: any[]; // if value is not one of these, it's invalid
+            warnIfNotValidValue?: boolean; // if invalid, it's just a warning, not an error
             validWithWarningValues?: any[]; // if value is one of these, it's considered valid, but with a warning
             invalidIfBlank?: boolean; // invalid if the row has a blank value
             warnIfBlank?: boolean; // just a warning if row has a blank value
@@ -103,7 +104,11 @@ export default class Validate extends BaseProcessor {
                 continue;
             } else if (colConfig.validValues && !validVal) {
                 validationErrors.push(`Invalid Value for ${colName}`);
-                validationStatus = ValidateStatus.Invalid;
+                if (colConfig.warnIfNotValidValue) {
+                    validationStatus = ValidateStatus.Warning;
+                } else {
+                    validationStatus = ValidateStatus.Invalid;
+                }
                 continue;
             }
 

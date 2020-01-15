@@ -917,7 +917,6 @@ program
                        error = true;
                     }
 
-
                     if (hsInfo.jobs.length) {
                         const dt = new Date(hsInfo.jobs.slice(-1)[0].created!);
                         dtStr = `${dt.getMonth() + 1}/${dt.getDate()}/${dt.getFullYear()}`;
@@ -1050,6 +1049,7 @@ program
 program
     .command('studentPlan.loadAll')
     .option('--highschools')
+    .option('--splitdistricts')
     .option('--chunk-size <chunkSize>')
     .option('--plan-batch-size <planBatchSize>')
     .option('--no-spin')
@@ -1068,37 +1068,103 @@ program
         const hsRows = await csvRows('Highschools.csv');
 
         let runCount = 0;
-        for (const dsId of planningDistricts) {
-            let runnable = false;
-            if (studentPlanSkips.includes(dsId)) {
-                console.log(dsId, 'total skipping');
-                continue;
-            }
-            if (planningSplitDistricts.includes(dsId)) {
-                console.log(dsId, 'skipping split district');
-                continue;
-            }
-            if (catalogLog[dsId] && catalogLog[dsId].pos && (catalogLog[dsId].pos!.status !== JobStatus.Completed)) {
-                console.log(dsId, 'skipping because failed PoS migrate', dsId);
-                continue;
-            }
-
-            if (logName === 'catalogLog.json') {
-                // district
-                if (!catalogLog[dsId] ||
-                    !catalogLog[dsId].pos ||
-                    new Date(catalogLog[dsId].pos!.completed!.toString()) <  new Date('2020-01-08')) {
-                    // loading PoS first
-                    await processBatch(
-                        [dsId],
-                        logName,
-                        tenantType,
-                        catalogLog[dsId] && catalogLog[dsId].catalog !== undefined,
-                        !cmd.spin);
+        if (!cmd.highschools && !cmd.splitdistricts) {
+            for (const dsId of planningDistricts) {
+                let runnable = false;
+                if (studentPlanSkips.includes(dsId)) {
+                    console.log(dsId, 'total skipping');
+                    continue;
+                }
+                if (planningSplitDistricts.includes(dsId)) {
+                    console.log(dsId, 'skipping split district');
+                    continue;
+                }
+                if (catalogLog[dsId] &&
+                    catalogLog[dsId].pos && (catalogLog[dsId].pos!.status !== JobStatus.Completed)) {
+                    console.log(dsId, 'skipping because failed PoS migrate', dsId);
+                    continue;
                 }
 
-                if (catalogLog[dsId] && catalogLog[dsId].pos && catalogLog[dsId].pos!.objects === 0) {
-                    console.log(dsId, 'skipping because no PoS', dsId);
+                if (logName === 'catalogLog.json') {
+                    // district
+                    if (!catalogLog[dsId] ||
+                        !catalogLog[dsId].pos ||
+                        new Date(catalogLog[dsId].pos!.completed!.toString()) <  new Date('2020-01-08')) {
+                        // loading PoS first
+                        await processBatch(
+                            [dsId],
+                            logName,
+                            tenantType,
+                            catalogLog[dsId] && catalogLog[dsId].catalog !== undefined,
+                            !cmd.spin);
+                    }
+
+                    if (catalogLog[dsId] && catalogLog[dsId].pos && catalogLog[dsId].pos!.objects === 0) {
+                        console.log(dsId, 'skipping because no PoS', dsId);
+                        continue;
+                    }
+
+                    for (const row of hsRows.slice(1)) {
+                        const [ hsId, name, dassigned, hasCp, xId] = row;
+
+                        if (dsId === xId) {
+                            if (catalogLog[dsId].student &&
+                                catalogLog[dsId].student![hsId] &&
+                                !catalogLog[dsId].student![hsId].error) {
+                                continue;
+                            }
+
+                            if (!cmd.fixErrors &&
+                                catalogLog[dsId].student &&
+                                catalogLog[dsId].student![hsId] &&
+                                catalogLog[dsId].student![hsId].error) {
+                                console.log(`skipping ${hsId} as it previously errored out`);
+                                continue;
+                            }
+
+                            console.log(`loading hs ${hsId}`);
+
+                            runnable = true;
+
+                            await loadHighschoolPlans(
+                                dsId,
+                                hsId,
+                                parseInt(cmd.chunkSize) || 40,
+                                parseInt(cmd.planBatchSize) || 30,
+                                cmd.spin,
+                                logName
+                            );
+                        }
+                    }
+                }
+
+                let planCount = 0;
+                let hsCount = 0;
+                if (catalogLog[dsId].student) {
+                    for (const hsPlan of Object.values(catalogLog[dsId].student!)) {
+                        hsCount += 1;
+                        planCount += hsPlan.numPlansTotal || 0;
+                    }
+                }
+
+                console.log('--> ', dsId,  `${hsCount} highschools, ${planCount} plans`);
+
+                if (runnable) {
+                    runCount += 1;
+                }
+
+                if (parseInt(cmd.count) && runCount >= parseInt(cmd.count)) {
+                    console.log(`Processed ${runCount} institutions, quitting`);
+                    break;
+                }
+            }
+        }
+
+        if (cmd.splitdistricts) {
+            for (const dsId of planningSplitDistricts) {
+                let runnable = false;
+                if (studentPlanSkips.includes(dsId)) {
+                    console.log(dsId, 'total skipping');
                     continue;
                 }
 
@@ -1106,9 +1172,27 @@ program
                     const [ hsId, name, dassigned, hasCp, xId] = row;
 
                     if (dsId === xId) {
+                        if (!catalogLog[hsId] ||
+                            !catalogLog[hsId].pos ||
+                            new Date(catalogLog[hsId].pos!.completed!.toString()) <  new Date('2020-01-08')) {
+                            // loading PoS first
+                            await processBatch(
+                                [hsId],
+                                logName,
+                                tenantType,
+                                catalogLog[hsId] && catalogLog[hsId].catalog !== undefined,
+                                !cmd.spin);
+                        }
+
+                        if (catalogLog[hsId] && catalogLog[hsId].pos && catalogLog[hsId].pos!.objects === 0) {
+                            console.log(dsId, 'skipping because no PoS', hsId);
+                            continue;
+                        }
+
                         if (catalogLog[dsId].student &&
                             catalogLog[dsId].student![hsId] &&
                             !catalogLog[dsId].student![hsId].error) {
+                            console.log(dsId, 'skipping because already successful', hsId);
                             continue;
                         }
 
@@ -1134,26 +1218,26 @@ program
                         );
                     }
                 }
-            }
 
-            let planCount = 0;
-            let hsCount = 0;
-            if (catalogLog[dsId].student) {
-                for (const hsPlan of Object.values(catalogLog[dsId].student!)) {
-                    hsCount += 1;
-                    planCount += hsPlan.numPlansTotal || 0;
+                let planCount = 0;
+                let hsCount = 0;
+                if (catalogLog[dsId].student) {
+                    for (const hsPlan of Object.values(catalogLog[dsId].student!)) {
+                        hsCount += 1;
+                        planCount += hsPlan.numPlansTotal || 0;
+                    }
                 }
-            }
 
-            console.log('--> ', dsId,  `${hsCount} highschools, ${planCount} plans`);
+                console.log('--> ', dsId,  `${hsCount} highschools, ${planCount} plans`);
 
-            if (runnable) {
-                runCount += 1;
-            }
+                if (runnable) {
+                    runCount += 1;
+                }
 
-            if (parseInt(cmd.count) && runCount >= parseInt(cmd.count)) {
-                console.log(`Processed ${runCount} institutions, quitting`);
-                break;
+                if (parseInt(cmd.count) && runCount >= parseInt(cmd.count)) {
+                    console.log(`Processed ${runCount} institutions, quitting`);
+                    break;
+                }
             }
         }
 
