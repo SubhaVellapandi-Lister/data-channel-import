@@ -156,11 +156,9 @@ async function getLogS3(name: string): Promise<IMigration | null> {
 
 async function loadCatalogLog(name: string) {
 
-    console.log('getting', name);
     const log = await getLogS3(name);
     if (log) {
         catalogLog = log;
-        console.log('got', name);
 
         return;
     } else {
@@ -840,12 +838,13 @@ async function loadHighschoolPlans(
     for (let jobChunkIdx = 0; jobChunkIdx < numJobs; jobChunkIdx++) {
         const chunkStartParm = jobChunkIdx * finalChunksPerJob;
         console.log(`running ${finalChunksPerJob} chunks starting at chunk ${chunkStartParm}`);
+        const namespace = planningSplitDistricts.includes(districtId) ? hsId : districtId;
         const createBody = jobExecutionBody({
             channel: 'naviance/migrateStudentCoursePlan',
             product: 'naviance',
             parameters:
                 // tslint:disable-next-line:max-line-length
-                `chunkStart=${chunkStartParm},numChunks=${finalChunksPerJob},namespace=${districtId},scope=${hsId},tenantType=highschool,tenantId=${hsId},planBatchSize=${planBatchSize}`
+                `chunkStart=${chunkStartParm},numChunks=${finalChunksPerJob},namespace=${namespace},scope=${hsId},tenantType=highschool,tenantId=${hsId},planBatchSize=${planBatchSize}`
                 // ,createOnly=true
         });
         const job = await createjob(JSON.stringify(createBody), true);
@@ -881,43 +880,57 @@ program
     .action(async (cmd) => {
         let totalDistricts = 0;
         let districts = 0;
-        let totalHighschools = 0;
-        let highschools = 0;
-        let districtErrors = 0;
-        let hsErrors = 0;
-        let totalPlans = 0;
         await loadCatalogLog('catalogLog.json');
 
-        const priority = planningDistricts;
-        const dsByPriority = Object.keys(catalogLog).sort(
-            (a, b) => (priority.indexOf(a) === -1 ? 999999 : priority.indexOf(a))
-            - (priority.indexOf(b) === -1 ? 999999 : priority.indexOf(b))
-        );
-
-        for (const dsId of dsByPriority) {
-            if (!catalogLog[dsId].pos) {
+        for (const dsId of planningDistricts) {
+            if (studentPlanSkips.includes(dsId)) {
+                console.log(`${dsId},,,skipped on purpose`);
                 continue;
             }
+            if (planningSplitDistricts.includes(dsId)) {
+                console.log(`${dsId},,,district with cp highschools`);
+                continue;
+            }
+            if (catalogLog[dsId] && catalogLog[dsId].pos && (catalogLog[dsId].pos!.status !== JobStatus.Completed)) {
+                console.log(`${dsId},,,issue with PoS migration`);
+                continue;
+            }
+
+            if (catalogLog[dsId] && catalogLog[dsId].pos && catalogLog[dsId].pos!.objects === 0 &&
+                (!catalogLog[dsId].student || !Object.keys(catalogLog[dsId].student!).length)) {
+                console.log(`${dsId},,,no plans of study`);
+                continue;
+            }
+
             totalDistricts += 1;
             if (catalogLog[dsId].student) {
                 districts += 1;
                 let dsTotalPlans = 0;
+                let dtStr = '';
+                let error = false;
+
                 for (const hsId of Object.keys(catalogLog[dsId].student!)) {
                     const hsInfo = catalogLog[dsId].student![hsId];
+                    dsTotalPlans += hsInfo.numPlansTotal || 0;
+
                     if (hsInfo.error) {
-                        console.log('ERROR', dsId, hsId);
-                        districtErrors += 1;
-                    } else {
-                        totalPlans += hsInfo.numPlansTotal || 0;
-                        dsTotalPlans += hsInfo.numPlansTotal || 0;
+                       error = true;
                     }
+
+
+                    if (hsInfo.jobs.length) {
+                        const dt = new Date(hsInfo.jobs.slice(-1)[0].created!);
+                        dtStr = `${dt.getMonth() + 1}/${dt.getDate()}/${dt.getFullYear()}`;
+                    }
+
                 }
-                if (cmd.details) {
-                    console.log(`${dsId} ${dsTotalPlans} total plans`);
-                }
+                console.log(`${dsId},${dtStr},${dsTotalPlans},${error ? 'Some errors to be investigated' : ''}`);
+            } else {
+                console.log(`${dsId},,,`);
             }
         }
 
+/*
         await loadCatalogLog('hsCatalog.json');
 
         for (const dsId of Object.keys(catalogLog)) {
@@ -944,7 +957,7 @@ program
 
         console.log(`${totalPlans} plans total`);
         console.log(`${districts}/${totalDistricts} districts processed, ${districtErrors} errors`);
-        console.log(`${highschools}/${totalHighschools} highschools processed, ${hsErrors} errors`);
+        console.log(`${highschools}/${totalHighschools} highschools processed, ${hsErrors} errors`); */
     });
 
 program

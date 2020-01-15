@@ -17,6 +17,8 @@ export function getCombinedSubjectArea(
 ): string {
     if (scedCode && (!subName || !subName.length)) {
         subName = scedMapping[parseInt(scedCode)] || '';
+    } else if (subName.includes('(') || subName.includes(')')) {
+        subName = subName.replace(/\(/g, '\\(').replace(/\)/g, '\\)');
     }
     if (subLoad.subjectAreaMapping[subName]) {
         for (const codePair of subLoad.subjectAreaMapping[subName]) {
