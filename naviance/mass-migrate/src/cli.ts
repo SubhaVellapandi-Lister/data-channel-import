@@ -223,6 +223,7 @@ program
 
 program
     .command('info <id>')
+    .option('--remove')
     .action(async (id, cmd) => {
         let logName = 'catalogLog.json';
         await loadCatalogLog(logName);
@@ -240,6 +241,12 @@ program
 
         if (item) {
             console.log(JSON.stringify(item, undefined, 2));
+            if (cmd.remove) {
+                catalogLog[id] = {};
+                await saveCatalogLog(logName, id);
+                console.log('removed');
+            }
+
         } else {
             console.log(`no migration history found for ${id}`);
         }
@@ -1184,7 +1191,7 @@ program
                             await processBatch(
                                 [hsId],
                                 logName,
-                                tenantType,
+                                'highschool',
                                 catalogLog[hsId] && catalogLog[hsId].catalog !== undefined,
                                 !cmd.spin);
                         }
