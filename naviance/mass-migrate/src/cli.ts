@@ -1063,6 +1063,8 @@ program
             tenantType = 'highschool';
             logName = 'hsCatalog.json';
         }
+        await loadCatalogLog('hsCatalog.json');
+        const hsCatalogLog = catalogLog;
         await loadCatalogLog(logName);
 
         const hsRows = await csvRows('Highschools.csv');
@@ -1172,9 +1174,12 @@ program
                     const [ hsId, name, dassigned, hasCp, xId] = row;
 
                     if (dsId === xId) {
-                        if (!catalogLog[hsId] ||
+                        if ((!catalogLog[hsId] ||
                             !catalogLog[hsId].pos ||
-                            new Date(catalogLog[hsId].pos!.completed!.toString()) <  new Date('2020-01-08')) {
+                            new Date(catalogLog[hsId].pos!.completed!.toString()) <  new Date('2020-01-08')) &&
+                            (!hsCatalogLog[hsId] ||
+                             !hsCatalogLog[hsId].pos ||
+                             new Date(hsCatalogLog[hsId].pos!.completed!.toString()) <  new Date('2020-01-08'))) {
                             // loading PoS first
                             await processBatch(
                                 [hsId],
