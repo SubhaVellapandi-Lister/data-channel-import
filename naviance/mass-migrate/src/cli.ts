@@ -1018,6 +1018,13 @@ program
                     continue;
                 }
 
+                if (catalogLog[districtId].student &&
+                    catalogLog[districtId].student![hsId] &&
+                    catalogLog[districtId].student![hsId].numPlansTotal === 0) {
+                    console.log(`skipping ${hsId} as it was run before and has 0 student plans`);
+                    continue;
+                }
+
                 if (!cmd.fixErrors &&
                     catalogLog[districtId].student &&
                     catalogLog[districtId].student![hsId] &&
