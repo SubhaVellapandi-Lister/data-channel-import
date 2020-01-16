@@ -1201,6 +1201,10 @@ program
                             continue;
                         }
 
+                        if (!catalogLog[dsId]) {
+                            catalogLog[dsId] = {};
+                        }
+
                         if (catalogLog[dsId].student &&
                             catalogLog[dsId].student![hsId] &&
                             !catalogLog[dsId].student![hsId].error) {
