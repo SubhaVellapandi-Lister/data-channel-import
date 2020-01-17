@@ -1244,7 +1244,7 @@ program
 
                 let planCount = 0;
                 let hsCount = 0;
-                if (catalogLog[dsId].student) {
+                if (catalogLog[dsId] && catalogLog[dsId].student) {
                     for (const hsPlan of Object.values(catalogLog[dsId].student!)) {
                         hsCount += 1;
                         planCount += hsPlan.numPlansTotal || 0;
