@@ -1266,6 +1266,73 @@ program
             }
         }
 
+        if (cmd.highschools) {
+            for (const hsId of planningHighschools) {
+                let runnable = false;
+                if (studentPlanSkips.includes(hsId)) {
+                    console.log(hsId, 'total skipping');
+                    continue;
+                }
+
+                if (!catalogLog[hsId] ||
+                    !catalogLog[hsId].pos ||
+                    !catalogLog[hsId].pos!.completed ||
+                    new Date(catalogLog[hsId].pos!.completed!.toString()) <  new Date('2020-01-08')) {
+                    // loading PoS first
+                    await processBatch(
+                        [hsId],
+                        logName,
+                        'highschool',
+                        catalogLog[hsId] && catalogLog[hsId].catalog !== undefined,
+                        !cmd.spin);
+                }
+
+                if (catalogLog[hsId].student &&
+                    catalogLog[hsId].student![hsId] &&
+                    !catalogLog[hsId].student![hsId].error) {
+                    console.log(hsId, 'skipping because already successful');
+                    continue;
+                }
+
+                if (!cmd.fixErrors &&
+                    catalogLog[hsId].student &&
+                    catalogLog[hsId].student![hsId] &&
+                    catalogLog[hsId].student![hsId].error) {
+                    console.log(`skipping ${hsId} as it previously errored out`);
+                    continue;
+                }
+
+                console.log(`loading hs ${hsId}`);
+
+                runnable = true;
+
+                await loadHighschoolPlans(
+                    hsId,
+                    hsId,
+                    parseInt(cmd.chunkSize) || 40,
+                    parseInt(cmd.planBatchSize) || 30,
+                    cmd.spin,
+                    logName
+                );
+
+                let planCount = 0;
+                if (catalogLog[hsId] && catalogLog[hsId].student) {
+                    for (const hsPlan of Object.values(catalogLog[hsId].student!)) {
+                        planCount += hsPlan.numPlansTotal || 0;
+                    }
+                }
+
+                console.log('--> ', hsId,  `${planCount} plans`);
+
+                runCount += 1;
+
+                if (parseInt(cmd.count) && runCount >= parseInt(cmd.count)) {
+                    console.log(`Processed ${runCount} institutions, quitting`);
+                    break;
+                }
+            }
+        }
+
     });
 
 program
