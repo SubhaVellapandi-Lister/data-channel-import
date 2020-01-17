@@ -1073,9 +1073,14 @@ program
         initConnection(program);
         let tenantType = 'district';
         let logName = 'catalogLog.json';
+        let districtLog: IMigration = {};
         if (cmd.highschools) {
+            await loadCatalogLog(logName);
+            districtLog = catalogLog;
+
             tenantType = 'highschool';
             logName = 'hsCatalog.json';
+
         }
         await loadCatalogLog('hsCatalog.json');
         const hsCatalogLog = catalogLog;
@@ -1267,10 +1272,20 @@ program
         }
 
         if (cmd.highschools) {
+            let highschoolsRunFromDistricts: string[] = [];
+            for (const ds of Object.values(districtLog)) {
+                if (ds.student) {
+                    highschoolsRunFromDistricts = highschoolsRunFromDistricts.concat(Object.keys(ds.student));
+                }
+            }
             for (const hsId of planningHighschools) {
-                let runnable = false;
                 if (studentPlanSkips.includes(hsId)) {
                     console.log(hsId, 'total skipping');
+                    continue;
+                }
+
+                if (highschoolsRunFromDistricts.includes(hsId)) {
+                    console.log(hsId, 'run as part of a district, skipping');
                     continue;
                 }
 
@@ -1303,8 +1318,6 @@ program
                 }
 
                 console.log(`loading hs ${hsId}`);
-
-                runnable = true;
 
                 await loadHighschoolPlans(
                     hsId,
