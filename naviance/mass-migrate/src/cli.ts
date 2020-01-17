@@ -1203,10 +1203,10 @@ program
                                 !cmd.spin);
                         }
 
-                        if (catalogLog[hsId] && catalogLog[hsId].pos && catalogLog[hsId].pos!.objects === 0) {
+                        /*if (catalogLog[hsId] && catalogLog[hsId].pos && catalogLog[hsId].pos!.objects === 0) {
                             console.log(dsId, 'skipping because no PoS', hsId);
                             continue;
-                        }
+                        }*/
 
                         if (!catalogLog[dsId]) {
                             catalogLog[dsId] = {};
