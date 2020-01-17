@@ -222,9 +222,9 @@ program
     });
 
 program
-    .command('info <id>')
+    .command('info <id> [hsId]')
     .option('--remove')
-    .action(async (id, cmd) => {
+    .action(async (id, hsId, cmd) => {
         let logName = 'catalogLog.json';
         await loadCatalogLog(logName);
 
@@ -242,7 +242,14 @@ program
         if (item) {
             console.log(JSON.stringify(item, undefined, 2));
             if (cmd.remove) {
-                catalogLog[id] = {};
+                if (hsId) {
+                    if (catalogLog[id].student && catalogLog[id].student![hsId]) {
+                        delete catalogLog[id].student![hsId];
+                    }
+                } else {
+                    catalogLog[id] = {};
+                }
+
                 await saveCatalogLog(logName, id);
                 console.log('removed');
             }

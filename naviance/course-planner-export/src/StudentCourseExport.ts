@@ -11,7 +11,7 @@ import {
     IStepAfterOutput,
     IStepBeforeInput
 } from "@data-channels/dcSDK";
-import { initServices } from "./Utils";
+import { initServices, sleep } from "./Utils";
 
 interface IPlanSet {
     slim: SlimStudentPlan;
@@ -22,8 +22,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
     private headers = [
         'Highschool_ID',
         'Student_ID',
-        'Plan_GUID',
-        'Plan_Name',
+        'Student_Plan_ID',
         'Grade_Level',
         'Course_ID',
         'Course_Name',
@@ -33,12 +32,22 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         'Instructional_Level'
     ];
     private courseByName: { [name: string]: Course | null } = {};
+    private coursesExported: { [name: string]: number } = {};
 
     private async findCourse(namespace: Namespace, name: string): Promise<Course | null> {
         if (!this.courseByName[name]) {
-            const course = await Course.findOne({
-                namespace, itemName: name
-            });
+            let course: Course | null;
+            try {
+                course = await Course.findOne({
+                    namespace, itemName: name
+                });
+            } catch (err) {
+                console.log('ERROR GETTING COURSE, RETRYING...');
+                sleep(2000);
+                course = await Course.findOne({
+                    namespace, itemName: name
+                });
+            }
 
             this.courseByName[name] = course;
         }
@@ -46,43 +55,32 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         return this.courseByName[name];
     }
 
-    private booleanToString(item: any) {
-        return item ? 'TRUE' : 'FALSE';
-    }
-
-    public async before_exportPlans(input: IStepBeforeInput) {
+    public async before_exportStudentCourses(input: IStepBeforeInput) {
         initServices(input.parameters!);
     }
 
-    private async getFullPlan(slim: SlimStudentPlan): Promise<IPlanSet> {
-        try {
-            const full = await slim.toStudentPlan();
-
-            return { slim, full};
-
-        } catch (err) {
-            return { slim };
-        }
-    }
-
     private async processHighschool(
-        dsId: string, hsId: string, configItems: { [name: string]: string }
+        dsId: string, hsId: string
     ): Promise<string[][]> {
 
+        console.log(`processing school ${hsId}`);
         const namespace = new Namespace(dsId);
         const results: string[][] = [];
-        const pager = StudentPlan.find(`naviance.${hsId}`, { expand: 'courses' });
-        let page = await pager.page(1);
+        const pager = StudentPlan.find(`naviance.${hsId}`, { expand: 'courses,meta' });
+        let page: SlimStudentPlan[];
+        try {
+            page = await pager.page(1);
+        } catch (err) {
+            console.log('ERROR GETTING FIRST PAGE OF PLANS, RETRYING...');
+            sleep(2000);
+            page = await pager.page(1);
+        }
 
-        const sleep = (milliseconds: number) => {
-            return new Promise((resolve) => setTimeout(resolve, milliseconds));
-        };
-
-
-
-        console.log(`got first page ${page.length}`);
         while (page.length) {
             for (const splan of page) {
+                if (splan.meta && !splan.meta['isActive']) {
+                    continue;
+                }
                 for (const record of splan.courses || []) {
                     const course = await this.findCourse(namespace, record.number);
                     if (!course) {
@@ -119,52 +117,54 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             }
         }
 
+        console.log(`finished school ${hsId}, ${results.length} rows`);
+
         return results;
     }
 
-    public async exportCourses(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
+    public async exportStudentCourses(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
         const schoolId = Object.keys(input.outputs)[0];
         const hsMapping = this.job.steps['findSchools'].output!['hsMapping'] as { [dsId: string]: string[]};
         let highschoolsToProcess = [schoolId];
         if (hsMapping[schoolId]) {
             highschoolsToProcess = hsMapping[schoolId];
         }
+
+        if (input.parameters!['highschools']) {
+            highschoolsToProcess = highschoolsToProcess.filter(
+                (hsId) => input.parameters!['highschools'].includes(hsId));
+        }
         console.log(`district ${schoolId} processing schools ${highschoolsToProcess}`);
 
         this.writeOutputRow(input.outputs[schoolId].writeStream, this.headers);
 
-        this.programsByName = {};
+        const chunkSize = 6;
+        const chunks = Array.from({ length: Math.ceil(highschoolsToProcess.length / chunkSize) }, (_v, i) =>
+            highschoolsToProcess.slice(i * chunkSize, i * chunkSize + chunkSize),
+        );
 
-        const namespace = new Namespace(schoolId);
-        const config = await RawStorage.findOne({namespace, itemName: schoolId });
-        let configItems: { [name: string]: string } = {};
-        if (config && config.json) {
-            const labels = config.json['labels'] || {};
-            configItems = {
-                Approval_Requirement: config.json['approvalRequirement'] || '',
-                Pathway_Label: labels['pathway'] || '',
-                Cluster_Label: labels['cluster'] || ''
-            };
-        }
-
-        for (const hsId of highschoolsToProcess) {
-            console.log(`processing school ${hsId}`);
-
-            const results = await this.processHighschool(schoolId, hsId, configItems);
-
-            console.log(`finished ${hsId}`);
-            for (const flatRow of results) {
-                this.writeOutputRow(input.outputs[schoolId].writeStream, flatRow);
+        for (const [idx, chunk] of chunks.entries()) {
+            console.log(`processing chunk ${idx + 1} of ${chunks.length}`);
+            const promises: Promise<string[][]>[] = [];
+            for (const hsId of chunk) {
+                promises.push(this.processHighschool(schoolId, hsId));
             }
-            this.plansExported[hsId] = results.length;
+
+            const results = await Promise.all(promises);
+            for (const [hsIdx, rows] of results.entries()) {
+                for (const row of rows) {
+                    this.writeOutputRow(input.outputs[schoolId].writeStream, row);
+                }
+                this.coursesExported[chunk[hsIdx]] = rows.length;
+            }
         }
 
         return {};
     }
 
-    public async after_exportPlans(input: IStepBeforeInput): Promise<IStepAfterOutput> {
+    public async after_exportStudentCourses(input: IStepBeforeInput): Promise<IStepAfterOutput> {
         return { results: {
-            plansExported: this.plansExported
+            coursesExported: this.coursesExported
         }};
     }
 }

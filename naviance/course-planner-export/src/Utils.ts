@@ -25,3 +25,7 @@ export function initServices(parameters: object) {
 export async function getJWT(): Promise<string> {
     return await RulesRepository.getInstance().getJwt();
 }
+
+export const sleep = (milliseconds: number) => {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
+};
