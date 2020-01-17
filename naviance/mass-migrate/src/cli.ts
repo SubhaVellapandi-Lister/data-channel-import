@@ -1190,9 +1190,11 @@ program
                     if (dsId === xId) {
                         if ((!catalogLog[hsId] ||
                             !catalogLog[hsId].pos ||
+                            !catalogLog[hsId].pos!.completed ||
                             new Date(catalogLog[hsId].pos!.completed!.toString()) <  new Date('2020-01-08')) &&
                             (!hsCatalogLog[hsId] ||
                              !hsCatalogLog[hsId].pos ||
+                             !hsCatalogLog[hsId].pos!.completed ||
                              new Date(hsCatalogLog[hsId].pos!.completed!.toString()) <  new Date('2020-01-08'))) {
                             // loading PoS first
                             await processBatch(
