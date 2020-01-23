@@ -181,7 +181,11 @@ export class CourseImport {
         return course;
     }
 
-    public static courseFromJSON(rowData: IRowData): Course | null {
+    public static courseFromJSON(
+        rowData: IRowData,
+        existingCourse: Course | undefined,
+        parameters: object | undefined
+    ): Course | null {
         const cObj = JSON.parse(rowData['JSON_OBJECT']);
 
         const instructLev = cObj['instructionalLevel'] || 'Untracked';
@@ -236,19 +240,43 @@ export class CourseImport {
 
         const statements: CourseStatement[] = [];
 
+        let existingPreq: CourseStatement | null = null;
+        let existingCoreq: CourseStatement | null = null;
+
+        if (parameters && parameters['prereqFix'] && existingCourse && existingCourse.statements.length) {
+            for (const existStmt of existingCourse.statements) {
+                if (existStmt.annotations && existStmt.annotations.getValue('coreq')) {
+                    existingCoreq = existStmt;
+                } else {
+                    existingPreq = existStmt;
+                }
+            }
+        }
+
         if (cObj['coursePrerequisites']) {
-            const cs = prereqCourseStatementFromJson(cObj['coursePrerequisites']);
+            const cs = prereqCourseStatementFromJson(cObj['coursePrerequisites'], existingPreq);
             if (cs) {
                 statements.push(cs);
             }
         }
 
         if (cObj['courseCorequisites']) {
-            const cs = prereqCourseStatementFromJson(cObj['courseCorequisites']);
+            const cs = prereqCourseStatementFromJson(cObj['courseCorequisites'], existingCoreq);
             if (cs) {
                 cs.annotations = Annotations.simple({coreq: true});
                 statements.push(cs);
             }
+        }
+
+        if (parameters && parameters['prereqFix']) {
+            if (existingCourse && statements.length) {
+                existingCourse.statements = statements;
+                console.log(`updating prereqs for ${existingCourse.name}`);
+
+                return existingCourse;
+            }
+
+           return null;
         }
 
         return new Course(

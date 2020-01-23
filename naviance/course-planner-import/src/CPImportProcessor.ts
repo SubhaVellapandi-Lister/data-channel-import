@@ -108,7 +108,7 @@ export class CPImportProcessor extends BaseProcessor {
     public async after_createSubjects(input: IStepBeforeInput): Promise<IStepAfterOutput> {
         let createdAnnotationType = false;
         console.log(`after create subjects, has rows ${this.hasRows}`);
-        if (this.hasRows) {
+        if (this.hasRows && !input.parameters!['prereqFix']) {
             await saveDefaultAnnotationTypes(this.namespace);
             console.log(`saved default annos`);
             createdAnnotationType = await saveSubjectAreas(this.namespace, this.subjectAreasLoaded);
@@ -181,7 +181,7 @@ export class CPImportProcessor extends BaseProcessor {
             this.apBatch.push(input.data);
         }
         if (this.apBatch.length === this.apBatchSize) {
-            await this.processBatch();
+            await this.processBatch(input.parameters);
         }
 
         return {
@@ -190,36 +190,56 @@ export class CPImportProcessor extends BaseProcessor {
         };
     }
 
-    private async processBatch(): Promise<void> {
+    private async processBatch(parameters: object | undefined): Promise<void> {
         this.batchCount += 1;
         const namespace = new Namespace(this.namespace);
         const b = new Batch({namespace});
         const courses: Course[] = [];
         const existingByName: { [name: string]: Course} = {};
-        if (!this.mappingsLoaded && !this.apBatch[0]['JSON_OBJECT']) {
-            // csv import but no mapping file, try to keep existing mappings for courses
-            const batchCourseIds = this.apBatch
-                .map((rowData) => CourseImport.finalCourseId(
-                    getRowVal(rowData, 'Course_ID') || getRowVal(rowData, 'Course_Code') || '')
-                )
-                .filter((cid) => cid.length > 0);
+        if ((!this.mappingsLoaded && !this.apBatch[0]['JSON_OBJECT']) || (parameters && parameters['prereqFix'])) {
 
+            let batchCourseIds: string[] = [];
+            if (parameters && parameters['prereqFix']) {
+                // get course IDs from json objects
+                batchCourseIds = this.apBatch
+                    .map((rowData) => {
+                        const cObj = JSON.parse(rowData['JSON_OBJECT']);
+
+                        return CourseImport.finalCourseId(cObj['id'] || cObj['schoolCode']);
+                    });
+            } else {
+                // csv import but no mapping file, try to keep existing mappings for courses
+                batchCourseIds = this.apBatch
+                    .map((rowData) => CourseImport.finalCourseId(
+                        getRowVal(rowData, 'Course_ID') || getRowVal(rowData, 'Course_Code') || '')
+                    )
+                    .filter((cid) => cid.length > 0);
+            }
+
+            console.log(`looking up existing courses for ${batchCourseIds}`);
             const existingCourses = await CourseImport.getBatchOfCourses(batchCourseIds, this.namespace);
             for (const existCourse of existingCourses) {
                 existingByName[existCourse.name] = existCourse;
             }
         }
+
+        console.log(`${Object.keys(existingByName).length} existing courses found for batch`);
+
         for (const rowData of this.apBatch) {
+            let rawCourseId = getRowVal(rowData, 'Course_ID') || getRowVal(rowData, 'Course_Code') || '';
+            if (parameters && parameters['prereqFix']) {
+                const cObj = JSON.parse(rowData['JSON_OBJECT']);
+                rawCourseId = cObj['id'] || cObj['schoolCode'];
+            }
+            const existingCourse = existingByName[CourseImport.finalCourseId(rawCourseId)];
             const course = rowData['JSON_OBJECT'] ?
-                CourseImport.courseFromJSON(rowData) :
+                CourseImport.courseFromJSON(rowData, existingCourse, parameters) :
                 CourseImport.courseFromRowData(
                     rowData,
                     this.singleHighschoolId,
                     this.subjectAreasLoaded,
                     this.schoolsByCourse,
-                    existingByName[CourseImport.finalCourseId(
-                        getRowVal(rowData, 'Course_ID') || getRowVal(rowData, 'Course_Code') || '')
-                    ],
+                    existingCourse,
                     this.namespace
                 );
 
@@ -269,7 +289,7 @@ export class CPImportProcessor extends BaseProcessor {
     public async after_batchToAp(input: IStepBeforeInput): Promise<IStepAfterOutput> {
         console.log('AFTER', this.apBatch.length);
         if (this.apBatch.length > 0) {
-            await this.processBatch();
+            await this.processBatch(input.parameters);
         }
 
         let mappingsUpdated = 0;

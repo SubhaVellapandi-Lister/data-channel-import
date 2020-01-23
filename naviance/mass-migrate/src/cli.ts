@@ -240,7 +240,11 @@ program
         }
 
         if (item) {
-            console.log(JSON.stringify(item, undefined, 2));
+            if (hsId) {
+                console.log(JSON.stringify(item.student![hsId], undefined, 2));
+            } else {
+                console.log(JSON.stringify(item, undefined, 2));
+            }
             if (cmd.remove) {
                 if (hsId) {
                     if (catalogLog[id].student && catalogLog[id].student![hsId]) {
@@ -858,7 +862,7 @@ async function loadHighschoolPlans(
             product: 'naviance',
             parameters:
                 // tslint:disable-next-line:max-line-length
-                `chunkStart=${chunkStartParm},numChunks=${finalChunksPerJob},namespace=${namespace},scope=${hsId},tenantType=highschool,tenantId=${hsId},planBatchSize=${planBatchSize}`
+                `chunkStart=${chunkStartParm},numChunks=${finalChunksPerJob},namespace=${namespace},scope=${hsId},tenantType=highschool,tenantId=${hsId},planBatchSize=${planBatchSize},createOnly=true`
                 // ,createOnly=true
         });
         const job = await createjob(JSON.stringify(createBody), true);
@@ -888,24 +892,94 @@ async function loadHighschoolPlans(
     }
 }
 
+function hsJobsInfo(allJobs: IProcessing[]): [number, number, string] {
+    const jobs = allJobs.filter((j) => j.completed);
+    let hsPlans = 0;
+    let hsErrors = 0;
+    let dtStr = '';
+    if (jobs.length) {
+        const dt = new Date(jobs.slice(-1)[0].completed!);
+        dtStr = `${dt.getMonth() + 1}/${dt.getDate()}/${dt.getFullYear()}`;
+
+        for (const job of jobs) {
+            hsErrors += job.errors || 0;
+            hsPlans += job.objects || 0;
+        }
+    }
+
+    return [hsPlans, hsErrors, dtStr];
+}
+
 program
     .command('studentPlan.status')
     .option('--details')
+    .option('--highschools')
+    .option('--splitdistricts')
     .action(async (cmd) => {
         let totalDistricts = 0;
         let districts = 0;
+        let idList = planningDistricts;
+        let mode = 'district';
+        await loadCatalogLog('hsCatalog.json');
+        const hsLog = catalogLog;
         await loadCatalogLog('catalogLog.json');
+        const districtLog = catalogLog;
 
-        for (const dsId of planningDistricts) {
+        const highschoolsRunFromDistricts: { [hsId: string]: string } = {};
+        for (const dsId of Object.keys(districtLog)) {
+            if (districtLog[dsId].student) {
+                for (const hsId of Object.keys(districtLog[dsId].student!)) {
+                    highschoolsRunFromDistricts[hsId] = dsId;
+                }
+            }
+        }
+
+        if (cmd.highschools) {
+            mode = 'highschool';
+            idList = planningHighschools;
+            await loadCatalogLog('hsCatalog.json');
+
+        }
+        if (cmd.splitdistricts) {
+            mode = 'split';
+            idList = planningSplitDistricts;
+        }
+
+        for (const dsId of idList) {
             if (studentPlanSkips.includes(dsId)) {
                 console.log(`${dsId},,,skipped on purpose`);
                 continue;
             }
-            if (planningSplitDistricts.includes(dsId)) {
-                console.log(`${dsId},,,district with cp highschools`);
+
+            if (cmd.highschools && highschoolsRunFromDistricts[dsId]) {
+                const parentId = highschoolsRunFromDistricts[dsId];
+                let pid = 23;
+                if (planningSplitDistricts.includes(parentId)) {
+                    pid = 34;
+                }
+                const [hsPlans, hsErrors, dateString] = hsJobsInfo(districtLog[parentId].student![dsId].jobs);
+                const totalPlans = districtLog[parentId].student![dsId].numPlansTotal || 0;
+                let msg = `highschool processed as part of district ${parentId} (PID ${pid})`;
+                if (hsPlans < 500 && hsErrors > hsPlans && hsErrors > 40) {
+                    msg += ` - has high % of errors (${hsErrors} total errors)`;
+                }
+                console.log(
+                    `${dsId},${dateString},${totalPlans},${msg}`);
                 continue;
             }
-            if (catalogLog[dsId] && catalogLog[dsId].pos && (catalogLog[dsId].pos!.status !== JobStatus.Completed)) {
+
+            if (mode === 'district' && planningSplitDistricts.includes(dsId)) {
+                console.log(`${dsId},,,district with cp (pid 34)`);
+                continue;
+            }
+
+            if (!catalogLog[dsId]) {
+                console.log(`${dsId},,,Not run - needs investigation`);
+                continue;
+            }
+
+            if (catalogLog[dsId] && catalogLog[dsId].pos &&
+                (catalogLog[dsId].pos!.status !== JobStatus.Completed) && !catalogLog[dsId].student) {
                 console.log(`${dsId},,,issue with PoS migration`);
                 continue;
             }
@@ -916,30 +990,43 @@ program
                 continue;
             }
 
+            let hasPosLoadErrors = '';
+            if (catalogLog[dsId].pos && catalogLog[dsId].pos!.errors) {
+                hasPosLoadErrors = `${catalogLog[dsId].pos?.errors} errors loading PoS;`;
+            }
+
             totalDistricts += 1;
             if (catalogLog[dsId].student) {
                 districts += 1;
                 let dsTotalPlans = 0;
                 let dtStr = '';
-                let error = false;
+                const highschoolErrors: string[] = [];
 
                 for (const hsId of Object.keys(catalogLog[dsId].student!)) {
                     const hsInfo = catalogLog[dsId].student![hsId];
                     dsTotalPlans += hsInfo.numPlansTotal || 0;
 
                     if (hsInfo.error) {
-                       error = true;
+                       highschoolErrors.push(`${hsId} job error`);
                     }
 
-                    if (hsInfo.jobs.length) {
-                        const dt = new Date(hsInfo.jobs.slice(-1)[0].created!);
-                        dtStr = `${dt.getMonth() + 1}/${dt.getDate()}/${dt.getFullYear()}`;
+                    const [hsPlans, hsErrors, dateString] = hsJobsInfo(hsInfo.jobs);
+                    if (dateString) {
+                        dtStr = dateString;
+                    }
+
+                    if (hsPlans < 500 && hsErrors > hsPlans && hsErrors > 40) {
+                        highschoolErrors.push(`${hsId} ${hsErrors} plan errors`);
+
+                        if (cmd.splitdistricts && (!hsLog[hsId] || !hsLog[hsId].pos || hsLog[hsId].pos?.errors)) {
+                            highschoolErrors.push(`${hsId} ${hsLog[hsId]?.pos?.errors || ''} errors loading PoS`);
+                        }
                     }
 
                 }
-                console.log(`${dsId},${dtStr},${dsTotalPlans},${error ? 'Some errors to be investigated' : ''}`);
+                console.log(`${dsId},${dtStr},${dsTotalPlans},${hasPosLoadErrors}${highschoolErrors.join(';')}`);
             } else {
-                console.log(`${dsId},,,`);
+                console.log(`${dsId},,,No highschools processed`);
             }
         }
 
@@ -1129,16 +1216,26 @@ program
                         const [ hsId, name, dassigned, hasCp, xId] = row;
 
                         if (dsId === xId) {
-                            if (catalogLog[dsId].student &&
-                                catalogLog[dsId].student![hsId] &&
-                                !catalogLog[dsId].student![hsId].error) {
+                            let hasErrors = false;
+                            if (catalogLog[dsId]?.student?.[hsId].error) {
+                                hasErrors = true;
+                            } else if (catalogLog[dsId]?.student?.[hsId].jobs) {
+                                let plans = 0;
+                                let errors  = 0;
+                                for (const job of catalogLog[dsId]?.student?.[hsId].jobs) {
+                                    errors += job.errors || 0;
+                                    plans += job.objects || 0;
+                                }
+                                if (errors > plans) {
+                                    hasErrors = true;
+                                }
+                            }
+
+                            if (!hasErrors) {
                                 continue;
                             }
 
-                            if (!cmd.fixErrors &&
-                                catalogLog[dsId].student &&
-                                catalogLog[dsId].student![hsId] &&
-                                catalogLog[dsId].student![hsId].error) {
+                            if (!cmd.fixErrors && hasErrors) {
                                 console.log(`skipping ${hsId} as it previously errored out`);
                                 continue;
                             }

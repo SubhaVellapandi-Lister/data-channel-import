@@ -18,6 +18,11 @@ export class StudentHistory {
                 gradeLevel: rec.gradeLevel,
                 termId: rec.term,
                 grade: rec.gradeAwarded || rec.score || undefined,
+                score: rec.score,
+                status: rec.status,
+                teacherName: rec.teacher || undefined,
+                courseName: rec.name,
+                courseSubject: rec.subjectArea ? rec.subjectArea.name : ''
             })).filter((stuRec) => stuRec.number && stuRec.number.length > 0);
 
             batchPromises.push(PlanContext.createOrUpdateStudentRecords(

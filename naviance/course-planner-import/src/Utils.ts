@@ -3,6 +3,7 @@ import {
     ChuteToObject, Course, CourseStatement, PlanningEngine, RulesRepository
 } from "@academic-planner/apSDK";
 import { IRowData } from "@data-channels/dcSDK";
+import _ from "lodash";
 
 export function initRulesRepo(params: object) {
     const config: any = {
@@ -63,7 +64,23 @@ export function prereqCourseStatement(preqString: string): CourseStatement | nul
     }
 }
 
-export function prereqCourseStatementFromJson(preqList: string[][]): CourseStatement | null {
+export function prereqCourseStatementFromJson(
+    preqList: string[][], existing: CourseStatement | null
+): CourseStatement | null {
+    if (existing) {
+        const jsonFlatIds: string[] = [];
+        for (const andList of preqList) {
+            for (const id of andList) {
+                jsonFlatIds.push(id);
+            }
+        }
+        const existingIds = existing.getExpressions('.*').map((e) => e.expression.identifier);
+        if (!_.isEqual(existingIds, jsonFlatIds)) {
+            // has changed since last migration, so just return the existing
+            return existing;
+        }
+    }
+
     const preqString =
         preqList.map((andList) => andList.length > 1 ? `(${andList.join(' and ')})` : andList[0]).join(' or ');
 

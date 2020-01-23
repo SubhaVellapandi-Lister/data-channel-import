@@ -2,7 +2,9 @@ import { ICourseRecord, IPlan } from "@academic-planner/academic-planner-common"
 import {
     Course,
     Namespace,
-    RawStorage, SlimStudentPlan, StudentPlan
+    Program,
+    SlimStudentPlan,
+    StudentPlan
 } from "@academic-planner/apSDK";
 import {
     BaseProcessor,
@@ -19,10 +21,14 @@ interface IPlanSet {
 }
 
 export class StudentCourseExportProcessor extends BaseProcessor {
+
     private headers = [
         'Highschool_ID',
+        'Highschool_Name',
         'Student_ID',
         'Student_Plan_ID',
+        'Student_Plan_Status',
+        'Plan_Of_Study_Name',
         'Grade_Level',
         'Course_ID',
         'Course_Name',
@@ -31,8 +37,22 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         'CSSC_Code',
         'Instructional_Level'
     ];
+    private customHeaders: string[] = [];
     private courseByName: { [name: string]: Course | null } = {};
     private coursesExported: { [name: string]: number } = {};
+    private programsByName: { [name: string]: Program } = {};
+    private schoolNamesById: { [id: string]: string } = {};
+
+    private async findProgram(namespace: Namespace, name: string): Promise<Program> {
+        if (!this.programsByName[name]) {
+            const fullProg = await Program.findOne({
+                namespace, itemName: name
+            });
+            this.programsByName[name] = fullProg!;
+        }
+
+        return this.programsByName[name];
+    }
 
     private async findCourse(namespace: Namespace, name: string): Promise<Course | null> {
         if (!this.courseByName[name]) {
@@ -66,7 +86,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         console.log(`processing school ${hsId}`);
         const namespace = new Namespace(dsId);
         const results: string[][] = [];
-        const pager = StudentPlan.find(`naviance.${hsId}`, { expand: 'courses,meta' });
+        const pager = StudentPlan.find(`naviance.${hsId}`, { expand: 'courses,meta,programs' });
         let page: SlimStudentPlan[];
         try {
             page = await pager.page(1);
@@ -78,8 +98,14 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         while (page.length) {
             for (const splan of page) {
-                if (splan.meta && !splan.meta['isActive']) {
-                    continue;
+                let programName = '';
+                if (splan.programs) {
+                    const program = await this.findProgram(namespace, splan.programs[0].name);
+                    programName = program.display;
+                }
+                let studentPlanStatus = '';
+                if (splan.meta) {
+                    studentPlanStatus = (splan.meta['status'] as string) || '';
                 }
                 for (const record of splan.courses || []) {
                     const course = await this.findCourse(namespace, record.number);
@@ -101,9 +127,12 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                         Course_Subject: subName,
                         SCED_Code: sced,
                         CSSC_Code: cssc,
-                        Instructional_Level: instLevel
+                        Instructional_Level: instLevel,
+                        Plan_Of_Study_Name: programName,
+                        Student_Plan_Status: studentPlanStatus,
+                        Highschool_Name: this.schoolNamesById[hsId] || ''
                     };
-                    const flatRow = this.headers.map((headerName) => (rowData[headerName] || '').toString());
+                    const flatRow = this.customHeaders.map((headerName) => (rowData[headerName] || '').toString());
                     results.push(flatRow);
                 }
             }
@@ -127,7 +156,16 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         const hsMapping = this.job.steps['findSchools'].output!['hsMapping'] as { [dsId: string]: string[]};
         let highschoolsToProcess = [schoolId];
         if (hsMapping[schoolId]) {
-            highschoolsToProcess = hsMapping[schoolId];
+            highschoolsToProcess = [];
+            for (const hsInfo of hsMapping[schoolId]) {
+                let name = '';
+                let id = hsInfo;
+                if (hsInfo.includes(',')) {
+                    [id, name] = hsInfo.split(',');
+                }
+                highschoolsToProcess.push(id);
+                this.schoolNamesById[id] = name;
+            }
         }
 
         if (input.parameters!['highschools']) {
@@ -136,7 +174,13 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         }
         console.log(`district ${schoolId} processing schools ${highschoolsToProcess}`);
 
-        this.writeOutputRow(input.outputs[schoolId].writeStream, this.headers);
+        if (input.parameters!['customHeaders']) {
+            this.customHeaders = input.parameters!['customHeaders'].filter((h: string) => this.headers.includes(h));
+        } else {
+            this.customHeaders = this.headers;
+        }
+
+        this.writeOutputRow(input.outputs[schoolId].writeStream, this.customHeaders);
 
         const chunkSize = 6;
         const chunks = Array.from({ length: Math.ceil(highschoolsToProcess.length / chunkSize) }, (_v, i) =>

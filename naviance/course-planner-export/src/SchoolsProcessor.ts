@@ -14,6 +14,11 @@ export class SchoolsProcessor extends BaseProcessor {
         }
 
         const hsId = input.data['Id'].replace(/\s+/g, '');
+        const hsName = input.data['Name'].trim();
+        let hsInfo = hsId;
+        if (input.parameters!['includeNames']) {
+            hsInfo = `${hsId},${hsName}`;
+        }
 
         if (input.data['DistrictId'] && input.data['DistrictId'].length > 4) {
             // has a district
@@ -21,9 +26,9 @@ export class SchoolsProcessor extends BaseProcessor {
             if (!this.schoolsByDistrict[dsId]) {
                 this.schoolsByDistrict[dsId] = [];
             }
-            this.schoolsByDistrict[dsId].push(hsId);
+            this.schoolsByDistrict[dsId].push(hsInfo);
         } else {
-            this.schoolsByDistrict[hsId] = [hsId];
+            this.schoolsByDistrict[hsId] = [hsInfo];
         }
 
         return {
