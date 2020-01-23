@@ -424,12 +424,13 @@ program
 
     });
 
-async function processCourseCatalog(id: string, logName: string, tenantType: string) {
+async function processCourseCatalog(id: string, logName: string, tenantType: string, prereqFix?: boolean) {
+    const prereqFixParam = prereqFix ? ',prereqFix=true' : '';
     const createBody = jobExecutionBody({
         channel: 'naviance/migrateCourseCatalog',
         product: 'naviance',
         parameters:
-            `namespace=${id},tenantId=${id},tenantType=${tenantType},batchSize=50`
+            `namespace=${id},tenantId=${id},tenantType=${tenantType},batchSize=50${prereqFixParam}`
     });
     const job = await createjob(JSON.stringify(createBody), true);
     catalogLog[id].catalog = {
@@ -564,7 +565,7 @@ async function waitOnPoS(processingIds: string[], logName: string) {
 }
 
 async function processBatch(
-    idBatch: string[], logName: string, tenantType: string, noCatalog?: boolean, noSpin?: boolean
+    idBatch: string[], logName: string, tenantType: string, noCatalog?: boolean, noSpin?: boolean, prereqFix?: boolean
 ) {
     console.log(`starting batch of ${idBatch.length}: ${idBatch}`);
     const shouldProcessPos: {[key: string]: boolean} = {};
@@ -576,7 +577,7 @@ async function processBatch(
         if (catalogExcludes.includes(id) || noCatalog) {
             console.log(`skipping ${id} catalog`);
         } else {
-            await processCourseCatalog(id, logName, tenantType);
+            await processCourseCatalog(id, logName, tenantType, prereqFix);
             processingIds.push(id);
         }
     }
@@ -587,11 +588,16 @@ async function processBatch(
         spin.start();
     }
     const failedCatIds = await waitOnCourseCatalog(processingIds, logName);
+
     for (const failId of failedCatIds) {
         shouldProcessPos[failId] = false;
     }
     if (!noSpin) {
         spin.stop();
+    }
+
+    if (prereqFix) {
+        return;
     }
 
     const posIds = Object.keys(shouldProcessPos).filter((id) => shouldProcessPos[id]);
@@ -688,11 +694,66 @@ program
     });
 
 program
-    .command('catalog.loadAll [districtPath] [hsPath]')
+    .command('catalog.prereqFix')
     .option('--starting <startingId>')
     .option('--highschools')
+    .option('--batch-size')
+    .option('--no-spin')
+    .action(async (cmd) => {
+        initConnection(program);
+        let logName = 'catalogLogPrereqFix.json';
+        let tenantType = 'district';
+        if (cmd.highschools) {
+            logName = 'hsCatalogPrereqFix.json';
+            tenantType = 'highschool';
+        }
+        await loadCatalogLog(logName);
+
+        const batchSize = parseInt(cmd.batchSize) || 1;
+
+        let toRuns = planningDistricts.filter((dsId) =>
+            !planningSplitDistricts.includes(dsId) &&
+            !totalSkips.includes(dsId) &&
+            !catalogExcludes.includes(dsId));
+
+        if (cmd.highschools) {
+            toRuns = planningHighschools.filter((dsId) =>
+                !totalSkips.includes(dsId) &&
+                !catalogExcludes.includes(dsId));
+                tenantType = 'highschool';
+        }
+
+        let foundStarting = false;
+        let idBatch: string[] = [];
+        for (const dsId of toRuns) {
+            if (cmd.starting && dsId === cmd.starting) {
+                foundStarting = true;
+                continue;
+            }
+            if (cmd.starting && !foundStarting) {
+                continue;
+            }
+
+            idBatch.push(dsId);
+            if (idBatch.length >= batchSize) {
+                await processBatch(idBatch, logName, tenantType, false, !cmd.spin, true);
+                idBatch = [];
+            }
+        }
+
+        if (idBatch.length) {
+            await processBatch(idBatch, logName, tenantType, false, !cmd.spin, true);
+            idBatch = [];
+        }
+    });
+
+program
+    .command('catalog.loadAll')
+    .option('--starting <startingId>')
+    .option('--highschools')
+    .option('--prereq-fix')
     .option('--batch-size <batchSize')
-    .action(async (dsPath, hsPath, cmd) => {
+    .action(async (cmd) => {
         initConnection(program);
         let logName = 'catalogLog.json';
         if (cmd.highschools) {
@@ -702,8 +763,8 @@ program
 
         const batchSize = parseInt(cmd.batchSize) || 1;
 
-        const hsRows = await csvRows(hsPath);
-        const dsRows = await csvRows(dsPath);
+        const hsRows = await csvRows('Highschools.csv');
+        const dsRows = await csvRows('District.csv');
 
         const districtIdsWithCP = [];
         for (const row of dsRows) {
@@ -1018,7 +1079,11 @@ program
                     if (hsPlans < 500 && hsErrors > hsPlans && hsErrors > 40) {
                         highschoolErrors.push(`${hsId} ${hsErrors} plan errors`);
 
-                        if (cmd.splitdistricts && (!hsLog[hsId] || !hsLog[hsId].pos || hsLog[hsId].pos?.errors)) {
+                        if ((cmd.splitdistricts || cmd.highschools) &&
+                            (!hsLog[hsId] ||
+                             !hsLog[hsId].pos ||
+                             hsLog[hsId].pos?.status !== JobStatus.Completed ||
+                             hsLog[hsId].pos?.errors)) {
                             highschoolErrors.push(`${hsId} ${hsLog[hsId]?.pos?.errors || ''} errors loading PoS`);
                         }
                     }
