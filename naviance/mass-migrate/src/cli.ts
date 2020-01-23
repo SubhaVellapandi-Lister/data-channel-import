@@ -1316,17 +1316,28 @@ program
                             catalogLog[dsId] = {};
                         }
 
-                        if (catalogLog[dsId].student &&
-                            catalogLog[dsId].student![hsId] &&
-                            !catalogLog[dsId].student![hsId].error) {
+                        let hasErrors = false;
+                        if (catalogLog[dsId]?.student?.[hsId].error) {
+                            hasErrors = true;
+                        } else if (catalogLog[dsId]?.student?.[hsId].jobs) {
+                            let plans = 0;
+                            let errors  = 0;
+                            for (const job of catalogLog[dsId]?.student?.[hsId].jobs) {
+                                errors += job.errors || 0;
+                                plans += job.objects || 0;
+                            }
+                            if (errors > plans) {
+                                hasErrors = true;
+                            }
+                        }
+
+                        if (!hasErrors) {
                             console.log(dsId, 'skipping because already successful', hsId);
                             continue;
                         }
 
                         if (!cmd.fixErrors &&
-                            catalogLog[dsId].student &&
-                            catalogLog[dsId].student![hsId] &&
-                            catalogLog[dsId].student![hsId].error) {
+                            hasErrors) {
                             console.log(`skipping ${hsId} as it previously errored out`);
                             continue;
                         }
@@ -1399,17 +1410,28 @@ program
                         !cmd.spin);
                 }
 
-                if (catalogLog[hsId].student &&
-                    catalogLog[hsId].student![hsId] &&
-                    !catalogLog[hsId].student![hsId].error) {
+                let hasErrors = false;
+                if (catalogLog[hsId]?.student?.[hsId].error) {
+                    hasErrors = true;
+                } else if (catalogLog[hsId]?.student?.[hsId].jobs) {
+                    let plans = 0;
+                    let errors  = 0;
+                    for (const job of catalogLog[hsId]?.student?.[hsId].jobs) {
+                        errors += job.errors || 0;
+                        plans += job.objects || 0;
+                    }
+                    if (errors > plans) {
+                        hasErrors = true;
+                    }
+                }
+
+                if (!hasErrors) {
                     console.log(hsId, 'skipping because already successful');
                     continue;
                 }
 
                 if (!cmd.fixErrors &&
-                    catalogLog[hsId].student &&
-                    catalogLog[hsId].student![hsId] &&
-                    catalogLog[hsId].student![hsId].error) {
+                    hasErrors) {
                     console.log(`skipping ${hsId} as it previously errored out`);
                     continue;
                 }
