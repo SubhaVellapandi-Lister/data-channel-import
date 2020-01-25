@@ -1052,8 +1052,9 @@ program
             }
 
             let hasPosLoadErrors = '';
-            if (catalogLog[dsId].pos && catalogLog[dsId].pos!.errors) {
-                hasPosLoadErrors = `${catalogLog[dsId].pos?.errors} errors loading PoS;`;
+            if (catalogLog[dsId].pos &&
+                (catalogLog[dsId].pos!.status !== JobStatus.Completed || catalogLog[dsId].pos!.errors)) {
+                hasPosLoadErrors = `${catalogLog[dsId].pos?.errors || 'some'} errors loading PoS;`;
             }
 
             totalDistricts += 1;
