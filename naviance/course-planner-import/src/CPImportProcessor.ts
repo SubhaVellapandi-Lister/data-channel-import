@@ -17,8 +17,9 @@ import {
 import uuidv5 from "uuid/v5";
 import { CourseImport } from "./Course";
 import { PoSImport } from "./PoS";
+import { IBasicNavianceStudent, INavianceStudentIDMap } from "./Student";
 import { PlanImport } from "./StudentCoursePlan";
-import { StudentHistory } from "./StudentHistory";
+import { IHistoryRow, StudentHistory } from "./StudentHistory";
 import { ISubjectAreaLoad, loadExistingSubjectAreas,
     parseSubjectAreaRow, saveDefaultAnnotationTypes, saveSubjectAreas } from "./SubjectAreas";
 import { getRowVal, initRulesRepo, initServices } from "./Utils";
@@ -45,8 +46,8 @@ export class CPImportProcessor extends BaseProcessor {
     private subjectsCreated: number = 0;
     private singleHighschoolId = '';
     private historyStudentId = '';
-    private historyForStudent: object[] = [];
-    private historyBatch: object[][] = [];
+    private historyForStudent: IHistoryRow[] = [];
+    private historyBatch: IHistoryRow[][] = [];
     private historyBatchSize = 10;
     private planBatch: object[] = [];
     private planBatchSize = 10;
@@ -59,6 +60,8 @@ export class CPImportProcessor extends BaseProcessor {
     private hasRows: boolean = false;
     private startTstamp: number = 0;
     private skippedForTime: number = 0;
+    private studentIdMap: INavianceStudentIDMap = {};
+    private skippedHistories: number = 0;
 
     public async validate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
         // things to validate for
@@ -414,31 +417,54 @@ export class CPImportProcessor extends BaseProcessor {
     }
 
     public async importHistories(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
-        if (input.index === 1 || input.data['JSON_OBJECT'] === 'JSON_OBJECT') {
+        if (input.index === 1) {
             return { outputs: {} };
         }
 
-        const rowData = input.data;
-        const cObj = JSON.parse(rowData['JSON_OBJECT']);
-        const studentId = cObj['studentId'].toString();
-        if (!this.historyStudentId.length) {
-            this.historyStudentId = studentId;
-        }
-        if (this.historyStudentId !== studentId && this.historyForStudent.length) {
-            this.historyBatch.push([...this.historyForStudent]);
-            this.historyForStudent = [];
-            this.historyStudentId = studentId;
-
-            if (this.historyBatch.length >= this.historyBatchSize) {
-                const [createdCount, updatedCount] = await StudentHistory.processBatch(
-                    this.namespace, this.historyBatch);
-                this.createdCount += createdCount;
-                this.updatedCount += updatedCount;
-                console.log(`Processed batch of ${this.historyBatch.length} students`);
-                this.historyBatch = [];
+        if (input.name.toUpperCase().startsWith('STUDENTS')) {
+            // load student ID mapping
+            const student = JSON.parse(input.data['JSON_OBJECT']) as IBasicNavianceStudent;
+            if (!this.studentIdMap[student.highschoolId]) {
+                this.studentIdMap[student.highschoolId] = [student];
+            } else {
+                this.studentIdMap[student.highschoolId].push(student);
             }
+        } else {
+            // process history records
+            const isMigration = input.data['JSON_OBJECT'] !== undefined;
+            const record = StudentHistory.parseHistoryRow(input.data);
+
+            if (!isMigration) {
+                const sisId = record.studentId;
+                const activeStudents = (this.studentIdMap[sisId] || []).filter((student) => student.isActive);
+                const inactiveStudents = (this.studentIdMap[sisId] || []).filter((student) => !student.isActive);
+
+                if (activeStudents.length === 1) {
+                    record.studentId = activeStudents[0].id.toString();
+                } else if (inactiveStudents.length === 1) {
+                    record.studentId = inactiveStudents[0].id.toString();
+                }
+            }
+
+            if (!this.historyStudentId.length) {
+                this.historyStudentId = record.studentId;
+            }
+            if (this.historyStudentId !== record.studentId && this.historyForStudent.length) {
+                this.historyBatch.push([...this.historyForStudent]);
+                this.historyForStudent = [];
+                this.historyStudentId = record.studentId;
+
+                if (this.historyBatch.length >= this.historyBatchSize) {
+                    const [createdCount, updatedCount] = await StudentHistory.processBatch(
+                        this.namespace, this.historyBatch);
+                    this.createdCount += createdCount;
+                    this.updatedCount += updatedCount;
+                    console.log(`Processed batch of ${this.historyBatch.length} students`);
+                    this.historyBatch = [];
+                }
+            }
+            this.historyForStudent.push(record);
         }
-        this.historyForStudent.push(cObj);
 
         return { outputs: {} };
     }

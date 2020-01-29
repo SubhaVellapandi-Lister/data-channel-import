@@ -4,6 +4,7 @@ import Table from 'cli-table3';
 import program from 'commander';
 import { chmod, readFileSync, writeFileSync } from "fs";
 import { Readable } from 'stream';
+import { getApInfo } from "./ap";
 import {csvRows} from "./file";
 import {createjob, deletejob, findjob, findjobs, jobExecutionBody, updatejob} from "./job";
 import {planningDistricts, planningHighschools, planningSplitDistricts} from "./schools";
@@ -207,6 +208,160 @@ program
     .option('--auth0-client-secret <auth0 client secret>', 'Auth0 client secret for JWT retrieval')
     .option('--auth0-domain <auth0 domain>', 'Auth0 domain for JWT retrieval')
     .option('--auth0-audience <auth0 audience>', 'Auth0 audience for JWT retrieval');
+
+program
+    .command('big.picture')
+    .action(async () => {
+        const [nsCounts, scopeCounts] = await getApInfo();
+
+        let totalCourses = 0;
+        let totalPrograms = 0;
+        let totalPlans = 0;
+        for (const ns of Object.keys(nsCounts)) {
+            if (ns.startsWith('naviance.') && ns.endsWith('courses')) {
+                totalCourses += parseInt(nsCounts[ns].files);
+            }
+            if (ns.startsWith('naviance.') && ns.endsWith('programs')) {
+                totalPrograms += parseInt(nsCounts[ns].files);
+            }
+        }
+
+        for (const scope of Object.keys(scopeCounts)) {
+            if (scope.startsWith('naviance.')) {
+                totalPlans += parseInt(scopeCounts[scope].plans);
+            }
+        }
+
+        console.error(`AP ${totalCourses} courses, ${totalPrograms} programs, ${totalPlans} plans`);
+
+        await loadCatalogLog('hsCatalog.json');
+        const hsLog = catalogLog;
+        await loadCatalogLog('catalogLog.json');
+        const districtLog = catalogLog;
+
+        interface IRowPrintable {
+            dsId?: string;
+            dsName?: string;
+            hsId?: string;
+            hsName?: string;
+            courseCount?: number;
+            courseDate?: string;
+            courseError?: string;
+            posCount?: number;
+            posDate?: string;
+            posError?: string;
+            plansCP?: number;
+            plansAP?: number;
+            plansDate?: string;
+            plansError?: string;
+        }
+
+        function printRow(row: IRowPrintable) {
+            const columns = [
+                row.dsId || '', row.dsName || '', row.hsId || '', row.hsName || '',
+                row.courseCount?.toString() || '', row.courseDate || '', row.courseError || '',
+                row.posCount?.toString() || '', row.posDate || '', row.posError || '',
+                row.plansCP?.toString() || '', row.plansAP?.toString() || '', row.plansDate || '',
+                row.plansError || ''
+            ];
+
+            console.log(`"${columns.join('","')}"`);
+        }
+
+        for (const dsId of planningDistricts) {
+
+            const row = {
+                dsId,
+            };
+            if (studentPlanSkips.includes(dsId)) {
+                console.log(`${dsId},,,skipped on purpose`);
+                continue;
+            }
+
+            if (cmd.highschools && highschoolsRunFromDistricts[dsId]) {
+                const parentId = highschoolsRunFromDistricts[dsId];
+                let pid = 23;
+                if (planningSplitDistricts.includes(parentId)) {
+                    pid = 34;
+                }
+                const [hsPlans, hsErrors, dateString] = hsJobsInfo(districtLog[parentId].student![dsId].jobs);
+                const totalPlans = districtLog[parentId].student![dsId].numPlansTotal || 0;
+                let msg = `highschool processed as part of district ${parentId} (PID ${pid})`;
+                if (hsPlans < 500 && hsErrors > hsPlans && hsErrors > 40) {
+                    msg += ` - has high % of errors (${hsErrors} total errors)`;
+                }
+                console.log(
+                    `${dsId},${dateString},${totalPlans},${msg}`);
+                continue;
+            }
+
+            if (mode === 'district' && planningSplitDistricts.includes(dsId)) {
+                console.log(`${dsId},,,district with cp (pid 34)`);
+                continue;
+            }
+
+            if (!catalogLog[dsId]) {
+                console.log(`${dsId},,,Not run - needs investigation`);
+                continue;
+            }
+
+            if (catalogLog[dsId] && catalogLog[dsId].pos &&
+                (catalogLog[dsId].pos!.status !== JobStatus.Completed) && !catalogLog[dsId].student) {
+                console.log(`${dsId},,,issue with PoS migration`);
+                continue;
+            }
+
+            if (catalogLog[dsId] && catalogLog[dsId].pos && catalogLog[dsId].pos!.objects === 0 &&
+                (!catalogLog[dsId].student || !Object.keys(catalogLog[dsId].student!).length)) {
+                console.log(`${dsId},,,no plans of study`);
+                continue;
+            }
+
+            let hasPosLoadErrors = '';
+            if (catalogLog[dsId].pos &&
+                (catalogLog[dsId].pos!.status !== JobStatus.Completed || catalogLog[dsId].pos!.errors)) {
+                hasPosLoadErrors = `${catalogLog[dsId].pos?.errors || 'some'} errors loading PoS;`;
+            }
+
+            totalDistricts += 1;
+            if (catalogLog[dsId].student) {
+                districts += 1;
+                let dsTotalPlans = 0;
+                let dtStr = '';
+                const highschoolErrors: string[] = [];
+
+                for (const hsId of Object.keys(catalogLog[dsId].student!)) {
+                    const hsInfo = catalogLog[dsId].student![hsId];
+                    dsTotalPlans += hsInfo.numPlansTotal || 0;
+
+                    if (hsInfo.error) {
+                       highschoolErrors.push(`${hsId} job error`);
+                    }
+
+                    const [hsPlans, hsErrors, dateString] = hsJobsInfo(hsInfo.jobs);
+                    if (dateString) {
+                        dtStr = dateString;
+                    }
+
+                    if (hsPlans < 500 && hsErrors > hsPlans && hsErrors > 40) {
+                        highschoolErrors.push(`${hsId} ${hsErrors} plan errors`);
+
+                        if ((cmd.splitdistricts || cmd.highschools) &&
+                            (!hsLog[hsId] ||
+                             !hsLog[hsId].pos ||
+                             hsLog[hsId].pos?.status !== JobStatus.Completed ||
+                             hsLog[hsId].pos?.errors)) {
+                            highschoolErrors.push(`${hsId} ${hsLog[hsId]?.pos?.errors || ''} errors loading PoS`);
+                        }
+                    }
+
+                }
+                console.log(`${dsId},${dtStr},${dsTotalPlans},${hasPosLoadErrors}${highschoolErrors.join(';')}`);
+            } else {
+                console.log(`${dsId},,,No highschools processed`);
+            }
+        }
+    });
 
 program
     .command('studentfix [path]')

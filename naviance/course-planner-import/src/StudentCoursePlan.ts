@@ -114,25 +114,44 @@ export class PlanImport {
         const name = planObj.label;
         const migratedId = planObj.id;
         const status = approvalStatusMap[planObj.approvalStatus] || 'In Progress';
-        const isActive = planObj.type === 'TYPE_HIGH_SCHOOL_OFFICIAL';
+        let isActive = planObj.type === 'TYPE_HIGH_SCHOOL_OFFICIAL';
         const schoolId = planObj.planOfStudy.institutionId;
         const studentId = planObj.studentId.toString();
 
         console.log(`found ${existingForStudent.length} existing plans for ${studentId}, looking for name ${name}`);
 
         let existing: StudentPlan | undefined;
+        const otherActivePlans: StudentPlan[] = [];
         for (const existPlan of existingForStudent) {
             const full = await existPlan.toStudentPlan();
-            if (full.meta && full.meta['name'] === name && full.meta['migratedId'] === migratedId) {
-                if (createOnly) {
-                    return PlanImportStatus.Skipped;
-                }
 
-                console.log(`found name match, updating existing plan`);
+            if (!existing && full.meta && full.meta['name'] === name && full.meta['migratedId'] === migratedId) {
                 existing = full;
-                break;
+            } else if (full.meta && full.meta['isActive']) {
+                otherActivePlans.push(full);
             }
         }
+
+        let needsIsActiveUpdate = false;
+        if (existing && existing.meta && existing.meta['isActive'] && otherActivePlans.length) {
+            for (const otherPlan of otherActivePlans) {
+                if (otherPlan.meta) {
+                    if (!otherPlan.meta['migratedId'] ||
+                        existing.meta['migratedId']! < otherPlan.meta['migratedId']) {
+                        // UI created plan is active or other migrated plan is newer, so this plan should not be active
+                        isActive = false;
+                        needsIsActiveUpdate = true;
+                        console.log(`marking ${existing.guid} inactive because other active plan exists`);
+                    }
+                }
+            }
+        }
+
+        if (existing && createOnly && !needsIsActiveUpdate) {
+            return PlanImportStatus.Skipped;
+        }
+
+        console.log(`found name match, updating existing plan`);
 
         const stmtIdxByName: { [name: string]: number } = {};
         for (const [idx, stmt] of pos.statements.entries()) {
