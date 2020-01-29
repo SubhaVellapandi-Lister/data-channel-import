@@ -13,6 +13,7 @@ import {
     IStepAfterOutput,
     IStepBeforeInput
 } from "@data-channels/dcSDK";
+import { INavianceStudent, INavianceStudentIDMap, readStudents} from "./Student";
 import { initServices, sleep } from "./Utils";
 
 interface IPlanSet {
@@ -26,12 +27,15 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         'Highschool_ID',
         'Highschool_Name',
         'Student_ID',
+        'Last_Name',
+        'First_Name',
+        'Class_Year',
         'Student_Plan_ID',
         'Student_Last_Update_Date',
-        'Student_Plan_Status',
-        'Student_Plan_Type',
-        'Plan_Of_Study_Name',
-        'Grade_Level',
+        'Status',
+        'Plan_Type',
+        'Plan_Name',
+        'Grade',
         'Course_ID',
         'Course_Name',
         'Course_Subject',
@@ -44,6 +48,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
     private coursesExported: { [name: string]: number } = {};
     private programsByName: { [name: string]: Program } = {};
     private schoolNamesById: { [id: string]: string } = {};
+    private studentsById: INavianceStudentIDMap = {};
+    private academicYear: number = 0;
 
     private async findProgram(namespace: Namespace, name: string): Promise<Program> {
         if (!this.programsByName[name]) {
@@ -77,6 +83,34 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         return this.courseByName[name];
     }
 
+    private studentRec(studentId: string): INavianceStudent | null {
+        if (!this.studentsById[studentId]) {
+            return null;
+        }
+        for (const rec of this.studentsById[studentId]) {
+            if (rec.isActive) {
+                return rec;
+            }
+        }
+
+        return this.studentsById[studentId][0];
+    }
+
+    private courseAcademicYear(studentId: string, course: ICourseRecord): number {
+        const student = this.studentRec(studentId);
+
+        const curDate = new Date();
+        const curYear = new Date().getFullYear();
+        const july15 = new Date(`7/15/${curYear}`);
+        const curGradYear = curDate > july15 ? curYear + 1 : curYear;
+
+        if (!student || !student.classYear || student.classYear < curGradYear) {
+            return 0;
+        }
+
+        return student.classYear - (13 - (course.gradeLevel! as number));
+    }
+
     public async before_exportStudentCourses(input: IStepBeforeInput) {
         initServices(input.parameters!);
     }
@@ -100,6 +134,15 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         while (page.length) {
             for (const splan of page) {
+                const filteredCourses = splan.courses!
+                    .filter((crec) =>
+                        !this.academicYear ||
+                        this.courseAcademicYear(splan.studentPrincipleId, crec as ICourseRecord) === this.academicYear);
+
+                if (!filteredCourses.length) {
+                    console.log(`skipping ${splan.guid}, no courses matching filter`);
+                    continue;
+                }
                 let programName = '';
                 if (splan.programs) {
                     const program = await this.findProgram(namespace, splan.programs[0].name);
@@ -187,6 +230,22 @@ export class StudentCourseExportProcessor extends BaseProcessor {
     }
 
     public async exportStudentCourses(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
+        if (input.inputs['Students']) {
+            const students = await readStudents(input.inputs['Students']);
+            for (const student of students) {
+                const navId = student.id.toString();
+                if (!this.studentsById[navId]) {
+                    this.studentsById[navId] = [student];
+                } else {
+                    this.studentsById[navId].push(student);
+                }
+            }
+        }
+
+        if (input.parameters!['academicYear']) {
+            this.academicYear = input.parameters!['academicYear'];
+        }
+
         const schoolId = Object.keys(input.outputs)[0];
         const hsMapping = this.job.steps['findSchools'].output!['hsMapping'] as { [dsId: string]: string[]};
         let highschoolsToProcess = [schoolId];

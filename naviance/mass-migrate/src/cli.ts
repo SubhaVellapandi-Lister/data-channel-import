@@ -268,7 +268,7 @@ program
             console.log(`"${columns.join('","')}"`);
         }
 
-        for (const dsId of planningDistricts) {
+        /* for (const dsId of planningDistricts) {
 
             const row = {
                 dsId,
@@ -360,7 +360,7 @@ program
             } else {
                 console.log(`${dsId},,,No highschools processed`);
             }
-        }
+        } */
     });
 
 program

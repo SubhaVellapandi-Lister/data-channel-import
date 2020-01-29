@@ -165,7 +165,6 @@ export const planningDistricts = [
     '2707290DUS',
     '2400540DUS',
     '1732910DUS',
-    '0402860DUS',
     '4816530DUS',
     '4500900DUS',
     '1200930DUS',
@@ -533,6 +532,7 @@ export const planningSplitDistricts = [
     '7802736DUS',
     '7802738DUS',
     '3704950DUS',
+    '0402860DUS'
 ];
 
 export const planningHighschools = [
