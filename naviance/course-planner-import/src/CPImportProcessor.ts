@@ -17,6 +17,7 @@ import {
 import uuidv5 from "uuid/v5";
 import { CourseImport } from "./Course";
 import { PoSImport } from "./PoS";
+import { IRecommendationRow, StudentRecommendation } from "./Recommendation";
 import { IBasicNavianceStudent, INavianceStudentIDMap } from "./Student";
 import { PlanImport } from "./StudentCoursePlan";
 import { IHistoryRow, StudentHistory } from "./StudentHistory";
@@ -34,7 +35,7 @@ export class CPImportProcessor extends BaseProcessor {
     private uuidSeed = 'ec3d4a8c-f8ac-47d3-bb77-abcadea819d9';
 
     /* Course Catalog variables */
-    private apBatchSize = 50;
+    private batchSize = 50;
     private apBatch: IRowData[] = [];
     private batchCount = 0;
     private duplicatesSkipped = 0;
@@ -48,9 +49,7 @@ export class CPImportProcessor extends BaseProcessor {
     private historyStudentId = '';
     private historyForStudent: IHistoryRow[] = [];
     private historyBatch: IHistoryRow[][] = [];
-    private historyBatchSize = 10;
     private planBatch: object[] = [];
-    private planBatchSize = 10;
     private planBatchDelay = 1;
     private schoolsLoaded = false;
     private coursesLoaded = false;
@@ -62,6 +61,8 @@ export class CPImportProcessor extends BaseProcessor {
     private skippedForTime: number = 0;
     private studentIdMap: INavianceStudentIDMap = {};
     private skippedHistories: number = 0;
+    private recommendationBatch: IRecommendationRow[] = [];
+    private recommendationHandler: StudentRecommendation | null = null;
 
     public async validate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
         // things to validate for
@@ -137,7 +138,7 @@ export class CPImportProcessor extends BaseProcessor {
         if (input.parameters!['tenantType'] === 'highschool') {
             this.singleHighschoolId = this.namespace;
         }
-        this.apBatchSize = input.parameters!['batchSize'] || this.apBatchSize;
+        this.batchSize = input.parameters!['batchSize'] || 50;
 
         this.subjectAreasLoaded = await loadExistingSubjectAreas(this.namespace);
     }
@@ -183,7 +184,7 @@ export class CPImportProcessor extends BaseProcessor {
             this.coursesLoaded = true;
             this.apBatch.push(input.data);
         }
-        if (this.apBatch.length === this.apBatchSize) {
+        if (this.apBatch.length === this.batchSize) {
             await this.processBatch(input.parameters);
         }
 
@@ -424,10 +425,10 @@ export class CPImportProcessor extends BaseProcessor {
         if (input.name.toUpperCase().startsWith('STUDENTS')) {
             // load student ID mapping
             const student = JSON.parse(input.data['JSON_OBJECT']) as IBasicNavianceStudent;
-            if (!this.studentIdMap[student.highschoolId]) {
-                this.studentIdMap[student.highschoolId] = [student];
+            if (!this.studentIdMap[student.sisId]) {
+                this.studentIdMap[student.sisId] = [student];
             } else {
-                this.studentIdMap[student.highschoolId].push(student);
+                this.studentIdMap[student.sisId].push(student);
             }
         } else {
             // process history records
@@ -454,7 +455,7 @@ export class CPImportProcessor extends BaseProcessor {
                 this.historyForStudent = [];
                 this.historyStudentId = record.studentId;
 
-                if (this.historyBatch.length >= this.historyBatchSize) {
+                if (this.historyBatch.length >= this.batchSize) {
                     const [createdCount, updatedCount] = await StudentHistory.processBatch(
                         this.namespace, this.historyBatch);
                     this.createdCount += createdCount;
@@ -472,9 +473,7 @@ export class CPImportProcessor extends BaseProcessor {
     public async before_importHistories(input: IStepBeforeInput) {
         initServices(input.parameters!);
         this.namespace = `naviance.${input.parameters!['tenantId']}`;
-        if (input.parameters!['batchSize']) {
-            this.historyBatchSize = input.parameters!['batchSize'];
-        }
+        this.batchSize = input.parameters!['batchSize'] || 10;
     }
 
     public async after_importHistories(input: IStepBeforeInput): Promise<IStepAfterOutput> {
@@ -505,7 +504,7 @@ export class CPImportProcessor extends BaseProcessor {
             this.planBatch.push(JSON.parse(rowData['JSON_OBJECT']));
         }
         const createOnly = input.parameters!['createOnly'] === true;
-        if (this.planBatch.length >= this.planBatchSize) {
+        if (this.planBatch.length >= this.batchSize) {
             const batchStartTime = new Date().getTime();
             const [creates, updates, errors, skips] = await PlanImport.batchImportPlan(
                 this.scope, this.planBatch, this.allPrograms, createOnly, this.planBatchDelay);
@@ -539,9 +538,7 @@ export class CPImportProcessor extends BaseProcessor {
         }
         this.allPrograms = await PlanImport.allPrograms(input.parameters!['namespace']);
 
-        if (input.parameters!['planBatchSize']) {
-            this.planBatchSize = input.parameters!['planBatchSize'];
-        }
+        this.batchSize = input.parameters!['planBatchSize'] || 10;
     }
 
     public async after_importStudentCoursePlans(input: IStepBeforeInput): Promise<IStepAfterOutput> {
@@ -560,6 +557,79 @@ export class CPImportProcessor extends BaseProcessor {
             updatedCount: this.updatedCount,
             errorCount: this.errorCount,
             skipCount: this.skipCount
+        }};
+    }
+
+    public async importRecommendations(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
+        if (input.index === 1) {
+            return { outputs: {} };
+        }
+
+        if (input.name.toUpperCase().startsWith('STUDENTS')) {
+            // load student ID mapping
+            const student = JSON.parse(input.data['JSON_OBJECT']) as IBasicNavianceStudent;
+            if (!this.studentIdMap[student.sisId]) {
+                this.studentIdMap[student.highschoolId] = [student];
+            } else {
+                this.studentIdMap[student.highschoolId].push(student);
+            }
+        } else {
+            // process recommendation records
+            const isMigration = input.data['JSON_OBJECT'] !== undefined;
+            const record = StudentRecommendation.parseRow(input.data);
+
+            if (record) {
+                if (!isMigration) {
+                    const sisId = record.studentId;
+                    const activeStudents = (this.studentIdMap[sisId] || []).filter((student) => student.isActive);
+                    const inactiveStudents = (this.studentIdMap[sisId] || []).filter((student) => !student.isActive);
+
+                    if (activeStudents.length === 1) {
+                        record.studentId = activeStudents[0].id.toString();
+                    } else if (inactiveStudents.length === 1) {
+                        record.studentId = inactiveStudents[0].id.toString();
+                    }
+                }
+
+                this.recommendationBatch.push(record);
+
+                if (this.recommendationBatch.length >= this.batchSize) {
+                    const [skippedCount, foundCount, createdCount] = await this.recommendationHandler!.processBatch(
+                        this.recommendationBatch);
+                    this.skipCount += skippedCount;
+                    this.createdCount += createdCount;
+                    this.updatedCount += foundCount;
+                    console.log(`Processed batch of ${this.recommendationBatch.length} recommendations`);
+                    this.recommendationBatch = [];
+                }
+            }
+        }
+
+        return { outputs: {} };
+    }
+
+    public async before_importRecommendations(input: IStepBeforeInput) {
+        initServices(input.parameters!);
+        this.scope = `naviance.${input.parameters!['tenantId']}`;
+        this.namespace = `naviance.${input.parameters!['namespace']}`;
+        this.recommendationHandler = new StudentRecommendation(this.namespace, this.scope);
+        this.batchSize = input.parameters!['batchSize'] || 100;
+    }
+
+    public async after_importRecommendations(input: IStepBeforeInput): Promise<IStepAfterOutput> {
+        if (this.recommendationBatch.length) {
+            const [skippedCount, foundCount, createdCount] = await this.recommendationHandler!.processBatch(
+                this.recommendationBatch);
+            this.skipCount += skippedCount;
+            this.createdCount += createdCount;
+            this.updatedCount += foundCount;
+            console.log(`Processed batch of ${this.recommendationBatch.length} recommendations`);
+        }
+
+        return { results: {
+            skippedCount: this.skipCount,
+            createdCount: this.createdCount,
+            updatedCount: this.updatedCount
         }};
     }
 }

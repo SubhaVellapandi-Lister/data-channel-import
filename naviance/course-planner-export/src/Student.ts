@@ -5,6 +5,7 @@ import {Readable} from 'stream';
 export interface IBasicNavianceStudent {
     id: number;
     highschoolId: string;
+    sisId: string;
     isActive: boolean;
 }
 

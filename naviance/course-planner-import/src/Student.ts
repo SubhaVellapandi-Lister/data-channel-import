@@ -4,6 +4,7 @@ export interface IBasicNavianceStudent {
     id: number;
     highschoolId: string;
     isActive: boolean;
+    sisId: string;
 }
 
 export interface INavianceStudent extends IBasicNavianceStudent {

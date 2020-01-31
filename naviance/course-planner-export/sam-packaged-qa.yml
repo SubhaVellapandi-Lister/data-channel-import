@@ -18,7 +18,7 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-dev/ad178841673f19179f12421fc86a6012
+      CodeUri: s3://data-channels-processor-deployments-dev/b91d65924c38833380e6d1ce6f13073d
       FunctionName: cf-naviance-dc-ap-export-qa
       Handler: dist/index.exportHandler
       Timeout: 900
@@ -45,3 +45,8 @@ Resources:
           Action:
           - ssm:GetParameter
           Resource: arn:aws:ssm:*:*:parameter/academic-planner/*
+        - Sid: SSMGetQAParameterPolicy
+          Effect: Allow
+          Action:
+          - ssm:GetParameter
+          Resource: arn:aws:ssm:*:*:parameter/academic-planner-qa/*

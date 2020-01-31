@@ -100,6 +100,7 @@ export interface ISubInst {
 export interface IInstitution {
     catalog?: IProcessing;
     pos?: IProcessing;
+    reco?: IProcessing;
     student?: { [hsId: string]: IStudentPlans };
 }
 
@@ -1108,6 +1109,43 @@ async function loadHighschoolPlans(
     }
 }
 
+async function loadHighschoolRecommendations(
+    districtId: string, hsId: string, showSpin: boolean, logName: string
+) {
+
+    if (!catalogLog[hsId]) {
+        catalogLog[hsId] = {};
+    }
+    const jobBody = jobExecutionBody({
+        channel: 'naviance/migrateCourseRecommendations',
+        product: 'naviance',
+        parameters:
+            `tenantType=highschool,tenantId=${hsId},namespace=${districtId}`
+    });
+    const job = await createjob(JSON.stringify(jobBody), true);
+    const result = await waitOnJobExecution(job, showSpin);
+    catalogLog[hsId].reco = {
+        guid: result.guid,
+        status: result.status,
+        statusMsg: result.statusMsg || '',
+        created: result.created,
+        completed: result.completed
+    };
+    if (result.status === JobStatus.Failed || result.status === JobStatus.Started) {
+        console.log(`job failed - ${result.guid}`);
+        await saveCatalogLog(logName, districtId);
+
+        return;
+    }
+
+    const metrics = result.steps['importRecommendations'].output as any;
+    catalogLog[hsId].reco!.objects = metrics.createdCount + metrics.updatedCount;
+    catalogLog[hsId].reco!.errors = metrics.skippedCount;
+    console.log(catalogLog[hsId].reco);
+
+    await saveCatalogLog(logName, districtId);
+}
+
 function hsJobsInfo(allJobs: IProcessing[]): [number, number, string] {
     const jobs = allJobs.filter((j) => j.completed);
     let hsPlans = 0;
@@ -1710,6 +1748,105 @@ program
             cmd.spin,
             logName
         );
+    });
+
+async function highschoolsByDistrictId(): Promise<{ [id: string]: string[]}> {
+    const hsRows = await csvRows('Highschools.csv');
+
+    const highschoolsInDistrict: {[dsId: string]: string[]} = {};
+    for (const row of hsRows.slice(1)) {
+        const [ hsId, name, dassigned, hasCp, xId] = row;
+        const fileDsId = xId.trim();
+        if (fileDsId.length) {
+            if (!highschoolsInDistrict[fileDsId]) {
+                highschoolsInDistrict[fileDsId] = [hsId.trim()];
+            } else {
+                highschoolsInDistrict[fileDsId].push(hsId.trim());
+            }
+        }
+    }
+
+    return highschoolsInDistrict;
+}
+program
+    .command('reco.loadOne <id>')
+    .option('--highschool')
+    .option('--splitdistricts')
+    .option('--no-spin')
+    .action(async (id, cmd) => {
+        initConnection(program);
+        let logName = 'catalogLog.json';
+        if (cmd.highschool) {
+            logName = 'hsCatalog.json';
+        }
+        await loadCatalogLog(logName);
+
+        if (!cmd.highschool) {
+            const highschoolsInDistrict = await highschoolsByDistrictId();
+            for (const hsId of highschoolsInDistrict[id] || []) {
+                console.log(`loading hs ${hsId}`);
+                await loadHighschoolRecommendations(
+                    id,
+                    hsId,
+                    cmd.spin,
+                    logName
+                );
+            }
+        } else {
+            console.log(`loading hs ${id}`);
+            await loadHighschoolRecommendations(
+                id,
+                id,
+                cmd.spin,
+                logName
+            );
+        }
+    });
+
+program
+    .command('reco.loadAll')
+    .option('--highschools')
+    .option('--splitdistricts')
+    .option('--no-spin')
+    .action(async (cmd) => {
+        initConnection(program);
+        let logName = 'catalogLog.json';
+        if (cmd.highschools) {
+            logName = 'hsCatalog.json';
+        }
+        await loadCatalogLog(logName);
+
+        if (!cmd.highschools) {
+            const highschoolsInDistrict = await highschoolsByDistrictId();
+            console.log('processing districts');
+            for (const dsId of planningDistricts) {
+                if (planningSplitDistricts.includes(dsId)) {
+                    console.log(dsId, 'skipping split district');
+                    continue;
+                }
+
+                console.log(dsId, 'processing highschools');
+                for (const hsId of highschoolsInDistrict[dsId] || []) {
+                    console.log(`loading hs ${hsId}`);
+                    await loadHighschoolRecommendations(
+                        dsId,
+                        hsId,
+                        cmd.spin,
+                        logName
+                    );
+                }
+            }
+        } else {
+            for (const hsId of planningHighschools) {
+                console.log(`loading hs ${hsId}`);
+                await loadHighschoolRecommendations(
+                    hsId,
+                    hsId,
+                    cmd.spin,
+                    logName
+                );
+            }
+        }
     });
 
 program.parse(process.argv);

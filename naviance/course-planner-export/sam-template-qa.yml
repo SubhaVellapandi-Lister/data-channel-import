@@ -41,5 +41,10 @@ Resources:
           Action:
           - ssm:GetParameter
           Resource: arn:aws:ssm:*:*:parameter/academic-planner/*
+        - Sid: SSMGetQAParameterPolicy
+          Effect: Allow
+          Action:
+          - ssm:GetParameter
+          Resource: arn:aws:ssm:*:*:parameter/academic-planner-qa/*
 
 

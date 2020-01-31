@@ -8,8 +8,9 @@ import {
 } from "@academic-planner/apSDK";
 import {
     BaseProcessor,
-    IFileProcessorInput,
-    IFileProcessorOutput,
+    IRowProcessorInput,
+    IRowProcessorOutput,
+    IStepAfterInput,
     IStepAfterOutput,
     IStepBeforeInput
 } from "@data-channels/dcSDK";
@@ -93,7 +94,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             }
         }
 
-        return this.studentsById[studentId][0];
+        return null;
     }
 
     private courseAcademicYear(studentId: string, course: ICourseRecord): number {
@@ -134,13 +135,18 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         while (page.length) {
             for (const splan of page) {
+                const student = this.studentRec(splan.studentPrincipleId);
+
+                if (!student) {
+                    continue;
+                }
+
                 const filteredCourses = splan.courses!
                     .filter((crec) =>
                         !this.academicYear ||
                         this.courseAcademicYear(splan.studentPrincipleId, crec as ICourseRecord) === this.academicYear);
 
                 if (!filteredCourses.length) {
-                    console.log(`skipping ${splan.guid}, no courses matching filter`);
                     continue;
                 }
                 let programName = '';
@@ -163,18 +169,22 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
                 const planData = {
                     Highschool_ID: hsId,
-                    Student_ID: splan.studentPrincipleId,
+                    Student_ID: student.sisId || splan.studentPrincipleId,
+                    Last_Name: student!.lastName || '',
+                    First_Name: student!.firstName || '',
+                    Class_Year: student!.classYear!.toString() || '',
                     Student_Plan_ID: splan.guid,
-                    Plan_Of_Study_Name: programName,
-                    Student_Plan_Status: studentPlanStatus,
-                    Student_Plan_Type: studentPlanType,
-                    Highschool_Name: this.schoolNamesById[hsId] || '',
-                    Student_Last_Update_Date: updateDate.toISOString()
+                    Plan_Name: programName,
+                    Status: studentPlanStatus,
+                    Plan_Type: studentPlanType,
+                    Highschool_Name: this.schoolNamesById[hsId] || student.highschoolName || '',
+                    Student_Last_Update_Date: updateDate.toISOString(),
+                    Grade: filteredCourses[0].gradeLevel!.toString()
                 };
 
                 const courseRowData: object[] = [];
 
-                for (const record of splan.courses || []) {
+                for (const record of filteredCourses) {
                     const course = await this.findCourse(namespace, record.number);
                     if (!course) {
                         continue;
@@ -200,7 +210,6 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                     const allCourseCols = {};
                     for (const [idx, courseData] of courseRowData.entries()) {
                         allCourseCols[`Course${idx + 1}_ID`] = courseData['Course_ID'];
-                        allCourseCols[`Course${idx + 1}_Grade`] = courseData['Grade_Level'];
                         allCourseCols[`Course${idx + 1}_Name`] = courseData['Course_Name'];
                     }
                     const rowData = Object.assign(allCourseCols, planData);
@@ -229,24 +238,34 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         return results;
     }
 
-    public async exportStudentCourses(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
-        if (input.inputs['Students']) {
-            const students = await readStudents(input.inputs['Students']);
-            for (const student of students) {
-                const navId = student.id.toString();
-                if (!this.studentsById[navId]) {
-                    this.studentsById[navId] = [student];
-                } else {
-                    this.studentsById[navId].push(student);
-                }
-            }
+    // main call just loads in student data from prior naviance export step
+    public async exportStudentCourses(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
+        if (input.index === 1) {
+            return { outputs: {} };
         }
 
+        try {
+            const student = JSON.parse(input.data['JSON_OBJECT']) as INavianceStudent;
+            const navId = student.id.toString();
+            if (!this.studentsById[navId]) {
+                this.studentsById[navId] = [student];
+            } else {
+                this.studentsById[navId].push(student);
+            }
+        } catch (err) {
+            console.log(`Error row ${input.index}`, err);
+        }
+
+        return { outputs: {} };
+    }
+
+    public async after_exportStudentCourses(input: IStepAfterInput): Promise<IStepAfterOutput> {
         if (input.parameters!['academicYear']) {
             this.academicYear = input.parameters!['academicYear'];
         }
 
-        const schoolId = Object.keys(input.outputs)[0];
+        const schoolId = input.parameters!['tenantId'];
+        const namespace = input.parameters!['namespace'] || schoolId;
         const hsMapping = this.job.steps['findSchools'].output!['hsMapping'] as { [dsId: string]: string[]};
         let highschoolsToProcess = [schoolId];
         if (hsMapping[schoolId]) {
@@ -278,12 +297,21 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         if (input.parameters!['rowPerPlan']) {
             for (let i = 0; i < numCourseRows; i++) {
                 this.customHeaders.push(`Course${i + 1}_ID`);
-                this.customHeaders.push(`Course${i + 1}_Grade`);
                 this.customHeaders.push(`Course${i + 1}_Name`);
             }
         }
 
-        this.writeOutputRow(input.outputs[schoolId].writeStream, this.customHeaders);
+        console.log(JSON.stringify({
+            highschools: highschoolsToProcess,
+            numCourseRows,
+            schoolId,
+            students: Object.keys(this.studentsById).length,
+            academicYear: this.academicYear,
+            headers: this.customHeaders,
+            namespace
+        }, undefined, 2));
+
+        this.writeOutputRow(input.outputs['Export'].writeStream, this.customHeaders);
 
         const chunkSize = 6;
         const chunks = Array.from({ length: Math.ceil(highschoolsToProcess.length / chunkSize) }, (_v, i) =>
@@ -294,22 +322,18 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             console.log(`processing chunk ${idx + 1} of ${chunks.length}`);
             const promises: Promise<string[][]>[] = [];
             for (const hsId of chunk) {
-                promises.push(this.processHighschool(schoolId, hsId, numCourseRows));
+                promises.push(this.processHighschool(namespace, hsId, numCourseRows));
             }
 
             const results = await Promise.all(promises);
             for (const [hsIdx, rows] of results.entries()) {
                 for (const row of rows) {
-                    this.writeOutputRow(input.outputs[schoolId].writeStream, row);
+                    this.writeOutputRow(input.outputs['Export'].writeStream, row);
                 }
                 this.coursesExported[chunk[hsIdx]] = rows.length;
             }
         }
 
-        return {};
-    }
-
-    public async after_exportStudentCourses(input: IStepBeforeInput): Promise<IStepAfterOutput> {
         return { results: {
             coursesExported: this.coursesExported
         }};
