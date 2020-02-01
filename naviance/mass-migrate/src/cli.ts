@@ -1900,7 +1900,7 @@ program
                 },
                 academicYear: academicYearInt,
                 includeNames: true,
-                rowPerPlan: cmd.byCourse !== undefined,
+                rowPerPlan: !cmd.byCourse,
                 customHeaders
             }
 
@@ -1916,7 +1916,7 @@ program
         const job = await createjob(JSON.stringify(jobBody), true);
         const result = await waitOnJobExecution(job, cmd.spin);
 
-        console.log(result);
+        console.log(JSON.stringify(result.steps['exportStudentCourses'], undefined, 2));
     });
 
 program.parse(process.argv);
