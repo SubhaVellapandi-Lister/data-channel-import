@@ -1768,6 +1768,7 @@ async function highschoolsByDistrictId(): Promise<{ [id: string]: string[]}> {
 
     return highschoolsInDistrict;
 }
+
 program
     .command('reco.loadOne <id>')
     .option('--highschool')
@@ -1847,6 +1848,75 @@ program
                 );
             }
         }
+    });
+
+program
+    .command('export.Plans <id> <academicYear>')
+    .option('--by-course')
+    .option('--bucket <bucket>')
+    .option('--key-prefix <keyPrefix>')
+    .option('--no-spin')
+    .action(async (id, academicYear, cmd) => {
+        initConnection(program);
+
+        const academicYearInt = parseInt(academicYear);
+        let acadStr = '';
+        if (academicYear) {
+            acadStr = `_${academicYear}-${academicYearInt + 1}`;
+        }
+
+        const outBucket = cmd.bucket || 'data-channels-work-navprod';
+        const keyPrefix = cmd.keyPrefix || 'exports/studentCourses';
+        const fileName = cmd.byCourse ? 'PlanCoursesExportByCourse' : 'PlanCoursesExportByPlan';
+
+        let tenantType = 'highschool';
+        if (id.endsWith('DUS') || planningDistricts.includes(id) || planningSplitDistricts.includes(id)) {
+            tenantType = 'district';
+        }
+        let customHeaders = [
+            "Highschool_Name",
+            "Student_ID",
+            "Class_Year",
+            "First_Name",
+            "Last_Name",
+            "Status",
+            "Plan_Type",
+            "Student_Last_Update_Date",
+            "Plan_Name",
+            "Grade"
+        ];
+        if (cmd.byCourse) {
+            customHeaders = customHeaders.concat(["Course_ID", "Course_Name"]);
+        }
+
+        const parameters = JSON.stringify({
+            all: {
+                tenantType,
+                tenantId: id,
+                schools: [id],
+                filters: {
+                    classYearFrom: academicYearInt + 1,
+                    classYearTo: academicYearInt + 6
+                },
+                academicYear: academicYearInt,
+                includeNames: true,
+                rowPerPlan: cmd.byCourse !== undefined,
+                customHeaders
+            }
+
+        });
+
+        const jobBody = jobExecutionBody({
+            channel: 'naviance/exportStudentCourses',
+            product: 'naviance',
+            filesOut:
+                `Export=${outBucket}/${keyPrefix}/${fileName}_${id}${acadStr}.csv`,
+            parameters
+        });
+        const job = await createjob(JSON.stringify(jobBody), true);
+        const result = await waitOnJobExecution(job, cmd.spin);
+
+        console.log(result);
     });
 
 program.parse(process.argv);
