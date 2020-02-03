@@ -1008,7 +1008,9 @@ function setStudentPlanJobStatus(districtId: string, hsId: string, guid: string,
 }
 
 async function loadHighschoolPlans(
-    districtId: string, hsId: string, chunksPerJob: number, planBatchSize: number, showSpin: boolean, logName: string
+    districtId: string, hsId: string, chunksPerJob: number,
+    planBatchSize: number, showSpin: boolean, logName: string,
+    allowUpdates: boolean = false
 ) {
     if (!catalogLog[districtId].student) {
         catalogLog[districtId].student = {};
@@ -1074,12 +1076,13 @@ async function loadHighschoolPlans(
         const chunkStartParm = jobChunkIdx * finalChunksPerJob;
         console.log(`running ${finalChunksPerJob} chunks starting at chunk ${chunkStartParm}`);
         const namespace = planningSplitDistricts.includes(districtId) ? hsId : districtId;
+        const createOnly = !allowUpdates;
         const createBody = jobExecutionBody({
             channel: 'naviance/migrateStudentCoursePlan',
             product: 'naviance',
             parameters:
                 // tslint:disable-next-line:max-line-length
-                `chunkStart=${chunkStartParm},numChunks=${finalChunksPerJob},namespace=${namespace},scope=${hsId},tenantType=highschool,tenantId=${hsId},planBatchSize=${planBatchSize},createOnly=true`
+                `chunkStart=${chunkStartParm},numChunks=${finalChunksPerJob},namespace=${namespace},scope=${hsId},tenantType=highschool,tenantId=${hsId},planBatchSize=${planBatchSize},createOnly=${createOnly}`
                 // ,createOnly=true
         });
         const job = await createjob(JSON.stringify(createBody), true);
@@ -1327,6 +1330,7 @@ program
     .option('--no-spin')
     .option('--fix-errors')
     .option('--force')
+    .option('--allow-updates')
     .action(async (districtId, cmd) => {
         initConnection(program);
         await loadCatalogLog('catalogLog.json');
@@ -1400,7 +1404,8 @@ program
                     parseInt(cmd.chunkSize) || 40,
                     parseInt(cmd.planBatchSize) || 30,
                     cmd.spin,
-                    'catalogLog.json'
+                    'catalogLog.json',
+                    cmd.allowUpdates
                 );
             }
         }
@@ -1415,6 +1420,7 @@ program
     .option('--no-spin')
     .option('--count <count>')
     .option('--fix-errors')
+    .option('--allow-updates')
     .action(async (cmd) => {
         initConnection(program);
         let tenantType = 'district';
@@ -1509,7 +1515,8 @@ program
                                 parseInt(cmd.chunkSize) || 40,
                                 parseInt(cmd.planBatchSize) || 30,
                                 cmd.spin,
-                                logName
+                                logName,
+                                cmd.allowUpdates
                             );
                         }
                     }
@@ -1611,7 +1618,8 @@ program
                             parseInt(cmd.chunkSize) || 40,
                             parseInt(cmd.planBatchSize) || 30,
                             cmd.spin,
-                            logName
+                            logName,
+                            cmd.allowUpdates
                         );
                     }
                 }
@@ -1703,7 +1711,8 @@ program
                     parseInt(cmd.chunkSize) || 40,
                     parseInt(cmd.planBatchSize) || 30,
                     cmd.spin,
-                    logName
+                    logName,
+                    cmd.allowUpdates
                 );
 
                 let planCount = 0;
@@ -1731,6 +1740,7 @@ program
     .option('--chunk-size <chunkSize>')
     .option('--plan-batch-size <planBatchSize>')
     .option('--no-spin')
+    .option('--allow-updates')
     .action(async (hsId, dsId, cmd) => {
         initConnection(program);
 
@@ -1746,7 +1756,8 @@ program
             parseInt(cmd.chunkSize) || 40,
             parseInt(cmd.planBatchSize) || 30,
             cmd.spin,
-            logName
+            logName,
+            cmd.allowUpdates
         );
     });
 
