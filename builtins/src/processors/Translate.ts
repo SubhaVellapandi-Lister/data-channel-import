@@ -31,6 +31,10 @@ export default class Translate extends BaseProcessor {
         return original;
     }
 
+    public async translateInlineConfig(input: IRowProcessorInput): {
+
+    }
+
     public async translate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
 
         const config = input.parameters!['translateConfig'] as ITranslateConfig;
