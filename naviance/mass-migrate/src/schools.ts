@@ -6,7 +6,6 @@ export const catalogExcludes = [
     '0619540DUS',
     '1201770DUS',
     '7802511DUS',
-    '2400480DUS',
     '1301290DUS',
     '15295USPU',
     '1742310DUS',
