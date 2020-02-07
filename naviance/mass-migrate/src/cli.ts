@@ -7,66 +7,10 @@ import { Readable } from 'stream';
 import { getApInfo } from "./ap";
 import {csvRows} from "./file";
 import {createjob, deletejob, findjob, findjobs, jobExecutionBody, updatejob} from "./job";
-import {planningDistricts, planningHighschools, planningSplitDistricts} from "./schools";
+import {catalogExcludes, planningDistricts, planningHighschools, planningSplitDistricts} from "./schools";
 import {initConnection} from "./utils/config";
 import spin from "./utils/spinner";
 import {sleep, waitOnJobExecution} from "./wait";
-
-const catalogExcludes = [
-    '4814730DUS',
-    '4823640DUS',
-    '4823640DUS',
-    '0636840DUS',
-    '0619540DUS',
-    '1201770DUS',
-    '7802511DUS',
-    '2400480DUS',
-    '1301290DUS',
-    '15295USPU',
-    '1742310DUS',
-    '0506330DUS',
-    '1812810DUS',
-    '1810650DUS',
-    '5101260DUS',
-    '2930450DUS',
-    '2100360DUS',
-    '1930930DUS',
-    '4807890DUS',
-    '25005USPU',
-    '1725320DUS',
-    '4702190DUS',
-    '0506840DUS',
-    '2918300DUS',
-    '2733330DUS',
-    '19691USPU',
-    '19216USPU',
-    '20456USPU',
-    '4823910DUS',
-    '4829850DUS',
-    '4841220DUS',
-    '209228USPU',
-    '39125USPU',
-    '18006USPU',
-    '32035USPU',
-    '4100023DUS',
-    '5305910DUS',
-    '2509450DUS',
-    '0503690DUS',
-    '2012000DUS',
-    '0806900DUS',
-    '0634620DUS',
-    '4830060DUS',
-    '15999USPU',
-    '4900750DUS',
-    '0505170DUS',
-    '0502580DUS',
-    '4700900DUS',
-    '2926890DUS',
-    '5103690DUS',
-    '1808280DUS',
-    '1807140DUS',
-    '16025USPU'
-];
 
 const totalSkips = [
     '0610260DUS',
@@ -822,6 +766,7 @@ program
     .option('--highschool')
     .option('--no-spin')
     .option('--no-catalog')
+    .option('--force')
     .action(async (dsId, cmd) => {
         initConnection(program);
         let logName = 'catalogLog.json';

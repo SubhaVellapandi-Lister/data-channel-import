@@ -1,6 +1,7 @@
 import { ICourseRecord, IStudentRecordSummary } from "@academic-planner/academic-planner-common";
 import { PlanContext } from "@academic-planner/apSDK";
-import { IRowData } from "@data-channels/dcSDK";
+import { IRowData, IRowProcessorInput } from "@data-channels/dcSDK";
+import { IBasicNavianceStudent, INavianceStudentIDMap } from "./Student";
 import { getRowVal } from "./Utils";
 
 export interface IHistoryRow {
@@ -15,11 +16,19 @@ export interface IHistoryRow {
     teacherName?: string;
     courseName?: string;
     courseSubject?: string;
+    schoolId?: string;
 }
 
 export class StudentHistory {
-    public static createdCount = 0;
-    public static updatedCount = 0;
+    public createdCount = 0;
+    public updatedCount = 0;
+    public errorCount = 0;
+    private studentIdMap: INavianceStudentIDMap = {};
+    private historyStudentId = '';
+    private historyForStudent: IHistoryRow[] = [];
+    private historyBatch: IHistoryRow[][] = [];
+
+    constructor(private scope: string, private batchSize: number, private updatePlans: boolean) {}
 
     static parseHistoryRow(rowData: IRowData): IHistoryRow {
         if (rowData['JSON_OBJECT']) {
@@ -62,12 +71,20 @@ export class StudentHistory {
         }
     }
 
-    static async processBatch(namespace: string, batch: IHistoryRow[][]): Promise<[number, number]> {
-        let createdCount = 0;
-        let updatedCount = 0;
+    async processBatch(batch: IHistoryRow[][]) {
         const batchPromises: Promise<IStudentRecordSummary>[] = [];
         for (const studentCourses of batch) {
             const studentId = studentCourses[0].studentId.toString();
+            const highschoolId = studentCourses[0].schoolId;
+            let scope = this.scope;
+            if (!scope && highschoolId) {
+                scope = `naviance.${highschoolId}`;
+            }
+            if (!scope) {
+                console.log(`could not find scope fpr student ${studentId}`);
+                this.errorCount += 1;
+                continue;
+            }
             const courses: ICourseRecord[] = studentCourses.map((rec) => ({
                 number: rec.courseId,
                 unique: rec.courseId,
@@ -82,25 +99,102 @@ export class StudentHistory {
                 courseSubject: rec.courseSubject
             })).filter((stuRec) => stuRec.number && stuRec.number.length > 0);
 
-            batchPromises.push(PlanContext.createOrUpdateStudentRecords(
-                studentId,
-                'migration',
-                namespace,
-                {},
-                courses
-            ));
+            try {
+                batchPromises.push(PlanContext.createOrUpdateStudentRecords(
+                    studentId,
+                    'migration',
+                    scope,
+                    {},
+                    courses,
+                    this.updatePlans
+                ));
+            } catch (err) {
+                console.log(`Error updating history records for ${studentId}`);
+                this.errorCount += 1;
+            }
         }
 
         const results = await Promise.all(batchPromises);
         for (const result of results) {
             if (result.created) {
-                createdCount += 1;
+                this.createdCount += 1;
             }
             if (result.updated) {
-                updatedCount += 1;
+                this.updatedCount += 1;
             }
         }
 
-        return [createdCount, updatedCount];
+        return;
+    }
+
+    async processRow(input: IRowProcessorInput) {
+        if (input.index === 1) {
+            return { outputs: {} };
+        }
+
+        if (input.name.toUpperCase().startsWith('STUDENTS')) {
+            // load student ID mapping
+            const student = JSON.parse(input.data['JSON_OBJECT']) as IBasicNavianceStudent;
+            if (!this.studentIdMap[student.sisId]) {
+                this.studentIdMap[student.sisId] = [student];
+            } else {
+                this.studentIdMap[student.sisId].push(student);
+            }
+        } else {
+            // process history records
+            const isMigration = input.data['JSON_OBJECT'] !== undefined;
+            const record = StudentHistory.parseHistoryRow(input.data);
+
+            if (!isMigration) {
+                const sisId = record.studentId;
+                const activeStudents = (this.studentIdMap[sisId] || []).filter((student) => student.isActive);
+                const inactiveStudents = (this.studentIdMap[sisId] || []).filter((student) => !student.isActive);
+
+                let foundStudent: IBasicNavianceStudent | null = null;
+                if (activeStudents.length === 1) {
+                    foundStudent =  activeStudents[0];
+
+                } else if (inactiveStudents.length === 1) {
+                    foundStudent = inactiveStudents[0];
+                }
+
+                if (foundStudent) {
+                    record.studentId = foundStudent.id.toString();
+                    record.schoolId = foundStudent.highschoolId;
+                } else {
+                    this.errorCount += 1;
+                    console.log(`Student info not found for ${record.studentId}`);
+
+                    return;
+                }
+
+            }
+
+            if (!this.historyStudentId.length) {
+                this.historyStudentId = record.studentId;
+            }
+            if (this.historyStudentId !== record.studentId && this.historyForStudent.length) {
+                this.historyBatch.push([...this.historyForStudent]);
+                this.historyForStudent = [];
+                this.historyStudentId = record.studentId;
+
+                if (this.historyBatch.length >= this.batchSize) {
+                    await this.processBatch(this.historyBatch);
+                    console.log(`Processed batch of ${this.historyBatch.length} students`);
+                    this.historyBatch = [];
+                }
+            }
+            this.historyForStudent.push(record);
+        }
+    }
+
+    async processLeftovers() {
+        if (this.historyForStudent.length) {
+            this.historyBatch.push([...this.historyForStudent]);
+        }
+        if (this.historyBatch.length) {
+            await this.processBatch(this.historyBatch);
+            console.log(`Processed batch of ${this.historyBatch.length} students`);
+        }
     }
 }
