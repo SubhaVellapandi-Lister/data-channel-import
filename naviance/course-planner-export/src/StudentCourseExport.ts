@@ -35,6 +35,7 @@ interface IExportParameters {
     academicYear?: number;
     highschools?: string[];
     namespace?: string;
+    parallelSchools?: number;
 }
 
 interface IExportMap {
@@ -52,6 +53,8 @@ interface IExportConfig {
     headersToWrite?: string[];
     rowPerPlan?: boolean;
     numCourseCols?: number;
+    rewriteHeaderLabels?: boolean;
+    sisStudentId?: boolean;
 }
 
 interface IProgramTrio {
@@ -236,7 +239,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             return null;
         }
         for (const rec of this.studentsById[studentId]) {
-            if (rec.isActive) {
+            if (rec && rec.isActive) {
                 return rec;
             }
         }
@@ -350,10 +353,12 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                 .map((rec) => rec.creditsUsed)
                 .reduce((credA, credB) => credA + credB, 0);
 
-            columns[`${prefix}_Name`] = (program.annotations.getValue('name') || '').toString();
-            columns[`${prefix}_ID`] = program.guid;
-            columns[`${prefix}_Is_Published`] = booleanToString(program.annotations.getValue('published'));
-            columns[`${prefix}_Is_Num_Requirements_Met`] = statementsMet.toString();
+            const namePrefix = prefix === 'PoS' ? 'Plan_Of_Study' : prefix;
+
+            columns[`${namePrefix}_Name`] = (program.annotations.getValue('name') || '').toString();
+            columns[`${namePrefix}_ID`] = program.guid;
+            columns[`${namePrefix}_Is_Published`] = booleanToString(program.annotations.getValue('published'));
+            columns[`${prefix}_Num_Requirements_Met`] = statementsMet.toString();
             columns[`${prefix}_Num_Requirements_Total`] = statements.length.toString();
             columns[`${prefix}_Required_Credits_Remaining`] = (audit.progress.creditsRemaining || 0).toString();
             columns[`${prefix}_Required_Credits_Total`] = creditsTotal.toString();
@@ -376,7 +381,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
     }
 
     private async auditRowsFromPlanSet(
-        planSet: IPlanSet, headers: string[], namespace: Namespace, hsId: string
+        studentId: string, planSet: IPlanSet, headers: string[], namespace: Namespace, hsId: string
     ): Promise<string[]> {
         if (!planSet.full) {
             return [];
@@ -388,6 +393,9 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         let planStatus = meta['status'] || '';
         let isActive = meta['isActive'] || '';
         for (const ctx of planVersion.contexts) {
+            if (!ctx.product) {
+                continue;
+            }
             if (!planName && ctx.product['name']) {
                 planName = ctx.product['name'];
             }
@@ -407,7 +415,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             Tenant_ID: hsId,
             GUID: planSet.slim.guid,
             Plan_Name: planName,
-            Student_ID:  planSet.slim.studentPrincipleId,
+            Student_ID:  studentId,
             Author_ID:  planSet.slim.authorPrincipleId,
             Created_Date: planSet.slim.created.toISOString(),
             Updated_Date: planVersion.created,
@@ -445,7 +453,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
     }
 
     private async rowsFromSlimPlan(
-        splan: SlimStudentPlan, headers: string[], namespace: Namespace, hsId: string, expandCourses: boolean
+        studentId: string, splan: SlimStudentPlan, headers: string[],
+        namespace: Namespace, hsId: string, expandCourses: boolean
     ): Promise<string[][]> {
         const results: string[][] = [];
 
@@ -482,7 +491,6 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             }
         }
 
-        const studentId = student && student.sisId ? student.sisId : splan.studentPrincipleId;
         const studentHighschool = student && student.highschoolName ? student.highschoolName : '';
 
         const planData = {
@@ -507,6 +515,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         for (const record of filteredCourses) {
             const course = await this.findCourse(namespace, record.number);
             if (!course) {
+                console.log(`could not find course ${record.number} in ${namespace.toString()}`);
                 continue;
             }
 
@@ -594,9 +603,19 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                         resultsByExport[exportName] = [];
                     }
 
+
+                    let studentId = splan.studentPrincipleId;
+                    if (exportConf.sisStudentId) {
+                        const student = this.studentRec(studentId);
+                        if (student && student.sisId) {
+                            studentId = student.sisId;
+                        }
+                    }
+
                     if (exportConf.mode === ExportMode.Course) {
                         const rowsFromPlan = await this.rowsFromSlimPlan(
-                            splan, exportConf.headersToWrite!, namespace, hsId, !exportConf.rowPerPlan);
+                            studentId, splan, exportConf.headersToWrite!, namespace,
+                            hsId, exportConf.rowPerPlan === true);
                         resultsByExport[exportName] = resultsByExport[exportName].concat(rowsFromPlan);
                     }
                     if (exportConf.mode === ExportMode.Audit) {
@@ -605,7 +624,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                             continue;
                         }
                         const rowsFromPlan = await this.auditRowsFromPlanSet(
-                            planSetList[0], exportConf.headersToWrite!, namespace, hsId);
+                           studentId, planSetList[0], exportConf.headersToWrite!, namespace, hsId);
                         if (rowsFromPlan.length) {
                             resultsByExport[exportName].push(rowsFromPlan);
                         }
@@ -690,13 +709,15 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             const config = await RawStorage.findOne({namespace, itemName: parentId});
             if (config && config.json) {
                 const labels = config.json['labels'] || {};
-                if (labels['pathway'] && headersToWrite.includes('Pathway_Name')) {
-                    this.pathwayNameHeader = `${labels['pathway']}_Name`;
-                    headersToWrite[headersToWrite.indexOf('Pathway_Name')] = this.pathwayNameHeader;
-                }
-                if (labels['cluster'] && headersToWrite.includes('Cluster_Name')) {
-                    this.clusterNameHeader = `${labels['cluster']}_Name`;
-                    headersToWrite[headersToWrite.indexOf('Cluster_Name')] = this.clusterNameHeader;
+                if (exportConf.rewriteHeaderLabels) {
+                    if (labels['pathway'] && headersToWrite.includes('Pathway_Name')) {
+                        this.pathwayNameHeader = `${labels['pathway']}_Name`;
+                        headersToWrite[headersToWrite.indexOf('Pathway_Name')] = this.pathwayNameHeader;
+                    }
+                    if (labels['cluster'] && headersToWrite.includes('Cluster_Name')) {
+                        this.clusterNameHeader = `${labels['cluster']}_Name`;
+                        headersToWrite[headersToWrite.indexOf('Cluster_Name')] = this.clusterNameHeader;
+                    }
                 }
 
                 this.configItems = {
@@ -733,7 +754,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         console.log(`district ${schoolId} processing schools ${highschoolsToProcess}`);
 
-        const chunkSize = 6;
+        const chunkSize = params.parallelSchools || 6;
         const chunks = Array.from({ length: Math.ceil(highschoolsToProcess.length / chunkSize) }, (_v, i) =>
             highschoolsToProcess.slice(i * chunkSize, i * chunkSize + chunkSize),
         );
@@ -751,7 +772,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             for (const [hsIdx, exportResults] of results.entries()) {
                 for (const [exportName, rows] of Object.entries(exportResults)) {
                     for (const row of rows) {
-                        this.writeOutputRow(input.outputs['Export'].writeStream, row);
+                        this.writeOutputRow(input.outputs[exportName].writeStream, row);
                     }
                     if (!this.coursesExported[exportName]) {
                         this.coursesExported[exportName] = {};

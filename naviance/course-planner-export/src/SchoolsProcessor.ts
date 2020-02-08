@@ -43,7 +43,7 @@ export class SchoolsProcessor extends BaseProcessor {
         if (input.parameters!['schools']) {
             schools = input.parameters!['schools'];
         } else if (input.parameters!['tenantId']) {
-            schools = input.parameters!['tenantId'];
+            schools = [input.parameters!['tenantId']];
         } else {
             schools = await this.getSchools(input.parameters!['rulesRepoUrl']);
         }

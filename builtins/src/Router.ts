@@ -1,5 +1,6 @@
 import { BaseProcessor, Job } from "@data-channels/dcSDK";
 import HelloWorld from "./processors/HelloWorld";
+import Sort from "./processors/Sort";
 import Translate from "./processors/Translate";
 import Validate from "./processors/Validate";
 
@@ -14,6 +15,10 @@ export default class BuiltInRouter {
         switch (step!.method) {
             case 'translate': {
                 processor = new Translate(job);
+                break;
+            }
+            case 'sort': {
+                processor = new Sort(job);
                 break;
             }
             case 'validate': {

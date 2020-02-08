@@ -18,7 +18,7 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-dev/8349fce7247ffbc65ed187230a880f28
+      CodeUri: s3://data-channels-processor-deployments-dev/8872d1c353703b5ba6646a8d0aa6ed9a
       FunctionName: cf-naviance-dc-ap-export-qa
       Handler: dist/index.exportHandler
       Timeout: 900
