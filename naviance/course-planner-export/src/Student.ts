@@ -14,6 +14,8 @@ export interface INavianceStudent extends IBasicNavianceStudent {
     lastName?: string;
     classYear?: number;
     highschoolName?: string;
+    counselorId?: number;
+    counselorName?: string;
 }
 
 export interface INavianceStudentIDMap {

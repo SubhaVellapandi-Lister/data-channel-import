@@ -1807,12 +1807,11 @@ program
     });
 
 program
-    .command('export.Plans <id> <academicYear>')
-    .option('--by-course')
+    .command('export.Plans <id> <academicYear> [namespaceStr]')
     .option('--bucket <bucket>')
     .option('--key-prefix <keyPrefix>')
     .option('--no-spin')
-    .action(async (id, academicYear, cmd) => {
+    .action(async (id, academicYear, namespaceStr, cmd) => {
         initConnection(program);
 
         const academicYearInt = parseInt(academicYear);
@@ -1821,15 +1820,33 @@ program
             acadStr = `_${academicYear}-${academicYearInt + 1}`;
         }
 
+        const namespace = namespaceStr || id;
+
         const outBucket = cmd.bucket || 'data-channels-work-navprod';
         const keyPrefix = cmd.keyPrefix || 'exports/studentCourses';
-        const fileName = cmd.byCourse ? 'PlanCoursesExportByCourse' : 'PlanCoursesExportByPlan';
+        const byPlanfileName = 'PlanCoursesExportByPlan';
+        const byCourseFileName = 'PlanCoursesExportByCourse';
 
         let tenantType = 'highschool';
         if (id.endsWith('DUS') || planningDistricts.includes(id) || planningSplitDistricts.includes(id)) {
             tenantType = 'district';
         }
-        let customHeaders = [
+        const perPlanCustomHeaders = [
+            "Highschool_Name",
+            "Student_ID",
+            "Class_Year",
+            "First_Name",
+            "Last_Name",
+            "Counselor_ID",
+            "Counselor_Name",
+            "Status",
+            "Plan_Type",
+            "Student_Last_Update_Date",
+            "Plan_Name",
+            "Grade"
+        ];
+
+        const perCourseCustomHeaders = [
             "Highschool_Name",
             "Student_ID",
             "Class_Year",
@@ -1839,25 +1856,32 @@ program
             "Plan_Type",
             "Student_Last_Update_Date",
             "Plan_Name",
-            "Grade"
+            "Grade",
+            "Course_ID",
+            "Course_Name"
         ];
-        if (cmd.byCourse) {
-            customHeaders = customHeaders.concat(["Course_ID", "Course_Name"]);
-        }
 
         const parameters = JSON.stringify({
             all: {
                 tenantType,
                 tenantId: id,
-                schools: [id],
+                namespace,
                 filters: {
                     classYearFrom: academicYearInt + 1,
                     classYearTo: academicYearInt + 6
                 },
                 academicYear: academicYearInt,
-                includeNames: true,
-                rowPerPlan: !cmd.byCourse,
-                customHeaders
+                exports: {
+                    ByPlan: {
+                        mode: "course",
+                        customHeaders: perPlanCustomHeaders,
+                        rowPerPlan: true
+                    },
+                    ByCourse: {
+                        mode: "course",
+                        customHeaders: perCourseCustomHeaders
+                    }
+                }
             }
 
         });
@@ -1866,7 +1890,7 @@ program
             channel: 'naviance/exportStudentCourses',
             product: 'naviance',
             filesOut:
-                `Export=${outBucket}/${keyPrefix}/${fileName}_${id}${acadStr}.csv`,
+                `ByPlan=${outBucket}/${keyPrefix}/${byPlanfileName}_${id}${acadStr}.csv,ByPlan=${outBucket}/${keyPrefix}/${byCourseFileName}_${id}${acadStr}.csv`,
             parameters
         });
         const job = await createjob(JSON.stringify(jobBody), true);

@@ -55,6 +55,7 @@ interface IExportConfig {
     numCourseCols?: number;
     rewriteHeaderLabels?: boolean;
     sisStudentId?: boolean;
+    currentPlansOnly?: boolean;
 }
 
 interface IProgramTrio {
@@ -132,6 +133,8 @@ const courseHeaders = [
     'Student_ID',
     'Last_Name',
     'First_Name',
+    'Counselor_ID',
+    'Counselor_Name',
     'Class_Year',
     'Student_Plan_ID',
     'Student_Last_Update_Date',
@@ -454,7 +457,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
     private async rowsFromSlimPlan(
         studentId: string, splan: SlimStudentPlan, headers: string[],
-        namespace: Namespace, hsId: string, expandCourses: boolean
+        namespace: Namespace, hsId: string, expandCourses: boolean, currentOnly: boolean
     ): Promise<string[][]> {
         const results: string[][] = [];
 
@@ -491,14 +494,20 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             }
         }
 
+        if (currentOnly && studentPlanType === 'draft') {
+            return [];
+        }
+
         const studentHighschool = student && student.highschoolName ? student.highschoolName : '';
 
         const planData = {
             Highschool_ID: hsId,
             Student_ID: studentId,
-            Last_Name: student!.lastName || '',
-            First_Name: student!.firstName || '',
-            Class_Year: student!.classYear!.toString() || '',
+            Last_Name: student ? student.lastName : '',
+            First_Name: student ? student.firstName : '',
+            Class_Year: student ? student.classYear!.toString() : '',
+            Counselor_ID: student ? (student.counselorId || '').toString() : '',
+            Counselor_Name: student ? student.counselorName || '' : '',
             Student_Plan_ID: splan.guid,
             Plan_Name: this.programDisplayName(programs.pos),
             [this.clusterNameHeader]: this.programDisplayName(programs.cluster),
@@ -587,6 +596,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         }
 
         while (page.length) {
+            console.log(`processing page of ${page.length} plans`);
 
             let pageOfPlanSets: IPlanSet[] = [];
             if (needsFullPlans) {
@@ -603,7 +613,6 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                         resultsByExport[exportName] = [];
                     }
 
-
                     let studentId = splan.studentPrincipleId;
                     if (exportConf.sisStudentId) {
                         const student = this.studentRec(studentId);
@@ -614,9 +623,17 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
                     if (exportConf.mode === ExportMode.Course) {
                         const rowsFromPlan = await this.rowsFromSlimPlan(
-                            studentId, splan, exportConf.headersToWrite!, namespace,
-                            hsId, exportConf.rowPerPlan === true);
-                        resultsByExport[exportName] = resultsByExport[exportName].concat(rowsFromPlan);
+                            studentId,
+                            splan,
+                            exportConf.headersToWrite!,
+                            namespace,
+                            hsId,
+                            exportConf.rowPerPlan === true,
+                            exportConf.currentPlansOnly === true
+                        );
+                        resultsByExport[exportName] = resultsByExport[exportName].concat(
+                            rowsFromPlan.filter((row) => row.length > 0)
+                        );
                     }
                     if (exportConf.mode === ExportMode.Audit) {
                         const planSetList = pageOfPlanSets.filter((pset) => pset.slim.guid === splan.guid);
@@ -624,7 +641,12 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                             continue;
                         }
                         const rowsFromPlan = await this.auditRowsFromPlanSet(
-                           studentId, planSetList[0], exportConf.headersToWrite!, namespace, hsId);
+                           studentId,
+                           planSetList[0],
+                           exportConf.headersToWrite!,
+                           namespace,
+                           hsId
+                        );
                         if (rowsFromPlan.length) {
                             resultsByExport[exportName].push(rowsFromPlan);
                         }
