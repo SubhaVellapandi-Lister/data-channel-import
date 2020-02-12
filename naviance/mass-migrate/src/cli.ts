@@ -1875,11 +1875,13 @@ program
                     ByPlan: {
                         mode: "course",
                         customHeaders: perPlanCustomHeaders,
-                        rowPerPlan: true
+                        rowPerPlan: true,
+                        sisStudentId: true
                     },
                     ByCourse: {
                         mode: "course",
-                        customHeaders: perCourseCustomHeaders
+                        customHeaders: perCourseCustomHeaders,
+                        sisStudentId: true
                     }
                 }
             }
