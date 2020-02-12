@@ -1890,7 +1890,7 @@ program
             channel: 'naviance/exportStudentCourses',
             product: 'naviance',
             filesOut:
-                `ByPlan=${outBucket}/${keyPrefix}/${byPlanfileName}_${id}${acadStr}.csv,ByPlan=${outBucket}/${keyPrefix}/${byCourseFileName}_${id}${acadStr}.csv`,
+                `ByPlan=${outBucket}/${keyPrefix}/${byPlanfileName}_${id}${acadStr}.csv,ByCourse=${outBucket}/${keyPrefix}/${byCourseFileName}_${id}${acadStr}.csv`,
             parameters
         });
         const job = await createjob(JSON.stringify(jobBody), true);
