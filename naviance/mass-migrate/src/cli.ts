@@ -1017,6 +1017,7 @@ async function loadHighschoolPlans(
     } else {
         numJobs = totalJobs;
         finalChunksPerJob = chunksPerJob;
+        planCount = -1;
         catalogLog[districtId].student![hsId] = {
             jobs: [],
             numBatches: Math.ceil(totalStudents / 20),
