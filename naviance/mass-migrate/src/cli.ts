@@ -965,7 +965,7 @@ async function loadHighschoolPlans(
         channel: 'naviance/getStudentCoursePlan',
         product: 'naviance',
         parameters:
-            `tenantType=highschool,tenantId=${hsId}`
+            `tenantType=highschool,tenantId=${hsId},chunkSize=50`
     });
     const lookupJob = await createjob(JSON.stringify(lookupBody), true);
     const lookupResult = await waitOnJobExecution(lookupJob, showSpin);

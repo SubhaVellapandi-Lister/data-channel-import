@@ -33,6 +33,7 @@ interface IExportParameters {
     exports: IExportMap;
     tenantId: string;
     academicYear?: number;
+    academicYearOrGreater?: boolean;
     highschools?: string[];
     namespace?: string;
     parallelSchools?: number;
@@ -56,6 +57,8 @@ interface IExportConfig {
     rewriteHeaderLabels?: boolean;
     sisStudentId?: boolean;
     currentPlansOnly?: boolean;
+    academicYear?: number;
+    academicYearOrGreater?: boolean;
 }
 
 interface IProgramTrio {
@@ -160,7 +163,6 @@ export class StudentCourseExportProcessor extends BaseProcessor {
     private programsByName: { [name: string]: Program } = {};
     private schoolNamesById: { [id: string]: string } = {};
     private studentsById: INavianceStudentIDMap = {};
-    private academicYear: number = 0;
     private pathwayNameHeader = 'Pathway_Name';
     private clusterNameHeader = 'Cluster_Name';
     private configItems: { [name: string]: string } = {};
@@ -457,7 +459,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
     private async rowsFromSlimPlan(
         studentId: string, splan: SlimStudentPlan, headers: string[],
-        namespace: Namespace, hsId: string, expandCourses: boolean, currentOnly: boolean
+        namespace: Namespace, hsId: string, expandCourses: boolean, currentOnly: boolean,
+        academicYear: number | undefined, academicYearOrGreater: boolean | undefined
     ): Promise<string[][]> {
         const results: string[][] = [];
 
@@ -473,8 +476,13 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         const filteredCourses = splan.courses!
             .filter((crec) =>
-                !this.academicYear ||
-                this.courseAcademicYear(splan.studentPrincipleId, crec as ICourseRecord) === this.academicYear);
+                !academicYear ||
+                this.courseAcademicYear(splan.studentPrincipleId, crec as ICourseRecord) === academicYear ||
+                (
+                    academicYearOrGreater &&
+                    this.courseAcademicYear(splan.studentPrincipleId, crec as ICourseRecord) > academicYear
+                )
+            );
 
         if (!filteredCourses.length) {
             return [];
@@ -621,6 +629,9 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                         }
                     }
 
+                    const academicYear = params.academicYear || exportConf.academicYear;
+                    const academicYearOrGreater = params.academicYearOrGreater || exportConf.academicYearOrGreater;
+
                     if (exportConf.mode === ExportMode.Course) {
                         const rowsFromPlan = await this.rowsFromSlimPlan(
                             studentId,
@@ -629,7 +640,9 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                             namespace,
                             hsId,
                             exportConf.rowPerPlan === true,
-                            exportConf.currentPlansOnly === true
+                            exportConf.currentPlansOnly === true,
+                            academicYear,
+                            academicYearOrGreater
                         );
                         resultsByExport[exportName] = resultsByExport[exportName].concat(
                             rowsFromPlan.filter((row) => row.length > 0)
@@ -766,9 +779,6 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
     public async after_exportStudentCourses(input: IStepAfterInput): Promise<IStepAfterOutput> {
         const params = input.parameters! as IExportParameters;
-        if (params.academicYear) {
-            this.academicYear = params.academicYear;
-        }
 
         const schoolId = params.tenantId;
         const parentId = params.namespace || schoolId;
