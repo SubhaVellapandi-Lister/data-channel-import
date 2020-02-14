@@ -1703,8 +1703,8 @@ program
     .option('--plan-batch-size <planBatchSize>')
     .option('--no-spin')
     .option('--allow-updates')
-    .option('--total-students')
-    .option('--total-jobs')
+    .option('--total-students <totalStudents>')
+    .option('--total-jobs <totalJobs>')
     .action(async (hsId, dsId, cmd) => {
         initConnection(program);
 
