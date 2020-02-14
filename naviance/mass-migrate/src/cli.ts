@@ -955,60 +955,77 @@ function setStudentPlanJobStatus(districtId: string, hsId: string, guid: string,
 async function loadHighschoolPlans(
     districtId: string, hsId: string, chunksPerJob: number,
     planBatchSize: number, showSpin: boolean, logName: string,
-    allowUpdates: boolean = false
+    allowUpdates: boolean = false, totalJobs?: number, totalStudents?: number
 ) {
     if (!catalogLog[districtId].student) {
         catalogLog[districtId].student = {};
     }
 
-    const lookupBody = jobExecutionBody({
-        channel: 'naviance/getStudentCoursePlan',
-        product: 'naviance',
-        parameters:
-            `tenantType=highschool,tenantId=${hsId},chunkSize=100`
-    });
-    const lookupJob = await createjob(JSON.stringify(lookupBody), true);
-    const lookupResult = await waitOnJobExecution(lookupJob, showSpin);
-    if (lookupResult.status === JobStatus.Failed || lookupResult.status === JobStatus.Started) {
-        console.log(`lookup job failed - ${lookupJob.guid}`);
+    let finalChunksPerJob = 0;
+    let numJobs = 0;
+    let planCount = 0;
 
+    if (!totalJobs || !totalStudents) {
+        const lookupBody = jobExecutionBody({
+            channel: 'naviance/getStudentCoursePlan',
+            product: 'naviance',
+            parameters:
+                `tenantType=highschool,tenantId=${hsId},chunkSize=100`
+        });
+        const lookupJob = await createjob(JSON.stringify(lookupBody), true);
+        const lookupResult = await waitOnJobExecution(lookupJob, showSpin);
+        if (lookupResult.status === JobStatus.Failed || lookupResult.status === JobStatus.Started) {
+            console.log(`lookup job failed - ${lookupJob.guid}`);
+
+            catalogLog[districtId].student![hsId] = {
+                jobs: [],
+                error: true
+            };
+            await saveCatalogLog(logName, districtId);
+
+            return;
+        }
+
+        planCount = lookupResult.steps['getStudentCoursePlan'].output!['historyRecordsFound'] as number;
+        const totalChunks = lookupResult.steps['getStudentCoursePlan'].output!['totalChunks'] as number;
+        console.log(`${totalChunks} total student chunks, ${planCount} plans`);
+        finalChunksPerJob = chunksPerJob;
+        numJobs = Math.ceil(totalChunks / chunksPerJob);
+        if (planCount < 250 && numJobs > 1) {
+            numJobs = 1;
+            finalChunksPerJob = totalChunks;
+        }
+        if (planCount < 500 && numJobs > 2) {
+            numJobs = 2;
+            finalChunksPerJob = Math.ceil(totalChunks / 2);
+        }
+
+        if (planCount && numJobs) {
+            const plansPerJob = planCount / numJobs;
+            if (plansPerJob > 400) {
+                numJobs = Math.ceil(planCount / 400);
+                finalChunksPerJob = Math.ceil(totalChunks / numJobs);
+            }
+        }
         catalogLog[districtId].student![hsId] = {
             jobs: [],
-            error: true
+            numBatches: totalChunks,
+            numJobsNeeded: numJobs,
+            numPlansTotal: planCount,
+            error: false
         };
-        await saveCatalogLog(logName, districtId);
+    } else {
+        numJobs = totalJobs;
+        finalChunksPerJob = chunksPerJob;
+        catalogLog[districtId].student![hsId] = {
+            jobs: [],
+            numBatches: Math.ceil(totalStudents / 20),
+            numJobsNeeded: totalJobs,
+            numPlansTotal: -1,
+            error: false
+        };
 
-        return;
     }
-
-    const planCount = lookupResult.steps['getStudentCoursePlan'].output!['historyRecordsFound'] as number;
-    const totalChunks = lookupResult.steps['getStudentCoursePlan'].output!['totalChunks'] as number;
-    console.log(`${totalChunks} total student chunks, ${planCount} plans`);
-    let finalChunksPerJob = chunksPerJob;
-    let numJobs = Math.ceil(totalChunks / chunksPerJob);
-    if (planCount < 250 && numJobs > 1) {
-        numJobs = 1;
-        finalChunksPerJob = totalChunks;
-    }
-    if (planCount < 500 && numJobs > 2) {
-        numJobs = 2;
-        finalChunksPerJob = Math.ceil(totalChunks / 2);
-    }
-
-    if (planCount && numJobs) {
-        const plansPerJob = planCount / numJobs;
-        if (plansPerJob > 400) {
-            numJobs = Math.ceil(planCount / 400);
-            finalChunksPerJob = Math.ceil(totalChunks / numJobs);
-        }
-    }
-    catalogLog[districtId].student![hsId] = {
-        jobs: [],
-        numBatches: totalChunks,
-        numJobsNeeded: numJobs,
-        numPlansTotal: planCount,
-        error: false
-    };
 
     await saveCatalogLog(logName, districtId);
 
@@ -1032,7 +1049,7 @@ async function loadHighschoolPlans(
         });
         const job = await createjob(JSON.stringify(createBody), true);
         setStudentPlanJobStatus(districtId, hsId, job.guid, {
-            guid: lookupJob.guid
+            guid: job.guid
         });
         await saveCatalogLog(logName, districtId);
         const result = await waitOnJobExecution(job, showSpin);
@@ -1686,6 +1703,8 @@ program
     .option('--plan-batch-size <planBatchSize>')
     .option('--no-spin')
     .option('--allow-updates')
+    .option('--total-students')
+    .option('--total-jobs')
     .action(async (hsId, dsId, cmd) => {
         initConnection(program);
 
@@ -1702,7 +1721,9 @@ program
             parseInt(cmd.planBatchSize) || 30,
             cmd.spin,
             logName,
-            cmd.allowUpdates
+            cmd.allowUpdates,
+            parseInt(cmd.totalJobs) || undefined,
+            parseInt(cmd.totalStudents) || undefined
         );
     });
 
