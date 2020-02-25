@@ -48,7 +48,7 @@ export default class Merge extends BaseProcessor {
 
         const config = input.parameters!['sortConfig'] || {};
 
-        for (const [inputName, rows] of Object.entries(this.dataRowsByInputName)) {
+        /* for (const [inputName, rows] of Object.entries(this.dataRowsByInputName)) {
             const inputConfig = (config[inputName] || []) as ISortColumnConfig[];
             const sorter = (row1: string[], row2: string[]): number => {
                 for (const colConfig of inputConfig) {
@@ -75,7 +75,7 @@ export default class Merge extends BaseProcessor {
             for (const row of rows) {
                 this.writeOutputRow(input.outputs[`${inputName}Sorted`].writeStream, row);
             }
-        }
+        } */
 
         return { results: {} };
     }

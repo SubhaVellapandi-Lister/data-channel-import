@@ -37,6 +37,7 @@ interface IExportParameters {
     highschools?: string[];
     namespace?: string;
     parallelSchools?: number;
+    notGraduated?: boolean;
 }
 
 interface IExportMap {
@@ -169,9 +170,19 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
     private async findProgram(namespace: Namespace, name: string): Promise<Program> {
         if (!this.programsByName[name]) {
-            const fullProg = await Program.findOne({
-                namespace, itemName: name
-            });
+            let fullProg: Program | null;
+            try {
+                fullProg = await Program.findOne({
+                    namespace, itemName: name
+                });
+            } catch (err) {
+                console.log('ERROR GETTING PROGRAM, RETRYING...');
+                sleep(2000);
+                fullProg = await Program.findOne({
+                    namespace, itemName: name
+                });
+            }
+
             this.programsByName[name] = fullProg!;
         }
 
@@ -229,14 +240,19 @@ export class StudentCourseExportProcessor extends BaseProcessor {
     }
 
     private async getFullPlan(slim: SlimStudentPlan): Promise<IPlanSet> {
-        try {
-            const full = await slim.toStudentPlan();
+        let tries = 3;
+        while (tries > 0) {
+            try {
+                const full = await slim.toStudentPlan();
 
-            return { slim, full};
+                return { slim, full};
 
-        } catch (err) {
-            return { slim };
+            } catch (err) {
+                tries -= 1;
+            }
         }
+
+        return { slim };
     }
 
     private studentRec(studentId: string): INavianceStudent | null {
@@ -604,7 +620,23 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         }
 
         while (page.length) {
-            console.log(`processing page of ${page.length} plans`);
+            console.log(`processing page of ${page.length} plans ${hsId}`);
+
+            if (params.notGraduated) {
+                // filter out plans for students that have already graduated
+                let cutoffYear = new Date().getFullYear();
+                if (new Date().getMonth() > 6) {
+                    cutoffYear += 1;
+                }
+                const filteredPage: SlimStudentPlan[] = [];
+                for (const splan of page) {
+                    const student = this.studentRec(splan.studentPrincipleId);
+                    if (student && (!student.classYear || student.classYear! >= cutoffYear)) {
+                        filteredPage.push(splan);
+                    }
+                }
+                page = filteredPage;
+            }
 
             let pageOfPlanSets: IPlanSet[] = [];
             if (needsFullPlans) {

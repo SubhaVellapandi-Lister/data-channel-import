@@ -22,3 +22,9 @@ Resources:
             Action:
               - ssm:GetParameter
             Resource: 'arn:aws:ssm:*:*:parameter/data-channels/hello-*'
+      - Statement:
+        - Sid: SNSPublishPolicy
+          Effect: Allow
+          Action:
+            - SNS:Publish
+          Resource: '*'

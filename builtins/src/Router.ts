@@ -1,5 +1,6 @@
 import { BaseProcessor, Job } from "@data-channels/dcSDK";
 import HelloWorld from "./processors/HelloWorld";
+import SNSProcessor from "./processors/SNS";
 import Sort from "./processors/Sort";
 import Translate from "./processors/Translate";
 import Validate from "./processors/Validate";
@@ -28,6 +29,10 @@ export default class BuiltInRouter {
             case 'hello':
             case 'helloRow': {
                 processor = new HelloWorld(job);
+                break;
+            }
+            case 'sns': {
+                processor = new SNSProcessor(job);
                 break;
             }
             default: {
