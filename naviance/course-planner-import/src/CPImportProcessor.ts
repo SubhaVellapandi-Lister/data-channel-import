@@ -4,6 +4,7 @@ import {
     Course,
     Namespace,
     PlanContext,
+    PlanningEngine,
     Program
 } from "@academic-planner/apSDK";
 import {
@@ -14,7 +15,7 @@ import {
     IStepAfterOutput,
     IStepBeforeInput
 } from "@data-channels/dcSDK";
-import uuidv5 from "uuid/v5";
+import { v5 as uuidv5} from "uuid";
 import { CourseImport } from "./Course";
 import { PoSImport } from "./PoS";
 import { IRecommendationRow, StudentRecommendation } from "./Recommendation";
@@ -419,17 +420,23 @@ export class CPImportProcessor extends BaseProcessor {
     }
 
     public async importHistories(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
-        this.historyHandler!.processRow(input);
+        await this.historyHandler!.processRow(input);
 
         return { outputs: {} };
     }
 
     public async before_importHistories(input: IStepBeforeInput) {
         initServices(input.parameters!);
+        // warm up the JWT, don't want to hit it with thundering herd
+        await PlanningEngine.getInstance().getJwt();
         const scope = input.parameters!['tenantId'] ? `naviance.${input.parameters!['tenantId']}` : '';
         const batchSize = input.parameters!['batchSize'] || 8;
         const updatePlans = input.parameters!['updatePlans'] || false;
-        this.historyHandler = new StudentHistory(scope, batchSize, updatePlans);
+        let namespace = input.parameters!['namespace'];
+        if (!namespace) {
+            namespace = this.job.rawConfig.tenant?.name ?? '0';
+        }
+        this.historyHandler = new StudentHistory(scope, namespace, batchSize, updatePlans);
     }
 
     public async after_importHistories(input: IStepBeforeInput): Promise<IStepAfterOutput> {

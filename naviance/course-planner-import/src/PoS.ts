@@ -7,7 +7,7 @@ import {
     Modifiers,
     TakeStatement
 } from "@academic-planner/apSDK";
-import uuidv5 from "uuid/v5";
+import {v5 as uuidv5} from "uuid";
 
 export class PoSImport {
     private static uuidSeed = 'ec3d4a8c-f8ac-47d3-bb77-abcadea819d9';

@@ -1,13 +1,15 @@
 import { ICourseRecord, IStudentRecordSummary } from "@academic-planner/academic-planner-common";
-import { PlanContext } from "@academic-planner/apSDK";
+import { Course, PlanContext } from "@academic-planner/apSDK";
 import { IRowData, IRowProcessorInput } from "@data-channels/dcSDK";
+import _ from "lodash";
+import { CourseImport } from "./Course";
 import { IBasicNavianceStudent, INavianceStudentIDMap } from "./Student";
 import { getRowVal } from "./Utils";
 
 export interface IHistoryRow {
     studentId: string;
     courseId: string;
-    creditEarned: number;
+    creditEarned?: number | undefined;
     gradeLevel: number;
     gradeAwarded?: string;
     term?: string;
@@ -19,6 +21,12 @@ export interface IHistoryRow {
     schoolId?: string;
 }
 
+export enum HistoryStatus {
+    Completed = 'Completed',
+    Scheduled = 'Scheduled',
+    InProgress = 'In Progress'
+}
+
 export class StudentHistory {
     public createdCount = 0;
     public updatedCount = 0;
@@ -27,19 +35,23 @@ export class StudentHistory {
     private historyStudentId = '';
     private historyForStudent: IHistoryRow[] = [];
     private historyBatch: IHistoryRow[][] = [];
+    private courseById: { [id: string]: Course } = {};
 
-    constructor(private scope: string, private batchSize: number, private updatePlans: boolean) {}
+    constructor(
+        private scope: string, private namespace: string, private batchSize: number, private updatePlans: boolean
+    ) {}
 
     static parseHistoryRow(rowData: IRowData): IHistoryRow {
+        let hist: IHistoryRow;
         if (rowData['JSON_OBJECT']) {
             // migration record
             const rec = JSON.parse(rowData['JSON_OBJECT']);
             const studentId = rec.studentId.toString();
 
-            return  {
+            hist = {
                 studentId,
                 courseId: rec.courseId,
-                creditEarned: rec.creditEarned || 0,
+                creditEarned: rec.creditEarned,
                 gradeLevel: rec.gradeLevel,
                 term: rec.term,
                 gradeAwarded: rec.gradeAwarded || rec.score || undefined,
@@ -53,42 +65,129 @@ export class StudentHistory {
         } else {
             // import record
             const gradeLevelStr = getRowVal(rowData, 'Grade_Level_Taken');
-            const creditEarnedStr = getRowVal(rowData, 'Credits_Earned');
+            const creditEarnedStr: any = getRowVal(rowData, 'Credits_Earned');
             const scoreStr = getRowVal(rowData, 'Score');
 
-            return {
+            hist = {
                 studentId: getRowVal(rowData, 'Student_ID') || '',
                 courseId: getRowVal(rowData, 'Course_ID') || '',
                 gradeLevel: gradeLevelStr ? parseInt(gradeLevelStr) : 0,
                 term: getRowVal(rowData, 'Term'),
                 courseName: getRowVal(rowData, 'Course_Name'),
                 teacherName: getRowVal(rowData, 'Teacher'),
-                creditEarned: creditEarnedStr ? parseFloat(creditEarnedStr) : 0.0,
+                creditEarned: parseFloat(creditEarnedStr) || undefined,
                 gradeAwarded: getRowVal(rowData, 'Letter_Grade'),
                 score: scoreStr ? parseFloat(scoreStr) : undefined,
                 status: getRowVal(rowData, 'Course_Status')
             };
         }
+
+        hist = this.normalizeStatus(hist);
+
+        return hist;
+    }
+
+    async loadCatalogCredits(histories: IHistoryRow[]) {
+        const courseById = this.courseById;
+        const neededIds = _.uniq(
+            histories
+                .filter((hist) => hist.creditEarned === undefined)
+                .map((hist) => hist.courseId)
+                .filter((cId) => !courseById[cId])
+        );
+        if (neededIds.length) {
+            const courses = await CourseImport.getBatchOfCourses(neededIds, this.namespace);
+            for (const course of courses) {
+                const courseId = course.annotations.getValue('id') || course.name;
+                this.courseById[courseId as string] = course;
+            }
+        }
+    }
+
+    static normalizeStatus(hist: IHistoryRow): IHistoryRow {
+        switch (hist.status ? hist.status.toUpperCase().replace(/\s+/g, '') : '') {
+            case 'COMPLETED': {
+                hist.status = HistoryStatus.Completed;
+                break;
+            }
+            case 'INPROGRESS': {
+                hist.status = HistoryStatus.InProgress;
+                break;
+            }
+            case 'SCHEDULED': {
+                hist.status = HistoryStatus.Scheduled;
+            }
+            default: {
+                hist.status = hist.gradeAwarded ? HistoryStatus.Completed : HistoryStatus.InProgress;
+            }
+        }
+
+       return hist;
     }
 
     async processBatch(batch: IHistoryRow[][]) {
         const batchPromises: Promise<IStudentRecordSummary>[] = [];
+
+        // const flatHistories = _.flatten(batch);
+        // await this.loadCatalogCredits(flatHistories);
+
+        console.log(`processing batch of ${batch.length} students in parallel`);
+
         for (const studentCourses of batch) {
             const studentId = studentCourses[0].studentId.toString();
             const highschoolId = studentCourses[0].schoolId;
+
             let scope = this.scope;
             if (!scope && highschoolId) {
                 scope = `naviance.${highschoolId}`;
             }
             if (!scope) {
-                console.log(`could not find scope fpr student ${studentId}`);
+                console.log(`could not find scope for student ${studentId}`);
                 this.errorCount += 1;
                 continue;
             }
-            const courses: ICourseRecord[] = studentCourses.map((rec) => ({
+
+            function histKey(hist: IHistoryRow): string {
+                return `${hist.courseId}_${hist.gradeLevel}_${hist.term}`;
+            }
+
+            const completeByKey: { [key: string]: IHistoryRow } = {};
+            const incompleteByKey: { [key: string]: IHistoryRow } = {};
+
+            for (const stuCourse of studentCourses) {
+                const key = histKey(stuCourse);
+                if (stuCourse.status && stuCourse.status.toUpperCase() === 'COMPLETED') {
+                    completeByKey[key] = stuCourse;
+                } else {
+                    incompleteByKey[key] = stuCourse;
+                }
+            }
+
+            let deDuplicatedCourses = Object.values(completeByKey);
+            deDuplicatedCourses = deDuplicatedCourses
+                .concat(Object.values(incompleteByKey)
+                .filter((hist) => !completeByKey[histKey(hist)]));
+
+            const courseById = this.courseById;
+            function catalogCredits(courseId: string): number {
+                const course = courseById[courseId];
+                if (course) {
+                    return parseFloat(course.annotations.getValue('credits') as string);
+                }
+
+                return 0;
+            }
+
+            deDuplicatedCourses = deDuplicatedCourses.filter((hist) =>
+                hist.status !== HistoryStatus.Completed || (hist.creditEarned && hist.creditEarned >= 0)
+            );
+
+            const courses: ICourseRecord[] = deDuplicatedCourses.map((rec) => ({
                 number: rec.courseId,
                 unique: rec.courseId,
-                credits: rec.creditEarned || 0,
+                credits: rec.creditEarned === undefined && rec.status === HistoryStatus.Completed
+                    ? catalogCredits(rec.courseId)
+                    : rec.creditEarned || 0,
                 gradeLevel: rec.gradeLevel,
                 termId: rec.term,
                 grade: rec.gradeAwarded || undefined,
@@ -99,6 +198,7 @@ export class StudentHistory {
                 courseSubject: rec.courseSubject
             })).filter((stuRec) => stuRec.number && stuRec.number.length > 0);
 
+            console.log(studentId, courses);
             try {
                 batchPromises.push(PlanContext.createOrUpdateStudentRecords(
                     studentId,

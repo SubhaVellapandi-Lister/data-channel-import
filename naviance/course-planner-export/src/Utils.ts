@@ -1,6 +1,7 @@
 import {
     PlanningEngine, RulesRepository
 } from "@academic-planner/apSDK";
+import { IRowData } from "@data-channels/dcSDK";
 
 export function initServices(parameters: object) {
     const config: any = {
@@ -29,3 +30,22 @@ export async function getJWT(): Promise<string> {
 export const sleep = (milliseconds: number) => {
     return new Promise((resolve) => setTimeout(resolve, milliseconds));
 };
+
+export function getRowVal(rowData: IRowData, colName: string) {
+    function fixColName(n: string) {
+        return n.toUpperCase().replace(/_/g, '').replace(/\s/g, '');
+    }
+    const dataColNames = Object.keys(rowData);
+    let val: string | undefined;
+    for (const dataCol of dataColNames) {
+        if (fixColName(dataCol) === fixColName(colName)) {
+            val = rowData[dataCol];
+            break;
+        }
+    }
+    if (val === 'NULL') {
+        return undefined;
+    }
+
+    return val;
+}

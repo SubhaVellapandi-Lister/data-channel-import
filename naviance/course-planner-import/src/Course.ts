@@ -19,7 +19,7 @@ import {
 import { instructionalLevelMap } from "./Contants";
 import { getCombinedSubjectArea, getMigratedSubjectArea, ISubjectAreaLoad, loadExistingSubjectAreas,
     parseSubjectAreaRow, saveSubjectAreas } from "./SubjectAreas";
-import { getRowVal, prereqCourseStatement, prereqCourseStatementFromJson } from "./Utils";
+import { getRowVal, prereqCourseStatement, prereqCourseStatementFromJson, sleep } from "./Utils";
 
 export class CourseImport {
     public static finalCourseId(courseId: string) {
@@ -301,7 +301,13 @@ export class CourseImport {
             }
         });
 
-        return existingPager.all();
+        try {
+            return existingPager.all();
+        } catch (err) {
+            await sleep(1000);
+
+            return existingPager.all();
+        }
     }
 
     public static async processMappingsByBatch(

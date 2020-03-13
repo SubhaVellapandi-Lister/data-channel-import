@@ -10,6 +10,7 @@ Resources:
       FunctionName: data-channels-BuiltInProcessor
       Handler: dist/index.BuiltInHandler
       Timeout: 300
+      MemorySize: 3008
       Runtime: nodejs10.x
       Policies:
       - Statement:

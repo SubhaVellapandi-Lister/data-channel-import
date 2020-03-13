@@ -1,7 +1,9 @@
 import { ICourseRecord, IPlan } from "@academic-planner/academic-planner-common";
 import {
     Course,
+    IFindStudentPlanCriteria,
     Namespace,
+    PlanContext,
     Program,
     ProgramReference,
     RawStorage,
@@ -20,11 +22,6 @@ import {
 import { INavianceStudent, INavianceStudentIDMap, readStudents} from "./Student";
 import { initServices, sleep } from "./Utils";
 
-interface IPlanSet {
-    slim: SlimStudentPlan;
-    full?: StudentPlan;
-}
-
 interface IHsMap {
     [hsId: string]: string[];
 }
@@ -34,9 +31,12 @@ interface IExportParameters {
     tenantId: string;
     academicYear?: number;
     academicYearOrGreater?: boolean;
+    planOfStudyId?: string;
+    planStatus?: string;
     highschools?: string[];
     namespace?: string;
     parallelSchools?: number;
+    pageSize?: number;
     notGraduated?: boolean;
 }
 
@@ -149,6 +149,7 @@ const courseHeaders = [
     'Cluster_Name',
     'Grade',
     'Is_Planned',
+    'Alternate_Course',
     'Course_ID',
     'Course_Name',
     'Course_Subject',
@@ -167,22 +168,38 @@ export class StudentCourseExportProcessor extends BaseProcessor {
     private pathwayNameHeader = 'Pathway_Name';
     private clusterNameHeader = 'Cluster_Name';
     private configItems: { [name: string]: string } = {};
+    private curSchoolProcessCount = 0;
+    private parallelSchools = 8;
+    private pageSize = 100;
 
-    private async findProgram(namespace: Namespace, name: string): Promise<Program> {
-        if (!this.programsByName[name]) {
-            let fullProg: Program | null;
-            try {
-                fullProg = await Program.findOne({
-                    namespace, itemName: name
-                });
-            } catch (err) {
-                console.log('ERROR GETTING PROGRAM, RETRYING...');
-                sleep(2000);
-                fullProg = await Program.findOne({
-                    namespace, itemName: name
+    private async findProgram(namespace: Namespace, scopeAsNamespace: Namespace, name: string): Promise<Program> {
+
+        async function doFind() {
+            let prog = await Program.findOne({
+                namespace, itemName: name
+            });
+            if (!prog) {
+                prog = await Program.findOne({
+                    namespace: scopeAsNamespace, itemName: name
                 });
             }
 
+            return prog;
+        }
+
+        if (this.programsByName[name] === undefined) {
+            let fullProg: Program | null;
+            try {
+                fullProg = await doFind();
+            } catch (err) {
+                console.log('ERROR GETTING PROGRAM, RETRYING...');
+                sleep(2000);
+                fullProg = await doFind();
+            }
+
+            if (!fullProg) {
+                console.log(`Could not find program ${name}`);
+            }
             this.programsByName[name] = fullProg!;
         }
 
@@ -197,17 +214,18 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         return (program.annotations.getValue('name') || '').toString() || program.display;
     }
 
-    private async findProgramsForPlan(namespace: Namespace, refs: ProgramReference[]): Promise<IProgramTrio> {
+    private async findProgramsForPlan(
+        namespace: Namespace, scopeAsNamespace: Namespace, refs: ProgramReference[]
+    ): Promise<IProgramTrio> {
         const trio: IProgramTrio = {};
         for (const progRef of refs) {
-            const program = await this.findProgram(namespace, progRef.name);
+            const program = await this.findProgram(namespace, scopeAsNamespace, progRef.name);
             if (!program) {
-                console.log(`Could not find program ${progRef.name}`);
                 continue;
             }
             const clusterId = program.annotations.getValue('clusterId');
             if (clusterId) {
-                const cluster = await this.findProgram(namespace, clusterId as string);
+                const cluster = await this.findProgram(namespace, scopeAsNamespace, clusterId as string);
                 trio.cluster = cluster;
                 trio.pathway = program;
             } else {
@@ -218,41 +236,39 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         return trio;
     }
 
-    private async findCourse(namespace: Namespace, name: string): Promise<Course | null> {
-        if (!this.courseByName[name]) {
+    private async findCourse(namespace: Namespace, scopeAsNamespace: Namespace, name: string): Promise<Course | null> {
+
+        async function doFind() {
+            let c = await Course.findOne({
+                namespace, itemName: name
+            });
+            if (!c) {
+                c = await Course.findOne({
+                    namespace: scopeAsNamespace, itemName: name
+                });
+            }
+
+            return c;
+        }
+
+        if (this.courseByName[name] === undefined) {
             let course: Course | null;
             try {
-                course = await Course.findOne({
-                    namespace, itemName: name
-                });
+                course = await doFind();
             } catch (err) {
                 console.log('ERROR GETTING COURSE, RETRYING...');
                 sleep(2000);
-                course = await Course.findOne({
-                    namespace, itemName: name
-                });
+                course = await doFind();
+            }
+
+            if (!course) {
+                console.log(`could not find course ${name}}`);
             }
 
             this.courseByName[name] = course;
         }
 
         return this.courseByName[name];
-    }
-
-    private async getFullPlan(slim: SlimStudentPlan): Promise<IPlanSet> {
-        let tries = 3;
-        while (tries > 0) {
-            try {
-                const full = await slim.toStudentPlan();
-
-                return { slim, full};
-
-            } catch (err) {
-                tries -= 1;
-            }
-        }
-
-        return { slim };
     }
 
     private studentRec(studentId: string): INavianceStudent | null {
@@ -284,9 +300,9 @@ export class StudentCourseExportProcessor extends BaseProcessor {
     }
 
     private async auditColumns(
-        plan: StudentPlan, posProgram: Program, clusterProgram?: Program, pathwayProgram?: Program
+        plan: SlimStudentPlan, posProgram: Program, clusterProgram?: Program, pathwayProgram?: Program
     ): Promise<object> {
-        const audit = plan.latestAudit;
+        const audit = plan.audits!;
         const gradedRecIds: string[] = audit.studentRecords
             .filter((srec) => (srec.record as ICourseRecord).grade !== undefined)
             .map((srec) => srec.identifier);
@@ -401,30 +417,29 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         return columns;
     }
 
-    private async auditRowsFromPlanSet(
-        studentId: string, planSet: IPlanSet, headers: string[], namespace: Namespace, hsId: string
+    private async auditRowsFromPlan(
+        studentId: string, plan: SlimStudentPlan, headers: string[],
+        namespace: Namespace, scopeAsNamespace: Namespace, hsId: string
     ): Promise<string[]> {
-        if (!planSet.full) {
-            return [];
-        }
-        const planVersion = planSet.full.latestVersion();
-        const audit = planSet.full.latestAudit;
-        const meta = planSet.full.meta || {};
+        const planVersion = plan.latestVersionSummary!;
+        const audit = plan.audits!;
+        const meta = plan.meta || {};
         let planName =  meta['name'] || '';
         let planStatus = meta['status'] || '';
         let isActive = meta['isActive'] || '';
-        for (const ctx of planVersion.contexts) {
-            if (!ctx.product) {
+        for (const ctx of plan.contexts || []) {
+            const pContext = ctx as PlanContext;
+            if (!pContext.product) {
                 continue;
             }
-            if (!planName && ctx.product['name']) {
-                planName = ctx.product['name'];
+            if (!planName && pContext.product['name']) {
+                planName = pContext.product['name'];
             }
-            if (!planStatus && ctx.product['status']) {
-                planStatus = ctx.product['status'];
+            if (!planStatus && pContext.product['status']) {
+                planStatus = pContext.product['status'];
             }
-            if (isActive === '' && ctx.product['isActive']) {
-                isActive = ctx.product['isActive'].toString();
+            if (isActive === '' && pContext.product['isActive']) {
+                isActive = pContext.product['isActive'].toString();
             }
         }
 
@@ -434,11 +449,11 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         const rowData = {
             Tenant_ID: hsId,
-            GUID: planSet.slim.guid,
+            GUID: plan.guid,
             Plan_Name: planName,
             Student_ID:  studentId,
-            Author_ID:  planSet.slim.authorPrincipleId,
-            Created_Date: planSet.slim.created.toISOString(),
+            Author_ID:  plan.authorPrincipleId,
+            Created_Date: plan.created.toISOString(),
             Updated_Date: planVersion.created,
             Status: planStatus,
             Is_Active: isActive,
@@ -447,11 +462,11 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             Planned_Credits_Used: audit.progress.creditsInPlan.toString(),
             Completed_Credits: "0", // need to tweak once we are storing course histories
             Planned_Credits: plannedCreditTotal.toString(),
-            Planned_Courses: planVersion.courses.map((course) => course.number).join(', '),
+            Planned_Courses: plan.courses!.map((course) => course.number).join(', '),
             Course_History: '' // need to tweak once we are storing course histories
         };
 
-        const programs = await this.findProgramsForPlan(namespace, planSet.slim.programs || []);
+        const programs = await this.findProgramsForPlan(namespace, scopeAsNamespace, plan.programs || []);
 
         if (!programs.pos) {
             return [];
@@ -459,9 +474,9 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         try {
             Object.assign(rowData, await this.auditColumns(
-                planSet.full, programs.pos, programs.cluster, programs.pathway));
+                plan, programs.pos, programs.cluster, programs.pathway));
         } catch (error) {
-            console.log(`Error ${hsId} - ${planSet.slim.guid}`);
+            console.log(`Error ${hsId} - ${plan.guid}`);
             console.log(error);
 
             return [];
@@ -480,6 +495,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
     ): Promise<string[][]> {
         const results: string[][] = [];
 
+        const scopeAsNamespace = new Namespace(`namespace.${hsId}`);
+
         const studentRequired = headers.includes('Last_Name') ||
             headers.includes('First_Name') ||
             headers.includes('Class_Year');
@@ -487,6 +504,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         const student = this.studentRec(splan.studentPrincipleId);
 
         if (!student && studentRequired) {
+            console.log(`student not found ${splan.studentPrincipleId}`);
+
             return [];
         }
 
@@ -501,10 +520,17 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             );
 
         if (!filteredCourses.length) {
+            console.log(`no filtered courses, ${splan.guid} ${academicYear}`);
+            console.log(splan.courses!.map((crec) => [
+                crec.number, crec.gradeLevel, this.courseAcademicYear(splan.studentPrincipleId, crec as ICourseRecord)]
+            ));
+
             return [];
         }
 
-        const programs = await this.findProgramsForPlan(namespace, splan.programs || []);
+        const programs = await this.findProgramsForPlan(
+            namespace, scopeAsNamespace, splan.programs || []
+        );
         let studentPlanStatus = '';
         if (splan.meta) {
             studentPlanStatus = (splan.meta['status'] as string) || '';
@@ -546,9 +572,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         const courseRowData: object[] = [];
 
         for (const record of filteredCourses) {
-            const course = await this.findCourse(namespace, record.number);
+            const course = await this.findCourse(namespace, scopeAsNamespace, record.number);
             if (!course) {
-                console.log(`could not find course ${record.number} in ${namespace.toString()}`);
                 continue;
             }
 
@@ -564,6 +589,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                 Course_Name: course.display,
                 Course_Subject: subName,
                 Course_Active: booleanToString(active),
+                Alternate_Course: booleanToString(false),
                 SCED_Code: sced,
                 CSSC_Code: cssc,
                 Instructional_Level: instLevel,
@@ -600,16 +626,50 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         dsId: string, hsId: string, params: IExportParameters
     ): Promise<{ [name: string]: string[][] }> {
 
+        const scopeAsNamespace = new Namespace(`naviance.${hsId}`);
+        const startSleepSeconds = new Date().getTime() / 1000;
+        while (this.curSchoolProcessCount >= this.parallelSchools) {
+            await sleep(1000);
+
+            const waitSeconds = (new Date().getTime() / 1000) - startSleepSeconds;
+            if (waitSeconds > 600) {
+                // fire sale, gotta try to finish before time runs out
+                break;
+            }
+        }
+        this.curSchoolProcessCount += 1;
+
         console.log(`processing school ${hsId}`);
         const namespace = new Namespace(dsId);
         const resultsByExport: { [name: string]: string[][] } = {};
-        let needsFullPlans = false;
+
+        let expand = 'courses,programs,contexts';
         for (const exportConf of Object.values(params.exports)) {
             if (exportConf.mode === ExportMode.Audit) {
-                needsFullPlans = true;
+                expand = 'courses,programs,audits,contexts';
             }
         }
-        const pager = StudentPlan.find(`naviance.${hsId}`, { expand: 'courses,meta,programs' });
+
+        const findCriteria: IFindStudentPlanCriteria = {};
+
+        if (params.planOfStudyId) {
+            const programs = await Program.find(namespace).all();
+            for (const prog of programs) {
+                if (prog.guid === params.planOfStudyId) {
+                    findCriteria.program = { name: prog.name };
+                }
+            }
+            if (!findCriteria.program) {
+                console.log('program not found', params.planOfStudyId);
+            }
+        }
+        if (params.planStatus) {
+            findCriteria.meta = {
+                status: params.planStatus
+            };
+        }
+
+        const pager = StudentPlan.find(`naviance.${hsId}`, { expand, pageSize: this.pageSize, findCriteria });
         let page: SlimStudentPlan[];
         try {
             page = await pager.page(1);
@@ -636,15 +696,6 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                     }
                 }
                 page = filteredPage;
-            }
-
-            let pageOfPlanSets: IPlanSet[] = [];
-            if (needsFullPlans) {
-                const planGetPromises: Promise<IPlanSet>[] = [];
-                for (const slim of page) {
-                    planGetPromises.push(this.getFullPlan(slim));
-                }
-                pageOfPlanSets = await Promise.all(planGetPromises);
             }
 
             for (const splan of page) {
@@ -681,15 +732,12 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                         );
                     }
                     if (exportConf.mode === ExportMode.Audit) {
-                        const planSetList = pageOfPlanSets.filter((pset) => pset.slim.guid === splan.guid);
-                        if (!planSetList.length) {
-                            continue;
-                        }
-                        const rowsFromPlan = await this.auditRowsFromPlanSet(
+                        const rowsFromPlan = await this.auditRowsFromPlan(
                            studentId,
-                           planSetList[0],
+                           splan,
                            exportConf.headersToWrite!,
                            namespace,
+                           scopeAsNamespace,
                            hsId
                         );
                         if (rowsFromPlan.length) {
@@ -709,6 +757,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         }
 
         console.log(`finished school ${hsId}`);
+
+        this.curSchoolProcessCount -= 1;
 
         return resultsByExport;
     }
@@ -818,31 +868,38 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         console.log(`district ${schoolId} processing schools ${highschoolsToProcess}`);
 
-        const chunkSize = params.parallelSchools || 6;
+        this.parallelSchools = params.parallelSchools || 8;
+        this.pageSize = params.pageSize || 100;
+
+        this.writeHeaders(parentId, params, input.outputs);
+
+        /*const chunkSize = params.parallelSchools || 8;
         const chunks = Array.from({ length: Math.ceil(highschoolsToProcess.length / chunkSize) }, (_v, i) =>
             highschoolsToProcess.slice(i * chunkSize, i * chunkSize + chunkSize),
         );
-
-        this.writeHeaders(parentId, params, input.outputs);
 
         for (const [idx, chunk] of chunks.entries()) {
             console.log(`processing chunk ${idx + 1} of ${chunks.length}`);
             const promises: Promise<{ [name: string]: string[][] }>[] = [];
             for (const hsId of chunk) {
                 promises.push(this.processHighschool(parentId, hsId, params));
-            }
+            }*/
 
-            const results = await Promise.all(promises);
-            for (const [hsIdx, exportResults] of results.entries()) {
-                for (const [exportName, rows] of Object.entries(exportResults)) {
-                    for (const row of rows) {
-                        this.writeOutputRow(input.outputs[exportName].writeStream, row);
-                    }
-                    if (!this.coursesExported[exportName]) {
-                        this.coursesExported[exportName] = {};
-                    }
-                    this.coursesExported[exportName][chunk[hsIdx]] = rows.length;
+        const promises: Promise<{ [name: string]: string[][] }>[] = [];
+        for (const hsId of highschoolsToProcess) {
+            promises.push(this.processHighschool(parentId, hsId, params));
+        }
+
+        const results = await Promise.all(promises);
+        for (const [hsIdx, exportResults] of results.entries()) {
+            for (const [exportName, rows] of Object.entries(exportResults)) {
+                for (const row of rows) {
+                    this.writeOutputRow(input.outputs[exportName].writeStream, row);
                 }
+                if (!this.coursesExported[exportName]) {
+                    this.coursesExported[exportName] = {};
+                }
+                this.coursesExported[exportName][highschoolsToProcess[hsIdx]] = rows.length;
             }
         }
 
