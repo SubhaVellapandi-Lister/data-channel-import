@@ -432,11 +432,12 @@ export class CPImportProcessor extends BaseProcessor {
         const scope = input.parameters!['tenantId'] ? `naviance.${input.parameters!['tenantId']}` : '';
         const batchSize = input.parameters!['batchSize'] || 8;
         const updatePlans = input.parameters!['updatePlans'] || false;
+        const attachContextsIfNeeded = input.parameters!['attachContextsIfNeeded'] || false;
         let namespace = input.parameters!['namespace'];
         if (!namespace) {
             namespace = this.job.rawConfig.tenant?.name ?? '0';
         }
-        this.historyHandler = new StudentHistory(scope, namespace, batchSize, updatePlans);
+        this.historyHandler = new StudentHistory(scope, namespace, batchSize, updatePlans, attachContextsIfNeeded);
     }
 
     public async after_importHistories(input: IStepBeforeInput): Promise<IStepAfterOutput> {

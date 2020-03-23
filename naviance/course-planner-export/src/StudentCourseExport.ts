@@ -1,6 +1,8 @@
 import { ICourseRecord, IPlan } from "@academic-planner/academic-planner-common";
 import {
     Course,
+    FindPlansWithStudentNamePager,
+    FindStudentPlanPager,
     IFindStudentPlanCriteria,
     Namespace,
     PlanContext,
@@ -296,7 +298,9 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             return 0;
         }
 
-        return student.classYear - (13 - (course.gradeLevel! as number));
+        const gradeLevel = (course.gradeLevel as number) || course.numericGrade || 0;
+
+        return student.classYear - (13 - gradeLevel);
     }
 
     private async auditColumns(
@@ -520,7 +524,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             );
 
         if (!filteredCourses.length) {
-            console.log(`no filtered courses, ${splan.guid} ${academicYear}`);
+            console.log(`no filtered courses, ${splan.guid} ${academicYear}, ${splan.courses}`);
             console.log(splan.courses!.map((crec) => [
                 crec.number, crec.gradeLevel, this.courseAcademicYear(splan.studentPrincipleId, crec as ICourseRecord)]
             ));
@@ -584,7 +588,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             const courseYear = this.courseAcademicYear(splan.studentPrincipleId, record as ICourseRecord);
 
             courseRowData.push({
-                Grade: (record.gradeLevel || '').toString(),
+                Grade: (record.gradeLevel || record.numericGrade || '').toString(),
                 Course_ID: record.number,
                 Course_Name: course.display,
                 Course_Subject: subName,
@@ -669,19 +673,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             };
         }
 
-        const pager = StudentPlan.find(`naviance.${hsId}`, { expand, pageSize: this.pageSize, findCriteria });
-        let page: SlimStudentPlan[];
-        try {
-            page = await pager.page(1);
-        } catch (err) {
-            console.log('ERROR GETTING FIRST PAGE OF PLANS, RETRYING...');
-            sleep(2000);
-            page = await pager.page(1);
-        }
-
-        while (page.length) {
-            console.log(`processing page of ${page.length} plans ${hsId}`);
-
+        const processPageOfPlans = async (page: SlimStudentPlan[]) => {
             if (params.notGraduated) {
                 // filter out plans for students that have already graduated
                 let cutoffYear = new Date().getFullYear();
@@ -696,6 +688,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                     }
                 }
                 page = filteredPage;
+                console.log(`filtering plan page to ${filteredPage.length}`);
             }
 
             for (const splan of page) {
@@ -747,13 +740,60 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                 }
             }
 
+            return resultsByExport;
+        };
+
+        const processPager = async (pager: FindStudentPlanPager | FindPlansWithStudentNamePager) => {
+            let page: SlimStudentPlan[];
             try {
-                page = await pager.next();
-            } catch {
-                console.log('ERROR GETTING NEXT PAGE OF PLANS, RETRYING...');
+                page = await pager.page(1);
+            } catch (err) {
+                console.log('ERROR GETTING FIRST PAGE OF PLANS, RETRYING...');
                 sleep(2000);
-                page = await pager.next();
+                page = await pager.page(1);
             }
+
+            while (page.length) {
+                console.log(`processing page of ${page.length} plans ${hsId}`);
+                await processPageOfPlans(page);
+                try {
+                    page = await pager.next();
+                } catch {
+                    console.log('ERROR GETTING NEXT PAGE OF PLANS, RETRYING...');
+                    sleep(2000);
+                    page = await pager.next();
+                }
+            }
+        };
+
+        const numStudents = Object.keys(this.studentsById).length;
+        const allPlansPager = StudentPlan.find(`naviance.${hsId}`, { expand, pageSize: this.pageSize, findCriteria });
+        const numPlans = await allPlansPager.total();
+
+        if (numStudents < numPlans) {
+            // search for plans by student ID in chunks
+            const studentIds = Object.keys(this.studentsById);
+            const chunkSize = 100;
+            const idChunks =  Array.from({ length: Math.ceil(studentIds.length / chunkSize) }, (_v, i) =>
+                studentIds.slice(i * chunkSize, i * chunkSize + chunkSize),
+            );
+
+            for (const [idx, chunk] of idChunks.entries()) {
+                console.log(`processing student ID chunk ${idx + 1} of ${idChunks.length}`);
+
+                const pager = StudentPlan.find(
+                    `naviance.${hsId}`,
+                    {
+                        expand,
+                        pageSize: this.pageSize,
+                        findCriteria: Object.assign({ studentPrincipleId: chunk }, findCriteria)
+                    }
+                );
+                await processPager(pager);
+            }
+        } else {
+            // search for all plans
+            await processPager(allPlansPager);
         }
 
         console.log(`finished school ${hsId}`);

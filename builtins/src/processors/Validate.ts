@@ -2,6 +2,7 @@ import {
     BaseProcessor,
     IRowProcessorInput,
     IRowProcessorOutput,
+    IStepAfterInput,
     RowOutputValue
 } from "@data-channels/dcSDK";
 
@@ -37,10 +38,13 @@ export interface IValidateConfig {
     validInfoColumnName?: string; // log informational message column name
     includeDataInLog?: boolean; // let log include all the data columns in addition to the log columns
     includeLogInData?: boolean; // instead of separate log file, put log columns in the data file
+    logHeaders?: string[];
     extraLogFile?: string;
 }
 
 export default class Validate extends BaseProcessor {
+    private logFileHeaders: string[] = [];
+    private dataFileHeaders: string[] = [];
 
     public async validate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
         const config = input.parameters!['validateConfig'] as IValidateConfig;
@@ -57,25 +61,33 @@ export default class Validate extends BaseProcessor {
             logNames.push(config.extraLogFile);
         }
 
-        let dataFileHeaders: string[] = [];
-        let logFileHeaders: string[] = [];
-
         if (input.index === 1) {
-            dataFileHeaders = [...input.raw];
+            this.dataFileHeaders = [...input.raw];
             if (config.includeLogInData) {
-                dataFileHeaders = [...dataFileHeaders, statusName, infoName];
+                this.dataFileHeaders = [...this.dataFileHeaders, statusName, infoName];
+            } else if (config.logHeaders) {
+                this.logFileHeaders = config.logHeaders;
+                if (!this.logFileHeaders.includes('Row')) {
+                    this.logFileHeaders = ['Row', ...this.logFileHeaders];
+                }
+                if (!this.logFileHeaders.includes(statusName)) {
+                    this.logFileHeaders.push(statusName);
+                }
+                if (!this.logFileHeaders.includes(infoName)) {
+                    this.logFileHeaders.push(infoName);
+                }
             } else if (config.includeDataInLog) {
-                logFileHeaders = ['Row', ...dataFileHeaders, statusName, infoName];
+                this.logFileHeaders = ['Row', ...this.dataFileHeaders, statusName, infoName];
             } else {
-                logFileHeaders = ['Row', dataFileHeaders[0], statusName, infoName];
+                this.logFileHeaders = ['Row', this.dataFileHeaders[0], statusName, infoName];
             }
 
             const headerOutputs: { [name: string]: RowOutputValue } = {
-                [dataOutputName]: dataFileHeaders
+                [dataOutputName]: this.dataFileHeaders
             };
 
             for (const logOutputName of logNames) {
-                headerOutputs[logOutputName] = logFileHeaders;
+                headerOutputs[logOutputName] = this.logFileHeaders;
             }
 
             return {
@@ -158,11 +170,22 @@ export default class Validate extends BaseProcessor {
             outputs[dataOutputName] = dataOutputRow;
         }
 
+        const logDataByHeader = {
+            Row: input.index.toString(),
+            [statusName]: validationStatus,
+            [infoName]: validationErrors.join('; ')
+        };
+
+        for (const [idx, val] of input.raw.entries()) {
+            logDataByHeader[this.dataFileHeaders[idx]] = val;
+        }
+
+        const logOutputRow: string[] = [];
+        for (const logHeaderVal of this.logFileHeaders) {
+            logOutputRow.push(logDataByHeader[logHeaderVal] || '');
+        }
+
         for (const logOutputName of logNames) {
-            let logOutputRow = [input.index.toString(), input.raw[0], validationStatus, validationErrors.join('; ')];
-            if (config.includeDataInLog) {
-                logOutputRow = [input.index.toString(), ...input.raw, validationStatus, validationErrors.join('; ')];
-            }
             outputs[logOutputName] = logOutputRow;
         }
 

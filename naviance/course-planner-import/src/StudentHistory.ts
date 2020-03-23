@@ -38,7 +38,8 @@ export class StudentHistory {
     private courseById: { [id: string]: Course } = {};
 
     constructor(
-        private scope: string, private namespace: string, private batchSize: number, private updatePlans: boolean
+        private scope: string, private namespace: string, private batchSize: number,
+        private updatePlans: boolean, private attachContextsIfNeeded: boolean
     ) {}
 
     static parseHistoryRow(rowData: IRowData): IHistoryRow {
@@ -178,9 +179,9 @@ export class StudentHistory {
                 return 0;
             }
 
-            deDuplicatedCourses = deDuplicatedCourses.filter((hist) =>
+            /*deDuplicatedCourses = deDuplicatedCourses.filter((hist) =>
                 hist.status !== HistoryStatus.Completed || (hist.creditEarned && hist.creditEarned >= 0)
-            );
+            );*/
 
             const courses: ICourseRecord[] = deDuplicatedCourses.map((rec) => ({
                 number: rec.courseId,
@@ -206,7 +207,8 @@ export class StudentHistory {
                     scope,
                     {},
                     courses,
-                    this.updatePlans
+                    this.updatePlans,
+                    this.attachContextsIfNeeded
                 ));
             } catch (err) {
                 console.log(`Error updating history records for ${studentId}`);
