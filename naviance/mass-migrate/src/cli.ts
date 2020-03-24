@@ -1890,7 +1890,7 @@ program
                 namespace,
                 filters: {
                     classYearFrom: academicYearInt + 1,
-                    classYearTo: academicYearInt + 6
+                    classYearTo: academicYearInt + 10
                 },
                 academicYear: academicYearInt,
                 exports: {
