@@ -14,7 +14,9 @@ export interface ITranslateConfig {
     [columnfromName: string]: string; // original name -> new name
   };
 
-  indexMappings?: string[]; // maps indexes to column names
+  indexMappings?: {
+    [index: number]: string; // original index -> new name
+  };
 
   valueMappings?: {
     [columnName: string]: IValueMapping[]; // one or more value mappings for the given column
@@ -48,7 +50,7 @@ export default class Translate extends BaseProcessor {
     if (input.index === 1) {
       this.originalHeaders = input.raw;
       this.newHeaders = this.originalHeaders.map((h, i) =>
-        this.mappedHeader(config, h, i)
+        this.mappedHeader(config, h, i + 1)
       );
 
       return {
