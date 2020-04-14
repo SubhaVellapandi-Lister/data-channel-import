@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import {ConfigType, IJobConfig, Job, JobStatus, s3Readable, s3Writeable, ServiceInterfacer} from "@data-channels/dcSDK";
+import {ConfigType, IJobConfig, IngressConfig, Job, JobStatus, s3Readable, s3Writeable, ServiceInterfacer} from "@data-channels/dcSDK";
 import Table from 'cli-table3';
 import program from 'commander';
 import { chmod, readFileSync, writeFileSync } from "fs";

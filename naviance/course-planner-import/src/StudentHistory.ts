@@ -199,7 +199,6 @@ export class StudentHistory {
                 courseSubject: rec.courseSubject
             })).filter((stuRec) => stuRec.number && stuRec.number.length > 0);
 
-            console.log(studentId, courses);
             try {
                 batchPromises.push(PlanContext.createOrUpdateStudentRecords(
                     studentId,

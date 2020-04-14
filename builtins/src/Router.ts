@@ -40,6 +40,6 @@ export default class BuiltInRouter {
             }
         }
 
-        await processor!.handle(context.awsRequestId , event.TaskToken);
+        await processor!.handle(context.awsRequestId , event);
     }
 }
