@@ -10,7 +10,7 @@ Resources:
       Handler: dist/index.BuiltInHandler
       Timeout: 300
       MemorySize: 3008
-      Runtime: nodejs10.x
+      Runtime: nodejs12.x
       Policies:
       - Statement:
           Action: lambda:InvokeFunction

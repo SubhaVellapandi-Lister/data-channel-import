@@ -17,7 +17,7 @@ Resources:
               Effect: Allow
               Resource: arn:aws:ssm:*:*:parameter/data-channels/hello-*
               Sid: SSMGetParameterPolicy
-      Runtime: nodejs10.x
+      Runtime: nodejs12.x
       Timeout: 300
     Type: AWS::Serverless::Function
 Transform: AWS::Serverless-2016-10-31
