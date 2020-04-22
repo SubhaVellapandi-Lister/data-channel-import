@@ -17,7 +17,10 @@ export default class SNSProcessor extends BaseProcessor {
         const sns = new AWS.SNS();
 
         const subject = `Data Channels Job - ${this.job.guid} Finished`;
-        const message = `${JSON.stringify(this.job.steps, undefined, 2)}`;
+        const message = JSON.stringify({
+            guid: this.job.guid,
+            channel: this.job.channelReference,
+            steps: this.job.steps }, undefined, 2);
 
         const snsParams = {
             Message: message,

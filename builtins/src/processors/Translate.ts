@@ -53,6 +53,10 @@ export default class Translate extends BaseProcessor {
         this.mappedHeader(config, h, i + 1)
       );
 
+      console.log(config);
+
+      console.log('new headers', this.newHeaders);
+
       return {
         index: input.index,
         outputs: {

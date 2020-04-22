@@ -1,4 +1,5 @@
 import { BaseProcessor, Job } from "@data-channels/dcSDK";
+import Echo from "./processors/Echo";
 import HelloWorld from "./processors/HelloWorld";
 import SNSProcessor from "./processors/SNS";
 import Sort from "./processors/Sort";
@@ -33,6 +34,10 @@ export default class BuiltInRouter {
             }
             case 'sns': {
                 processor = new SNSProcessor(job);
+                break;
+            }
+            case 'echo': {
+                processor = new Echo(job);
                 break;
             }
             default: {
