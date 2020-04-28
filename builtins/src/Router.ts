@@ -3,6 +3,7 @@ import Echo from "./processors/Echo";
 import HelloWorld from "./processors/HelloWorld";
 import SNSProcessor from "./processors/SNS";
 import Sort from "./processors/Sort";
+import ThrowError from "./processors/ThrowError";
 import Translate from "./processors/Translate";
 import Validate from "./processors/Validate";
 
@@ -38,6 +39,10 @@ export default class BuiltInRouter {
             }
             case 'echo': {
                 processor = new Echo(job);
+                break;
+            }
+            case 'throwError': {
+                processor = new ThrowError(job);
                 break;
             }
             default: {

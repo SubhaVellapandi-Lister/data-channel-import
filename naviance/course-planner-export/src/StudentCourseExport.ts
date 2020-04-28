@@ -195,7 +195,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                 fullProg = await doFind();
             } catch (err) {
                 console.log('ERROR GETTING PROGRAM, RETRYING...');
-                sleep(2000);
+                await sleep(2000);
                 fullProg = await doFind();
             }
 
@@ -259,7 +259,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                 course = await doFind();
             } catch (err) {
                 console.log('ERROR GETTING COURSE, RETRYING...');
-                sleep(2000);
+                await sleep(2000);
                 course = await doFind();
             }
 
@@ -911,7 +911,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         this.parallelSchools = params.parallelSchools || 8;
         this.pageSize = params.pageSize || 100;
 
-        this.writeHeaders(parentId, params, input.outputs);
+        await this.writeHeaders(parentId, params, input.outputs);
 
         /*const chunkSize = params.parallelSchools || 8;
         const chunks = Array.from({ length: Math.ceil(highschoolsToProcess.length / chunkSize) }, (_v, i) =>
