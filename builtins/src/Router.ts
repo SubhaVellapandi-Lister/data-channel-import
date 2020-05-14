@@ -1,4 +1,5 @@
 import { BaseProcessor, Job } from "@data-channels/dcSDK";
+import Diff from "./processors/Diff";
 import Echo from "./processors/Echo";
 import GroupBy from "./processors/GroupBy";
 import HelloWorld from "./processors/HelloWorld";
@@ -18,46 +19,42 @@ export default class BuiltInRouter {
         console.log(`Job ${job.guid} - running ${step!.method}`);
         let processor: BaseProcessor;
         switch (step!.method) {
-            case 'translate': {
+            case 'translate':
                 processor = new Translate(job);
                 break;
-            }
-            case 'sort': {
+            case 'sort':
                 processor = new Sort(job);
                 break;
-            }
-            case 'validate': {
+            case 'validate':
                 processor = new Validate(job);
                 break;
-            }
             case 'hello':
-            case 'helloRow': {
+            case 'helloRow':
                 processor = new HelloWorld(job);
                 break;
-            }
-            case 'sns': {
+            case 'sns':
                 processor = new SNSProcessor(job);
                 break;
-            }
-            case 'emailJobInfo': {
+            case 'emailJobInfo':
                 processor = new SESPRocessor(job);
                 break;
-            }
-            case 'echo': {
+            case 'echo':
                 processor = new Echo(job);
                 break;
-            }
-            case 'throwError': {
+            case 'throwError':
                 processor = new ThrowError(job);
                 break;
-            }
-            case 'groupby': {
+            case 'diff':
+                processor = new Diff(job);
+                break;
+            case 'throwError':
+                processor = new ThrowError(job);
+                break;
+            case 'groupby':
                 processor = new GroupBy(job);
                 break;
-            }
-            default: {
+            default:
                 throw new Error(`Built-in method ${step!.method} not found`);
-            }
         }
 
         await processor!.handle(context.awsRequestId , event);
