@@ -136,6 +136,8 @@ const auditHeaders = [
 const courseHeaders = [
     'Highschool_ID',
     'Highschool_Name',
+    'Selected_Highschool_ID',
+    'Selected_Highschool_Name',
     'Student_ID',
     'Last_Name',
     'First_Name',
@@ -536,8 +538,10 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             namespace, scopeAsNamespace, splan.programs || []
         );
         let studentPlanStatus = '';
+        let selectedHighschoolId = hsId;
         if (splan.meta) {
             studentPlanStatus = (splan.meta['status'] as string) || '';
+            selectedHighschoolId = (splan.meta['schoolId'] as string) || selectedHighschoolId;
         }
         let studentPlanType = 'draft';
         let updateDate = new Date(splan.created);
@@ -553,9 +557,11 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         }
 
         const studentHighschool = student && student.highschoolName ? student.highschoolName : '';
+        const selectedHighschool = this.schoolNamesById[selectedHighschoolId] || studentHighschool;
 
         const planData = {
             Highschool_ID: hsId,
+            Selected_Highschool_ID: selectedHighschoolId,
             Student_ID: studentId,
             Last_Name: student ? student.lastName : '',
             First_Name: student ? student.firstName : '',
@@ -569,6 +575,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             Status: studentPlanStatus,
             Plan_Type: studentPlanType,
             Highschool_Name: this.schoolNamesById[hsId] || studentHighschool,
+            Selected_Highschool_Name: selectedHighschool,
             Student_Last_Update_Date: updateDate.toISOString(),
             Grade: (filteredCourses[0].gradeLevel || '').toString()
         };
@@ -749,7 +756,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                 page = await pager.page(1);
             } catch (err) {
                 console.log('ERROR GETTING FIRST PAGE OF PLANS, RETRYING...');
-                sleep(2000);
+                await sleep(2000);
                 page = await pager.page(1);
             }
 
@@ -760,7 +767,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                     page = await pager.next();
                 } catch {
                     console.log('ERROR GETTING NEXT PAGE OF PLANS, RETRYING...');
-                    sleep(2000);
+                    await sleep(2000);
                     page = await pager.next();
                 }
             }

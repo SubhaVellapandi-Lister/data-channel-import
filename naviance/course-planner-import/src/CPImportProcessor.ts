@@ -441,6 +441,7 @@ export class CPImportProcessor extends BaseProcessor {
     }
 
     public async after_importHistories(input: IStepBeforeInput): Promise<IStepAfterOutput> {
+        console.log('finishing up import histories call');
         await this.historyHandler!.processLeftovers();
 
         return { results: {

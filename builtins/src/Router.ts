@@ -1,6 +1,8 @@
 import { BaseProcessor, Job } from "@data-channels/dcSDK";
 import Echo from "./processors/Echo";
+import GroupBy from "./processors/GroupBy";
 import HelloWorld from "./processors/HelloWorld";
+import SESPRocessor from "./processors/SES";
 import SNSProcessor from "./processors/SNS";
 import Sort from "./processors/Sort";
 import ThrowError from "./processors/ThrowError";
@@ -37,12 +39,20 @@ export default class BuiltInRouter {
                 processor = new SNSProcessor(job);
                 break;
             }
+            case 'emailJobInfo': {
+                processor = new SESPRocessor(job);
+                break;
+            }
             case 'echo': {
                 processor = new Echo(job);
                 break;
             }
             case 'throwError': {
                 processor = new ThrowError(job);
+                break;
+            }
+            case 'groupby': {
+                processor = new GroupBy(job);
                 break;
             }
             default: {

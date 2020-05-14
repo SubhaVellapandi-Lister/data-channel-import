@@ -25,7 +25,7 @@ export default class Echo extends BaseProcessor {
 
         return {
             outputs: {
-                echoOut: input.raw
+                [`${input.name}Echo`]: input.raw
             }
         };
     }

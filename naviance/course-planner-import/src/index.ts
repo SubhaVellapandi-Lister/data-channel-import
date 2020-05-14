@@ -10,7 +10,7 @@ export async function lambdaHandler(event: IDataChannelsEvent, context: any): Pr
   const job = Job.fromConfig(event.Job);
   await job.init();
   const processor = new CPImportProcessor(job);
-  await processor.handle(context.awsRequestId, event.TaskToken);
+  await processor.handle(context.awsRequestId, event);
   console.log('job status', `${job.status} ${job.statusMessage}`);
 
   const response = {

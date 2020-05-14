@@ -29,3 +29,10 @@ Resources:
           Action:
             - SNS:Publish
           Resource: '*'
+      - Statement:
+        - Sid: SESSendPolicy
+          Effect: Allow
+          Action:
+            - SES:SendEmail
+            - SES:SendRawEmail
+          Resource: '*'
