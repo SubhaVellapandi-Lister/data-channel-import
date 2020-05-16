@@ -13,7 +13,7 @@ export interface ISESParams {
 export default class SESProcessor extends BaseProcessor {
     public async emailJobInfo(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
 
-        const config = input.parameters as ISESParams;
+        const config = input.parameters!['emailConfig'] as ISESParams;
 
         const toAddresses = typeof config.to === 'string' ? [config.to] : config.to;
 

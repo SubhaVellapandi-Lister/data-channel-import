@@ -6,6 +6,10 @@ import {
     IStepAfterOutput
 } from "@data-channels/dcSDK";
 
+export interface IEchoConfig {
+    outputAllRows?: boolean;
+}
+
 export default class Echo extends BaseProcessor {
     private dataType = 'string';
     private totalCharacters = 0;
@@ -31,11 +35,18 @@ export default class Echo extends BaseProcessor {
     }
 
     public async after_echo(input: IStepAfterInput): Promise<IStepAfterOutput> {
+        const config = (input.parameters!['echoConfig'] || {}) as IEchoConfig;
+
+        const firstAndLast = this.rows.length < 2 ? this.rows : [this.rows[1]];
+        if (this.rows.length > 2) {
+            firstAndLast.push(this.rows.slice(-1)[0]);
+        }
+
         return {
             results: {
                 dataType: this.dataType,
                 totalCharacters: this.totalCharacters,
-                rows: this.rows
+                rows: config.outputAllRows ? this.rows : firstAndLast
             }
         };
     }
