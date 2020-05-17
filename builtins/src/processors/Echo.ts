@@ -41,12 +41,13 @@ export default class Echo extends BaseProcessor {
         if (this.rows.length > 2) {
             firstAndLast.push(this.rows.slice(-1)[0]);
         }
+        const rowsLabel = config.outputAllRows ? 'rows' : 'firstAndLastRows';
 
         return {
             results: {
                 dataType: this.dataType,
                 totalCharacters: this.totalCharacters,
-                rows: config.outputAllRows ? this.rows : firstAndLast
+                [rowsLabel]: config.outputAllRows ? this.rows : firstAndLast
             }
         };
     }
