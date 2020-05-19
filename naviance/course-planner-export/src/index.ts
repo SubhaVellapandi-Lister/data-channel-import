@@ -1,6 +1,7 @@
 import { BaseProcessor, Job } from "@data-channels/dcSDK";
 import { MappingExportProcessor } from "./CourseMappingExport";
 import { RecommendationExportProcessor } from "./CourseRecommendationExport";
+import { CoursesExportProcessor } from "./CoursesExport";
 import { PlanExportProcessor } from "./PlanExportProcessor";
 import { ProgramExportProcessor } from "./ProgramExportProcessor";
 import { SchoolsProcessor } from "./SchoolsProcessor";
@@ -36,6 +37,10 @@ export async function exportHandler(event: any, context: any): Promise<any> {
         }
         case 'exportMappings': {
             processor = new MappingExportProcessor(job);
+            break;
+        }
+        case 'exportCourses': {
+            processor = new CoursesExportProcessor(job);
             break;
         }
         default: {

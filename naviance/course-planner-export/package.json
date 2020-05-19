@@ -50,8 +50,8 @@
     "typescript": "3.6.3"
   },
   "dependencies": {
-    "@academic-planner/apSDK": "1.15.1-beta.1",
-    "@data-channels/dcSDK": "0.9.8-beta.1",
+    "@academic-planner/apSDK": "1.17.0",
+    "@data-channels/dcSDK": "0.10.10",
     "lodash": "4.17.15",
     "request": "2.88.0",
     "request-promise-native": "1.0.7"
