@@ -3,7 +3,8 @@ import {
     IRowProcessorInput,
     IRowProcessorOutput,
     IStepAfterInput,
-    IStepAfterOutput
+    IStepAfterOutput,
+    IStepBeforeInput
 } from "@data-channels/dcSDK";
 
 export interface IEchoConfig {
@@ -13,7 +14,8 @@ export interface IEchoConfig {
 export default class Echo extends BaseProcessor {
     private dataType = 'string';
     private totalCharacters = 0;
-    private rows: any[] = [];
+    private rows: { [inputName: string]: any[]} = {};
+    private config: IEchoConfig = {};
 
     public async echo(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
         console.log(`${input.index}: ${input.raw}`);
@@ -25,7 +27,7 @@ export default class Echo extends BaseProcessor {
             this.totalCharacters += input.raw.reduce((acc, next) => acc + next.length, 0);
         }
 
-        this.rows.push(input.json!);
+        this.pushRow(input.json!, input.name);
 
         return {
             outputs: {
@@ -34,22 +36,34 @@ export default class Echo extends BaseProcessor {
         };
     }
 
-    public async after_echo(input: IStepAfterInput): Promise<IStepAfterOutput> {
-        const config = (input.parameters!['echoConfig'] || {}) as IEchoConfig;
+    public async before_echo(input: IStepBeforeInput) {
+        this.config = (input.parameters!['echoConfig'] || {}) as IEchoConfig;
+    }
 
-        const firstAndLast = this.rows.length < 2 ? this.rows : [this.rows[1]];
-        if (this.rows.length > 2) {
-            firstAndLast.push(this.rows.slice(-1)[0]);
-        }
-        const rowsLabel = config.outputAllRows ? 'rows' : 'firstAndLastRows';
+    public async after_echo(input: IStepAfterInput): Promise<IStepAfterOutput> {
+        const rowsLabel = this.config.outputAllRows ? 'rows' : 'firstAndLastRows';
 
         return {
             results: {
                 dataType: this.dataType,
                 totalCharacters: this.totalCharacters,
-                [rowsLabel]: config.outputAllRows ? this.rows : firstAndLast
+                [rowsLabel]: this.rows
             }
         };
+    }
+
+    private pushRow(row: any, inputName: string) {
+        if (!this.rows[inputName]) {
+            this.rows[inputName] = [row];
+
+            return;
+        }
+
+        if (this.config.outputAllRows || this.rows[inputName].length < 2) {
+            this.rows[inputName].push(row);
+        } else {
+            this.rows[inputName][1] = row;
+        }
     }
 
 }
