@@ -19,42 +19,44 @@ export default class BuiltInRouter {
         console.log(`Job ${job.guid} - running ${step!.method}`);
         let processor: BaseProcessor;
         switch (step!.method) {
-            case 'translate':
-                processor = new Translate(job);
-                break;
-            case 'sort':
-                processor = new Sort(job);
-                break;
-            case 'validate':
-                processor = new Validate(job);
-                break;
-            case 'hello':
-            case 'helloRow':
-                processor = new HelloWorld(job);
-                break;
-            case 'sns':
-                processor = new SNSProcessor(job);
-                break;
-            case 'emailJobInfo':
-                processor = new SESPRocessor(job);
-                break;
-            case 'echo':
-                processor = new Echo(job);
-                break;
-            case 'throwError':
-                processor = new ThrowError(job);
-                break;
-            case 'diff':
-                processor = new Diff(job);
-                break;
-            case 'throwError':
-                processor = new ThrowError(job);
-                break;
-            case 'groupby':
-                processor = new GroupBy(job);
-                break;
-            default:
-                throw new Error(`Built-in method ${step!.method} not found`);
+        case 'translate':
+            processor = new Translate(job);
+            break;
+        case 'sort':
+            processor = new Sort(job);
+            break;
+        case 'validate':
+            processor = new Validate(job);
+            break;
+        case 'hello':
+        case 'helloRow':
+            processor = new HelloWorld(job);
+            break;
+        case 'sns':
+            processor = new SNSProcessor(job);
+            break;
+        case 'emailJobInfo':
+            processor = new SESPRocessor(job);
+            break;
+        case 'echo':
+            processor = new Echo(job);
+            break;
+        case 'throwError':
+            processor = new ThrowError(job);
+            break;
+        case 'diff':
+            processor = new Diff(job);
+            break;
+        case 'throwError':
+            processor = new ThrowError(job);
+            break;
+        case 'groupby':
+            processor = new GroupBy(job);
+            break;
+        default:
+            await job.terminalError('Builtin-Router', `Built-in method ${step!.method} not found`);
+
+            return;
         }
 
         await processor!.handle(context.awsRequestId , event);
