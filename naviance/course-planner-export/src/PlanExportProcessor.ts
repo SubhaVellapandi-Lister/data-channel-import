@@ -343,7 +343,7 @@ export class PlanExportProcessor extends BaseProcessor {
                 page = await pager.next();
             } catch {
                 console.log('ERROR GETTING NEXT PAGE OF PLANS, RETRYING...');
-                sleep(2000);
+                await sleep(2000);
                 page = await pager.next();
             }
         }
