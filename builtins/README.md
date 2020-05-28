@@ -41,6 +41,7 @@ Example step config that uses a built-in:
 
 Sorts an input based on one or more columns
 
+| | |
 | ---- | --- |
 | **method name** | sort |
 | **code** | [Sort.ts](src/processors/Sort.ts) |
