@@ -41,7 +41,6 @@ Example step config that uses a built-in:
 
 Sorts an input based on one or more columns
 
-| Sort |     |
 | ---- | --- |
 | **method name** | sort |
 | **code** | [Sort.ts](src/processors/Sort.ts) |
@@ -49,7 +48,6 @@ Sorts an input based on one or more columns
 | **output name** | Input name plus "Sorted", e.g. "dataSorted" |
 | **config property name** | sortConfig |
 
-**config details**
 `sortConfig` contains a property for each input by input name.  This property is a list of `[columnName]: string` objects.  Each object has to have a `columnName` string property, and can also define a boolean for treating the column as a nubmer, and for sorting in descending order  |
 
 Example Config
