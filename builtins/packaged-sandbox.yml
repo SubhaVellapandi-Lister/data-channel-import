@@ -5,7 +5,7 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-sandbox/693c022eece206d52fade1fdd1349bde
+      CodeUri: s3://data-channels-processor-deployments-sandbox/bdb80d1d3c054521f60991dae3756e0a
       FunctionName: data-channels-BuiltInProcessor
       Handler: dist/index.BuiltInHandler
       Timeout: 300
@@ -27,4 +27,11 @@ Resources:
           Effect: Allow
           Action:
           - SNS:Publish
+          Resource: '*'
+      - Statement:
+        - Sid: SESSendPolicy
+          Effect: Allow
+          Action:
+          - SES:SendEmail
+          - SES:SendRawEmail
           Resource: '*'
