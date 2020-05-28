@@ -138,6 +138,8 @@ const courseHeaders = [
     'Highschool_Name',
     'Selected_Highschool_ID',
     'Selected_Highschool_Name',
+    'Target_Highschool_ID',
+    'Target_Highschool_Name',
     'Student_ID',
     'Last_Name',
     'First_Name',
@@ -175,6 +177,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
     private curSchoolProcessCount = 0;
     private parallelSchools = 8;
     private pageSize = 100;
+    private districtAssignedIds: { [navId: string]: string } = {};
 
     private async findProgram(namespace: Namespace, scopeAsNamespace: Namespace, name: string): Promise<Program> {
 
@@ -562,6 +565,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         const planData = {
             Highschool_ID: hsId,
             Selected_Highschool_ID: selectedHighschoolId,
+            Target_Highschool_ID: this.districtAssignedIds[selectedHighschoolId] || selectedHighschoolId,
             Student_ID: studentId,
             Last_Name: student ? student.lastName : '',
             First_Name: student ? student.firstName : '',
@@ -576,6 +580,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             Plan_Type: studentPlanType,
             Highschool_Name: this.schoolNamesById[hsId] || studentHighschool,
             Selected_Highschool_Name: selectedHighschool,
+            Target_Highschool_Name: selectedHighschool,
             Student_Last_Update_Date: updateDate.toISOString(),
             Grade: (filteredCourses[0].gradeLevel || '').toString()
         };
@@ -844,7 +849,6 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                     [id, name] = hsInfo.split(',');
                 }
                 highschoolsToProcess.push(id);
-                this.schoolNamesById[id] = name;
             }
         }
 
@@ -917,6 +921,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         this.parallelSchools = params.parallelSchools || 8;
         this.pageSize = params.pageSize || 100;
+        this.districtAssignedIds = this.job.steps['findSchools'].output!['schoolAssignedIDs'] || {};
+        this.schoolNamesById = this.job.steps['findSchools'].output!['schoolNames'] || {};
 
         await this.writeHeaders(parentId, params, input.outputs);
 

@@ -5,6 +5,8 @@ import { getJWT, initServices } from "./Utils";
 
 export class SchoolsProcessor extends BaseProcessor {
     private schoolsByDistrict: { [dsId: string]: string[]} = {};
+    private districtIdByNavianceId: { [navId: string]: string } = {};
+    private schoolNamesById: { [navId: string]: string } = {};
 
     public async findSchools(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
         if (input.index === 1 || input.data['HasLegacyCP'] !== '1') {
@@ -19,6 +21,9 @@ export class SchoolsProcessor extends BaseProcessor {
         if (input.parameters!['includeNames']) {
             hsInfo = `${hsId},${hsName}`;
         }
+
+        this.districtIdByNavianceId[hsId] = input.data['DistrictAssignedId'] || '';
+        this.schoolNamesById[hsId] = hsName;
 
         if (input.data['DistrictId'] && input.data['DistrictId'].length > 4) {
             // has a district
@@ -48,16 +53,26 @@ export class SchoolsProcessor extends BaseProcessor {
         }
 
         const fullDistrictList: { [dsId: string]: string[]} = {};
+        const schoolAssignedIDs: { [id: string]: string } = {};
+        const schoolNames: { [id: string]: string } = {};
+
         for (const schoolId of schools) {
             if (this.schoolsByDistrict[schoolId]) {
                 fullDistrictList[schoolId] = this.schoolsByDistrict[schoolId];
+
+                for (const hsId of fullDistrictList[schoolId]) {
+                    schoolAssignedIDs[hsId] = this.districtIdByNavianceId[hsId];
+                    schoolNames[hsId] = this.schoolNamesById[hsId];
+                }
             }
         }
 
         return {
             results: {
                 schools,
-                hsMapping: fullDistrictList
+                hsMapping: fullDistrictList,
+                schoolAssignedIDs,
+                schoolNames
             }
         };
     }
