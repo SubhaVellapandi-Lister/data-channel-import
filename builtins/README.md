@@ -1,6 +1,6 @@
 # Built-in processors that will be usable for all data-channels channel configs
 
-These processors will be tailored for accomplishing common tasks that are used by many projects.
+These processors will be tailored for accomplishing common tasks that are used by many projects.  This repo is "inner-source", please share any ideas you have for future built-ins and request access to create PRs.
 
 Built-ins are published on the `data-channels-BuiltInProcessor` processor lambda.
 
