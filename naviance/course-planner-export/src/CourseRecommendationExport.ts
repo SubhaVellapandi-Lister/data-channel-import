@@ -104,7 +104,7 @@ export class RecommendationExportProcessor extends BaseProcessor {
                     coursesFound = await getCourses();
                 } catch (err) {
                     console.log('ERROR GETTING COURSE, RETRYING...');
-                    sleep(2000);
+                    await sleep(2000);
                     coursesFound = await getCourses();
                 }
 
@@ -153,7 +153,7 @@ export class RecommendationExportProcessor extends BaseProcessor {
             page = await pager.page(1);
         } catch (err) {
             console.log('ERROR GETTING FIRST PAGE OF REMARKS, RETRYING...');
-            sleep(2000);
+            await sleep(2000);
             page = await pager.page(1);
         }
 
@@ -199,7 +199,7 @@ export class RecommendationExportProcessor extends BaseProcessor {
                 page = await pager.next();
             } catch {
                 console.log('ERROR GETTING NEXT PAGE OF PLANS, RETRYING...');
-                sleep(2000);
+                await sleep(2000);
                 page = await pager.next();
             }
         }
