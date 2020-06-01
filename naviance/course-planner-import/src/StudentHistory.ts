@@ -49,8 +49,8 @@ export class StudentHistory {
         const scoreStr = getRowVal(rowData, 'Score');
 
         return this.normalizeStatus({
-            studentId: getRowVal(rowData, 'Student_ID') || '',
-            courseId: getRowVal(rowData, 'Course_ID') || '',
+            studentId: (getRowVal(rowData, 'Student_ID') || '').trim(),
+            courseId: (getRowVal(rowData, 'Course_ID') || '').trim(),
             gradeLevel: gradeLevelStr ? parseInt(gradeLevelStr) : 0,
             term: getRowVal(rowData, 'Term'),
             courseName: getRowVal(rowData, 'Course_Name'),
