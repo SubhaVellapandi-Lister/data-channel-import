@@ -235,6 +235,44 @@ Example config with input named "data".
 }
 ```
 
+## Modified output
+
+For each `IFileDiffConfig`, a `modifiedOutput` field can be specified, which controls the format of the modified output.
+
+The `modifiedOutput` format:
+
+| | |
+| ---- | --- |
+| **outputFormat** | The format of the output |
+| **unmodifiedValue** | What unmodified values should be replaced with |
+
+`outputFormat` values:
+
+| | |
+| --- | --- |
+| **newAll** | Output all values from the new file |
+| **newChangedOnly** | Output only values that have changed in the new file, replace others with `unmodifiedValue` |
+| **oldAll** | Output all values from the old file |
+| **oldChangedOnly** | Output only values that have changed in the old file, replace others with `unmodifiedValue` | 
+
+
+Example modified config:
+```json
+{
+  "parameters": {
+                "testInput": {
+                    "primaryKeyColumns": [
+                        "id"
+                    ],
+                    "modifiedOutput":  {
+                    	"outputFormat": "newChangedOnly",
+                    	"unchangedValue": ""
+                    }
+                }
+            }
+}
+```
+
 ### SNS
 
 Send an SNS notification out out with the basic info of the job.  Note that this method could be duplicated and modified for lots of other SNS situations.
