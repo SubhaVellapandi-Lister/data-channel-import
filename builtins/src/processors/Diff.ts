@@ -11,20 +11,107 @@ import parse from "csv-parse";
 import request from 'request-promise-native';
 import {Readable} from "stream";
 
-export interface IFileDiffConfig {
-    primaryKeyColumns: string[];
+export enum DiffModifiedOutputType {
+    /**
+     * Output all values from the current file
+     */
+    NewRowAll = 'newAll',
+
+    /**
+     * Only changed values are kept, others are replaced with [[IDiffModifiedSettings.unmodifiedValue]] or DDNC
+     */
+    NewRowChangedOnly = 'newChangedOnly',
+
+    /**
+     * Outputs all values from the previous file
+     */
+    OldRowAll = 'oldAll',
+
+    /**
+     * Like [[NewRowChangedOnly]], but outputs old values
+     */
+    OldRowChanged = 'oldChangedOnly'
 }
 
+/**
+ * Settings for the diff processor's modified output
+ */
+export interface IDiffModifiedSettings {
+    /**
+     * Controls what is output.
+     */
+    outputFormat?: DiffModifiedOutputType;
+
+    /**
+     * The sentinel value for unmodified values. Default "DDNC"
+     */
+    unmodifiedValue?: string;
+}
+
+/**
+ * Parameters for a single file-diff
+ */
+export interface IFileDiffConfig {
+    /**
+     * Columns that should be used to determine the uniqueness of a row
+     */
+    primaryKeyColumns: string[];
+
+    /**
+     * Settings for the modified output
+     */
+    modifiedOutput?: IDiffModifiedSettings;
+}
+
+/**
+ * Each file's settings
+ */
 export interface IDiffParameters {
     [filename: string]: IFileDiffConfig;
 }
 
+/**
+ * The Diff processor looks at a previous job run and outputs four files for each input,
+ * named: {filename}Added/Modified/Deleted/Unmodified.
+ *
+ * Each input file must have a corresponding [[IFileDiffConfig]] specified in parameters.
+ *
+ * Example diff step:
+ *
+ * ```json
+ * "diff": {
+ *           "inputs": [
+ *               "testInput"
+ *           ],
+ *           "method": "diff",
+ *           "outputs": [
+ *               "testInputAdded",
+ *               "testInputModified->changes",
+ *               "testInputDeleted",
+ *               "testInputUnmodified"
+ *           ],
+ *           "processor": "data-channels-BuiltInProcessor",
+ *           "parameters": {
+ *               "testInput": {
+ *                   "primaryKeyColumns": [
+ *                       "id"
+ *                   ],
+ *                   "modifiedOutput":  {
+ *                   	"outputFormat": "newChangedOnly",
+ *                   	"unchangedValue": ""
+ *                   }
+ *               }
+ *           },
+ *           "granularity": "row"
+ *       }
+ * ```
+ */
 export default class Diff extends BaseProcessor {
+    private headers!: string[];
     private lastJob!: Job;
     private hashers: { [filename: string]: FileHasher } = {};
 
     public async before_diff(input: IStepBeforeInput) {
-        console.log('before diff');
         let jobs: SlimJob[];
 
         const findCriteria: IJobPageOptions['findCriteria'] = {
@@ -81,6 +168,8 @@ export default class Diff extends BaseProcessor {
 
     public async diff(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
         if (input.index === 1) {
+            this.headers = input.raw;
+
             return {
                 outputs: {
                     [`${input.name}Added`]: input.raw,
@@ -92,8 +181,6 @@ export default class Diff extends BaseProcessor {
         }
 
         if (this.lastJob == null || !(input.name in this.hashers)) {
-            console.log('no last job or last file diff');
-
             return {
                 outputs: {
                     [`${input.name}Added`]: input.raw,
@@ -103,37 +190,33 @@ export default class Diff extends BaseProcessor {
 
         const hasher = this.hashers[input.name];
 
-        console.log(`diffing ${input.index} ${input.raw}`);
+        hasher.newHeaders = this.headers;
 
-        const res = hasher.testRow(input.raw);
-
-        console.log(`${input.index} => ${res}`);
+        const [res, rowOut] = hasher.testRow(input.raw);
 
         switch (res) {
         case FileHashResult.Modified:
             return {
                 outputs: {
-                    [`${input.name}Modified`]: input.raw,
+                    [`${input.name}Modified`]: rowOut,
                 }
             };
         case FileHashResult.NotPresent:
             return {
                 outputs: {
-                    [`${input.name}Added`]: input.raw,
+                    [`${input.name}Added`]: rowOut,
                 }
             };
         case FileHashResult.Unmodified:
             return {
                 outputs: {
-                    [`${input.name}Unmodified`]: input.raw,
+                    [`${input.name}Unmodified`]: rowOut,
                 }
             };
         }
     }
 
     public async after_diff(input: IStepAfterInput): Promise<IStepAfterOutput> {
-        console.log('after diff');
-
         for (const filename in this.hashers) {
             if (!this.hashers.hasOwnProperty(filename)) {
                 continue;
@@ -197,9 +280,14 @@ enum FileHashResult {
 }
 
 class FileHasher {
+    private headers!: string[];
     private rows = new Map<string, string>();
     private pkIdxs: number[] = [];
     private unattestedKeys = new Map<string, string[]>();
+
+    // Used for tracking between old and new
+    private newPkIdxs: number[] = [];
+    private oldHeaderIdxs!: number[]; // Locations of headers from old file in the new file
 
     constructor(
         public filename: string,
@@ -209,32 +297,103 @@ class FileHasher {
 
     }
 
+    /**
+     * Sets the headers for the new file. This must be called before testing rows on a new file
+     *
+     * @param newHeaders
+     */
+    set newHeaders(newHeaders: string[]) {
+        // Only compute once per instance
+        if (this.oldHeaderIdxs != null) {
+            return;
+        }
+
+        this.oldHeaderIdxs = newHeaders
+            .map((header) => this.headers.indexOf(header))
+            .filter((idx) => idx !== -1);
+
+        for (const pk of this.config.primaryKeyColumns) {
+            const pkIdx = newHeaders.indexOf(pk);
+
+            if (pkIdx === -1) {
+                throw new Error(`Missing primary key ${pk} in new file`);
+            }
+
+            this.newPkIdxs.push(pkIdx);
+        }
+    }
+
     get deletedRows(): string[][] {
         return [...this.unattestedKeys.values()];
     }
 
-    testRow(raw: string[]): FileHashResult {
-        const [pkHash, rowHash] = this.hashRow(raw);
+    /**
+     * Test a new file row against the old file
+     *
+     * @param raw
+     */
+    testRow(raw: string[]): [FileHashResult, string[]] {
+        const [pkHash, rowHash] = this.hashRow(raw, true);
+        const oldRaw = this.unattestedKeys.get(pkHash);
 
         this.unattestedKeys.delete(pkHash);
 
         const oldRow = this.rows.get(pkHash);
 
         if (oldRow == null) {
-            return FileHashResult.NotPresent;
+            return [FileHashResult.NotPresent, raw];
         } else if (oldRow !== rowHash) {
-            return FileHashResult.Modified;
+            return [FileHashResult.Modified, this.getModifiedOutput(raw, oldRaw!)];
         } else {
-            return FileHashResult.Unmodified;
+            return [FileHashResult.Unmodified, raw];
         }
     }
 
-    private hashRow(raw: string[]): [string, string] {
+    private getModifiedOutput(currentRaw: string[], oldRaw: string[]): string[] {
+        const { outputFormat } = this.config.modifiedOutput ?? { outputFormat: DiffModifiedOutputType.NewRowAll };
+
+        switch (outputFormat) {
+        case DiffModifiedOutputType.NewRowChangedOnly:
+            return this.getChangedOnlyOutput(currentRaw, oldRaw, false);
+        case DiffModifiedOutputType.OldRowAll:
+            return this.oldHeaderIdxs.map((idx) => oldRaw[idx]);
+        case DiffModifiedOutputType.OldRowChanged:
+            return this.getChangedOnlyOutput(currentRaw, oldRaw, true);
+        case DiffModifiedOutputType.NewRowAll:
+        default:
+            return currentRaw;
+        }
+    }
+
+    private getChangedOnlyOutput(currentRaw: string[], oldRaw: string[], useOld: boolean): string[] {
+        const { unmodifiedValue } = this.config.modifiedOutput ?? {};
+        const ret = [];
+
+        for (let i = 0; i < currentRaw.length; i++) {
+            // Always include primary keys in output
+            if (this.newPkIdxs.indexOf(i) !== -1) {
+                ret.push(currentRaw[i]);
+
+                continue;
+            }
+
+            const newVal = currentRaw[i];
+            const oldVal = oldRaw[this.oldHeaderIdxs[i]];
+            const retVal = useOld ? oldVal : newVal;
+
+            ret.push(newVal === oldVal ? unmodifiedValue ?? 'DDNC' : retVal);
+        }
+
+        return ret;
+    }
+
+    private hashRow(raw: string[], hashNew: boolean = false): [string, string] {
         // md5 since security isn't important here
         const pkHasher = crypto.createHash('md5');
         const rowHasher = crypto.createHash('md5');
+        const idxs = hashNew ? this.newPkIdxs : this.pkIdxs;
 
-        for (const pkIdx of this.pkIdxs) {
+        for (const pkIdx of idxs) {
             pkHasher.update(raw[pkIdx]);
         }
 
@@ -273,6 +432,8 @@ class FileHasher {
                         const raw = record as string[];
 
                         if (index === 1) {
+                            this.headers = raw;
+
                             // Handle header row
                             for (const pk of this.config.primaryKeyColumns) {
                                 const pkIdx = raw.indexOf(pk);
@@ -290,9 +451,6 @@ class FileHasher {
                         }
 
                         const [pkHash, rowHash] = this.hashRow(raw);
-
-                        console.log(`${index}: ${pkHash}`);
-                        console.log(`${index}: row hash ${rowHash}`);
 
                         this.unattestedKeys.set(pkHash, raw);
                         this.rows.set(pkHash, rowHash);
