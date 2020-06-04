@@ -235,7 +235,7 @@ Example config with input named "data".
 }
 ```
 
-## Modified output
+**Modified output**
 
 For each `IFileDiffConfig`, a `modifiedOutput` field can be specified, which controls the format of the modified output.
 
