@@ -260,16 +260,16 @@ Example modified config:
 ```json
 {
   "parameters": {
-                "testInput": {
-                    "primaryKeyColumns": [
-                        "id"
-                    ],
-                    "modifiedOutput":  {
-                    	"outputFormat": "newChangedOnly",
-                    	"unchangedValue": ""
-                    }
-                }
-            }
+    "testInput": {
+      "primaryKeyColumns": [
+        "id"
+      ],
+      "modifiedOutput":  {
+        "outputFormat": "newChangedOnly",
+        "unmodifiedValue": ""
+      }
+    }
+  }
 }
 ```
 
