@@ -10,6 +10,7 @@ export interface IHistoryRow {
     studentId: string;
     courseId: string;
     creditEarned?: number | undefined;
+    creditAttempted?: number;
     gradeLevel: number;
     gradeAwarded?: string;
     term?: string;
@@ -46,6 +47,7 @@ export class StudentHistory {
         // import record
         const gradeLevelStr = getRowVal(rowData, 'Grade_Level_Taken');
         const creditEarnedStr: any = getRowVal(rowData, 'Credits_Earned');
+        const creditAttemptedStr: any = getRowVal(rowData, 'Credits_Attempted');
         const scoreStr = getRowVal(rowData, 'Score');
 
         return this.normalizeStatus({
@@ -56,6 +58,7 @@ export class StudentHistory {
             courseName: getRowVal(rowData, 'Course_Name'),
             teacherName: getRowVal(rowData, 'Teacher'),
             creditEarned: parseFloat(creditEarnedStr) || undefined,
+            creditAttempted: parseFloat(creditAttemptedStr) || undefined,
             gradeAwarded: getRowVal(rowData, 'Letter_Grade'),
             score: scoreStr ? parseFloat(scoreStr) : undefined,
             status: getRowVal(rowData, 'Course_Status')
@@ -95,6 +98,7 @@ export class StudentHistory {
                 studentId,
                 courseId: rec.courseId,
                 creditEarned: rec.creditEarned,
+                creditAttempted: rec.creditAttempted,
                 gradeLevel: rec.gradeLevel,
                 term: rec.term,
                 gradeAwarded: rec.gradeAwarded || rec.score || undefined,
