@@ -11,7 +11,7 @@ import {
     IStepBeforeInput
 } from "@data-channels/dcSDK";
 import _ from "lodash";
-import { getRowVal, initServices } from "./Utils";
+import { getRowVal, initServices } from "../Utils";
 
 interface IExportParameters {
     tenantId: string;

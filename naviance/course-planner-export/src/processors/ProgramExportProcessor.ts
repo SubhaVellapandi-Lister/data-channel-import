@@ -6,7 +6,7 @@ import {
     IStepAfterOutput,
     IStepBeforeInput
 } from "@data-channels/dcSDK";
-import { initServices } from "./Utils";
+import { initServices } from "../Utils";
 
 export class ProgramExportProcessor extends BaseProcessor {
     private headers = [

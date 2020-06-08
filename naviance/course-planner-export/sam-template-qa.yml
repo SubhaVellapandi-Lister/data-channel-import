@@ -36,6 +36,10 @@ Resources:
           AUTH0_CLIENTSECRET: !Ref Auth0ClientSecret
       Policies:
       - Statement:
+          Action: lambda:InvokeFunction
+          Effect: Allow
+          Resource: arn:aws:lambda:*:*:function:cdk-data-channels-core-st-cfdatachannelsloggrabber
+      - Statement:
         - Sid: SSMGetParameterPolicy
           Effect: Allow
           Action:

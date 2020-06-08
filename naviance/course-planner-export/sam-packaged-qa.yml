@@ -18,7 +18,7 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-dev/e71b98791b960b954989bf21b3c52d7f
+      CodeUri: s3://data-channels-processor-deployments-dev/b10b17dc0ff3f719804012f768d711d8
       FunctionName: cf-naviance-dc-ap-export-qa
       Handler: dist/index.exportHandler
       Timeout: 900
@@ -39,6 +39,10 @@ Resources:
           AUTH0_CLIENTSECRET:
             Ref: Auth0ClientSecret
       Policies:
+      - Statement:
+          Action: lambda:InvokeFunction
+          Effect: Allow
+          Resource: arn:aws:lambda:*:*:function:cdk-data-channels-core-st-cfdatachannelsloggrabber
       - Statement:
         - Sid: SSMGetParameterPolicy
           Effect: Allow

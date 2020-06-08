@@ -1,4 +1,4 @@
-import { ICourseRecord, IPlan } from "@academic-planner/academic-planner-common";
+import { ICourseRecord } from "@academic-planner/academic-planner-common";
 import {
     Course,
     FindPlansWithStudentNamePager,
@@ -21,9 +21,9 @@ import {
     IStepAfterOutput,
     IStepBeforeInput
 } from "@data-channels/dcSDK";
-import {CoursePlannerProcessor} from "./CoursePlannerProcessor";
-import { INavianceStudent, INavianceStudentIDMap, readStudents} from "./Student";
-import { initServices, sleep } from "./Utils";
+import {PlanAudit} from "../PlanAudit";
+import { INavianceStudent, INavianceStudentIDMap } from "../Student";
+import { initServices, sleep } from "../Utils";
 
 interface IHsMap {
     [hsId: string]: string[];
@@ -396,7 +396,16 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                 }
             }
             planTotalCreditsRequired += creditsTotal;
-            const plannedCredits = CoursePlannerProcessor.creditsInPlan(programAudit);
+            const plannedCredits = PlanAudit.creditsInPlan(programAudit);
+            /* if (plannedCredits === 0) {
+                if (programAudit) {
+                    console.log(plan.studentPrincipleId, programAudit.calculateCreditTotals());
+                    console.log(programAudit.requirements.map(
+                        (req) =>
+                            req.calculateCreditTotals().totalCreditsRequiredMinusAttempted,
+                    ));
+                }
+            } */
 
             const completedCredits = rawAudit.program.auditResult.usedRecords
                 .filter((rec) => gradedRecIds[rec.studentRecordId])
@@ -412,7 +421,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             columns[`${prefix}_Num_Requirements_Total`] = statements.length.toString();
             columns[`${prefix}_Required_Credits_Remaining`] = (audit.progress.creditsRemaining || 0).toString();
             columns[`${prefix}_Required_Credits_Total`] = creditsTotal.toString();
-            columns[`${prefix}_Requirements_All_Met`] = booleanToString(CoursePlannerProcessor.isAllMet(programAudit));
+            columns[`${prefix}_Requirements_All_Met`] = booleanToString(PlanAudit.isAllMet(programAudit));
             columns[`${prefix}_Completed_Credits_Used`] = rawAudit.progress.credits.creditsGradedUsed.toString();
             columns[`${prefix}_Completed_Credits`] = completedCredits.toString();
             columns[`${prefix}_Planned_Credits_Used`] = rawAudit.progress.credits.creditsPlannedUsed.toString();

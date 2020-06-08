@@ -1,21 +1,22 @@
 import {IProgramDetailed} from "@academic-planner/academic-planner-common";
 import {ProgramAudit} from "@academic-planner/apSDK";
 import 'jest';
-import {CoursePlannerProcessor} from "./CoursePlannerProcessor";
-describe('CoursePlannerProcessor tests', () => {
+import {PlanAudit} from "./PlanAudit";
+
+describe('PlanAudit tests', () => {
     afterEach(() => {
         jest.resetAllMocks();
     });
 
     test('credits in plan regression', async () => {
         const progAudit = new ProgramAudit(rawProgramAuditDetail, []);
-        const ret = CoursePlannerProcessor.creditsInPlan(progAudit);
+        const ret = PlanAudit.creditsInPlan(progAudit);
         expect(ret).toEqual(0);
     });
 
     test('plan green checkmark regression', async () => {
         const progAudit = new ProgramAudit(rawProgramAuditDetail, []);
-        const ret = CoursePlannerProcessor.isAllMet(progAudit);
+        const ret = PlanAudit.isAllMet(progAudit);
         expect(ret).toEqual(true);
     });
 });

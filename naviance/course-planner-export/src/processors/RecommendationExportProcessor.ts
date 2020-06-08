@@ -1,17 +1,12 @@
-import { ICourseRecord, IPlan } from "@academic-planner/academic-planner-common";
 import {
     Course,
     Namespace,
-    Program,
-    ProgramReference,
-    RawStorage,
     Remark,
     SlimStudentPlan,
     StudentPlan
 } from "@academic-planner/apSDK";
 import {
     BaseProcessor,
-    IOutputByName,
     IRowProcessorInput,
     IRowProcessorOutput,
     IStepAfterInput,
@@ -19,8 +14,8 @@ import {
     IStepBeforeInput
 } from "@data-channels/dcSDK";
 import _ from "lodash";
-import { INavianceStudent, INavianceStudentIDMap, readStudents} from "./Student";
-import { initServices, sleep } from "./Utils";
+import { INavianceStudent, INavianceStudentIDMap } from "../Student";
+import { initServices, sleep } from "../Utils";
 
 interface IPlanSet {
     slim: SlimStudentPlan;

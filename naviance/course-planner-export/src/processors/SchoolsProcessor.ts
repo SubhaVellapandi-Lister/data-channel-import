@@ -1,7 +1,6 @@
-import { BaseProcessor, IFileProcessorInput,
-    IFileProcessorOutput, IRowProcessorInput, IRowProcessorOutput, IStepAfterInput } from "@data-channels/dcSDK";
-import request from "request-promise-native";
-import { getJWT, initServices } from "./Utils";
+import { BaseProcessor, IRowProcessorInput, IRowProcessorOutput, IStepAfterInput } from "@data-channels/dcSDK";
+import fetch from "node-fetch";
+import { getJWT, initServices } from "../Utils";
 
 export class SchoolsProcessor extends BaseProcessor {
     private schoolsByDistrict: { [dsId: string]: string[]} = {};
@@ -52,11 +51,17 @@ export class SchoolsProcessor extends BaseProcessor {
             schools = await this.getSchools(input.parameters!['rulesRepoUrl']);
         }
 
+        let districtIds = schools;
+        if (input.parameters!['namespace']) {
+            districtIds = [input.parameters!['namespace']];
+        }
+
         const fullDistrictList: { [dsId: string]: string[]} = {};
         const schoolAssignedIDs: { [id: string]: string } = {};
         const schoolNames: { [id: string]: string } = {};
 
-        for (const schoolId of schools) {
+
+        for (const schoolId of districtIds) {
             if (this.schoolsByDistrict[schoolId]) {
                 fullDistrictList[schoolId] = this.schoolsByDistrict[schoolId];
 
@@ -78,11 +83,12 @@ export class SchoolsProcessor extends BaseProcessor {
     }
 
     private async getSchools(rootUrl: string): Promise<string[]> {
-        const schoolIds = [];
+        const schoolIds: string[] = [];
         const JWT = await getJWT();
-        const body = await request(
-            rootUrl + '/tree?root=naviance&depth=1', { headers: { Authorization: JWT }, json: true});
+        const resp = await fetch(
+            rootUrl + '/tree?root=naviance&depth=1', { headers: { Authorization: JWT }});
 
+        const body = await resp.json();
         for (const schoolId of Object.keys(body['naviance'])) {
             if (schoolId.endsWith('DUS') || schoolId.endsWith('USPU') || schoolId.endsWith('USPR')) {
                 schoolIds.push(schoolId);

@@ -1,6 +1,6 @@
 import {ProgramAudit, RequirementAudit} from "@academic-planner/apSDK";
 
-export class CoursePlannerProcessor {
+export class PlanAudit {
 
     /**
      * See CP service creditTotals.totalCreditsAttempted

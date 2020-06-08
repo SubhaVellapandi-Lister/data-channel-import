@@ -6,12 +6,10 @@ import {
     BaseProcessor,
     IFileProcessorInput,
     IFileProcessorOutput,
-    IStepAfterInput,
-    IStepAfterOutput,
     IStepBeforeInput
 } from "@data-channels/dcSDK";
 import _ from "lodash";
-import { getRowVal, initServices, sleep } from "./Utils";
+import { initServices, sleep } from "../Utils";
 
 interface IExportParameters {
     tenantId: string;
@@ -20,8 +18,11 @@ interface IExportParameters {
 }
 
 const headers = [
+    'District_ID',
     'School_ID',
+    'School_Name',
     'Course_ID',
+    'Subject',
     'Course_Name'
 ];
 
@@ -37,8 +38,9 @@ export class CoursesExportProcessor extends BaseProcessor {
         );
 
         const params = input.parameters! as IExportParameters;
-        const schoolId = params.namespace || params.tenantId;
-        const namespace = new Namespace(schoolId);
+        const districtId = params.namespace || params.tenantId;
+        const namespace = new Namespace(districtId);
+        const schoolNamesById = this.job.steps['findSchools'].output!['schoolNames'] || {};
 
         const pager = Course.find(namespace);
 
@@ -60,10 +62,21 @@ export class CoursesExportProcessor extends BaseProcessor {
                     continue;
                 }
 
-                this.writeOutputRow(
-                    input.outputs['Courses'].writeStream,
-                    [schoolId, course.name, course.display]
-                );
+                const subject = course.annotations.getValue('subjectArea') as string;
+                const [subName, cssc, sced] = (subject || '__').split('_');
+
+                const schools = course.annotations.getValue('schools') as string[];
+                if (!schools || !schools.length) {
+                    continue;
+                }
+
+                for (const schoolId of schools) {
+                    const schoolName = schoolNamesById[schoolId] || '';
+                    this.writeOutputRow(
+                        input.outputs['Courses'].writeStream,
+                        [districtId, schoolId, schoolName, course.name, subName, course.display]
+                    );
+                }
                 totalCourses += 1;
             }
 
