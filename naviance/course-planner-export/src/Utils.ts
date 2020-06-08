@@ -2,6 +2,8 @@ import {
     PlanningEngine, RulesRepository
 } from "@academic-planner/apSDK";
 import { IRowData } from "@data-channels/dcSDK";
+import { Readable } from "stream";
+import parse from "csv-parse";
 
 export function initServices(parameters: object) {
     const config: any = {
@@ -48,4 +50,25 @@ export function getRowVal(rowData: IRowData, colName: string) {
     }
 
     return val;
+}
+
+export function csvReadableToStrings (csvstream: Readable): Promise<string[][]> {
+    const parser = parse({ bom: true, skip_empty_lines: true, skip_lines_with_empty_values: true, delimiter: ','});
+
+    const results: string[][] = [];
+
+    return new Promise((resolve, reject) => {
+        parser.on('readable', async () => {
+            let record = parser.read();
+            while (record) {
+                const raw = record as string[];
+                results.push(raw);
+                record = parser.read();
+            }
+        });
+        parser.on('end', () => {
+            resolve(results);
+        });
+        csvstream.pipe(parser);
+    });
 }

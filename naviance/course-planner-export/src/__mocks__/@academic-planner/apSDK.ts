@@ -15,12 +15,25 @@ export class Course {
             page: () => {
                 return [
                     new realCourse('MyCourse101', 'A basic course', new Annotations({
-                        test: {
+                        subjectArea: {
                             operator: AnnotationOperator.EQUALS,
-                            value: 'something'
+                            value: 'something_999_999'
+                        },
+                        schools: {
+                            operator: AnnotationOperator.EQUALS,
+                            value: ['111','222']
                         }
                     })),
-                    new realCourse('MyCourse102', 'Another course')
+                    new realCourse('MyCourse102', 'Another course', new Annotations({
+                        subjectArea: {
+                            operator: AnnotationOperator.EQUALS,
+                            value: 'something_999_999'
+                        },
+                        schools: {
+                            operator: AnnotationOperator.EQUALS,
+                            value: ['111','222']
+                        }
+                    }))
                 ];
             },
             next: () => {

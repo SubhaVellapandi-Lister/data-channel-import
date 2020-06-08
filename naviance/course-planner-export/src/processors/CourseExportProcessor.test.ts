@@ -3,6 +3,7 @@ import { Job, JobStatus } from "@data-channels/dcSDK";
 import stringify from "csv-stringify";
 import 'jest';
 import { CoursesExportProcessor} from "./CoursesExportProcessor";
+import { csvReadableToStrings } from "../Utils";
 
 jest.mock('@academic-planner/apSDK');
 
@@ -15,6 +16,7 @@ describe( 'CourseExportProcessor', () => {
         });
         const job = Job.fromConfig(jobConfig);
         const processor = new CoursesExportProcessor(job);
+        const writeStream = stringify();
         const result = await processor['exportCourses']({
             parameters: {
                 tenantId: '9999000USPU',
@@ -23,7 +25,7 @@ describe( 'CourseExportProcessor', () => {
             inputs: {},
             outputs: {
                 Courses: {
-                    writeStream: stringify(),
+                    writeStream,
                     bucket: '',
                     key: '',
                     uploadResponsePromise: {} as any
@@ -32,10 +34,56 @@ describe( 'CourseExportProcessor', () => {
         });
 
         expect(result).toEqual({
-            outputs: {
+            results: {
                 totalCourses: 2
             }
         });
+
+        writeStream.end();
+        const resultRows = await csvReadableToStrings(writeStream);
+
+        expect(resultRows).toEqual([
+            [
+                "District_ID",
+                "School_ID",
+                "School_Name",
+                "Course_ID",
+                "Subject",
+                "Course_Name"
+            ],
+            [
+                "999911111DUS",
+                "111",
+                "Some School 1",
+                "MyCourse101",
+                "something",
+                "A basic course",
+            ],
+            [
+                "999911111DUS",
+                "222",
+                "Some School 2",
+                "MyCourse101",
+                "something",
+                "A basic course",
+            ],
+            [
+                "999911111DUS",
+                "111",
+                "Some School 1",
+                "MyCourse102",
+                "something",
+                "Another course",
+            ],
+            [
+                "999911111DUS",
+                "222",
+                "Some School 2",
+                "MyCourse102",
+                "something",
+                "Another course",
+            ]
+        ]);
     });
 });
 
@@ -57,7 +105,10 @@ const jobConfig = {
         findSchools: {
             finished: true,
             output: {
-                schoolNames: {}
+                schoolNames: {
+                    '111': 'Some School 1',
+                    '222': 'Some School 2'
+                }
             }
         },
         exportCourses: {
