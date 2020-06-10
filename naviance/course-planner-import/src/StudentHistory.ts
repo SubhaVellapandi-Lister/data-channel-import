@@ -218,6 +218,7 @@ export class StudentHistory {
                 credits: rec.creditEarned === undefined && rec.status === HistoryStatus.Completed
                     ? catalogCredits(rec.courseId)
                     : rec.creditEarned || 0,
+                attemptedCredits: rec.creditAttempted,
                 gradeLevel: rec.gradeLevel,
                 termId: rec.term,
                 grade: rec.gradeAwarded || undefined,
