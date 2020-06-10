@@ -218,6 +218,7 @@ export class StudentHistory {
                 credits: rec.creditEarned === undefined && rec.status === HistoryStatus.Completed
                     ? catalogCredits(rec.courseId)
                     : rec.creditEarned || 0,
+                attemptedCredits: rec.creditAttempted,
                 gradeLevel: rec.gradeLevel,
                 termId: rec.term,
                 grade: rec.gradeAwarded || undefined,
@@ -225,7 +226,7 @@ export class StudentHistory {
                 status: rec.status,
                 teacherName: rec.teacherName,
                 courseName: rec.courseName,
-                courseSubject: rec.courseSubject
+                courseSubject: rec.courseSubject                
             })).filter((stuRec) => stuRec.number && stuRec.number.length > 0);
 
             // console.log(studentId, courses);
