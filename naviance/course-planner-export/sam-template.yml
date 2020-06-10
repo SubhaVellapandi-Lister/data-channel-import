@@ -7,7 +7,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: "./course-planner-export.zip"
-      FunctionName: cf-naviance-dc-ap-export-qa
+      FunctionName: cf-naviance-dc-ap-export
       Handler: dist/index.exportHandler
       Timeout: 900
       MemorySize: 2048

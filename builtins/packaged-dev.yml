@@ -5,7 +5,7 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-dev/3bcf20012975c5ce72db6c64730100a0
+      CodeUri: s3://data-channels-processor-deployments-dev/14c369a8e7271835def047de3b3be300
       FunctionName: data-channels-BuiltInProcessor
       Handler: dist/index.BuiltInHandler
       Timeout: 300
