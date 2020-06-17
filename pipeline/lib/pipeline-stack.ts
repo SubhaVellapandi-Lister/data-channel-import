@@ -4,7 +4,6 @@ import build = require('@aws-cdk/aws-codebuild');
 import pipeline = require('@aws-cdk/aws-codepipeline');
 import actions = require('@aws-cdk/aws-codepipeline-actions');
 import cfn = require('@aws-cdk/aws-cloudformation');
-import { FilterGroup } from '@aws-cdk/aws-codebuild';
 
 export class PipelineStack extends cdk.Stack {
     constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -24,7 +23,12 @@ export class PipelineStack extends cdk.Stack {
                 'BUILD_ARTIFACT_BUCKET': {
                     type: build.BuildEnvironmentVariableType.PLAINTEXT,
                     value: deploymentsBucket.bucketName
-                }
+                },
+                'NPM_USER': {
+                    type: build.BuildEnvironmentVariableType.PLAINTEXT,
+                    value: 'hpt-npm-user-ro'
+                },
+
             },
             cache: build.Cache.bucket(deploymentsBucket, { prefix: 'ss-data-channels-naviance-course-export-codebuild-cache'}),
             buildSpec: build.BuildSpec.fromObject({
@@ -37,11 +41,14 @@ export class PipelineStack extends cdk.Stack {
                         'commands': [
                             'echo "--------INSTALL PHASE--------"',
                             'pip3 install aws-sam-cli',
+                            'npm install -g npm-cli-login',
                         ]
                     },
                     'pre_build': {
                         'commands': [
                             'echo "--------PREBUILD PHASE--------"',
+                            'cd naviance/course-planner-export',
+                            'npm-cli-login',
                             'npm install',
                         ]
                     },
@@ -63,7 +70,7 @@ export class PipelineStack extends cdk.Stack {
                 },
                 'artifacts': {
                     'files': ['packaged.yaml'],
-                    'discard-paths': 'yes',
+                    'base-directory': 'naviance/course-planner-export'
                 },
                 'cache': {
                     'paths': ['/root/.cache/pip'],
@@ -88,19 +95,60 @@ export class PipelineStack extends cdk.Stack {
             resources: [`arn:aws:s3:::${props.readyBucketName}/*`]
         })); */
 
-        const processorPipeline = new pipeline.Pipeline(this, 'processorPipeline', {
-            artifactBucket: deploymentsBucket,
-            pipelineName: 'data-channels-naviance-course-export',
-            restartExecutionOnUpdate: true,
-        });
-
         const sourceOutput = new pipeline.Artifact();
         const buildOutput = new pipeline.Artifact();
-        const cfnOutput = new pipeline.Artifact();
+       // const cfnOutput = new pipeline.Artifact();
 
-        const githubToken = cdk.SecretValue.secretsManager('ss-data-channels-processor-pipeline-github-token', {jsonField: 'github-token'}),
+        const githubToken = cdk.SecretValue.secretsManager('ss-data-channels-processor-pipeline-github-token', {jsonField: 'github-token'});
 
-
+        new pipeline.Pipeline(this, 'Pipeline', {
+            artifactBucket: deploymentsBucket,
+            pipelineName: 'ss-data-channels-naviance-course-export',
+            restartExecutionOnUpdate: true,
+            stages: [
+              {
+                stageName: 'Source',
+                actions: [
+                  new actions.GitHubSourceAction({
+                    actionName: 'GitHub_Source',
+                    owner: 'Hobsons',
+                    repo: 'data-channels-processors',
+                    oauthToken: githubToken,
+                    output: sourceOutput,
+                    branch: 'master',
+                    trigger: actions.GitHubTrigger.WEBHOOK
+                  }),
+                ],
+              },
+              {
+                stageName: 'Build',
+                actions: [
+                  new actions.CodeBuildAction({
+                    actionName: 'Lambda_Build',
+                    project: buildProject,
+                    input: sourceOutput,
+                    outputs: [buildOutput],
+                  }),
+                ],
+              },
+              {
+                stageName: 'Deploy',
+                actions: [
+                  new actions.CloudFormationCreateUpdateStackAction({
+                    actionName: 'Lambda_CFN_Deploy',
+                    templatePath: buildOutput.atPath('packaged.yaml'),
+                    stackName: 'ss-data-channels-naviance-course-export-stack',
+                    adminPermissions: true,
+                    capabilities: [
+                      cfn.CloudFormationCapabilities.AUTO_EXPAND,
+                      cfn.CloudFormationCapabilities.NAMED_IAM,
+                      cfn.CloudFormationCapabilities.ANONYMOUS_IAM,
+                    ],
+                  }),
+                ],
+              },
+            ],
+          });
 
 
         //  NOTE: This Stage/Action requires a manual OAuth handshake in the browser be complete before automated deployment can occur
