@@ -17,6 +17,26 @@ Resources:
               Effect: Allow
               Resource: arn:aws:ssm:*:*:parameter/data-channels/hello-*
               Sid: SSMGetParameterPolicy
+        - Statement:
+          -
+            Action:
+              - s3:ListBucket
+            Effect: Allow
+            Resource:
+              arn:aws:s3:::data-channels-work-dev
+          -
+            Action:
+              - s3:*
+            Effect: Allow
+            Resource:
+              arn:aws:s3:::data-channels-work-dev/workspace/athena/*
+          -
+            Action:
+              - athena:StartQueryExecution
+              - athena:GetQueryExecution
+            Effect: Allow
+            Resource:
+              arn:aws:athena:*:*:workgroup/primary
       Runtime: nodejs12.x
       Timeout: 300
     Type: AWS::Serverless::Function
