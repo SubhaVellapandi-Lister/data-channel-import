@@ -1,10 +1,6 @@
-import { jobConfigFromEnv } from "@data-channels/dcSDK/dist/utils/docker";
-import BuiltInRouter from "./Router";
+import { builtInHandler } from "./index";
 
+// tslint:disable-next-line
 (async () => {
-    const jobConf = jobConfigFromEnv();
-    await BuiltInRouter.handleJobEvent({
-        Job: jobConf,
-        TaskToken: process.env.DCHAN_JOB_TASK_TOKEN
-    }, '');
+    await builtInHandler(undefined, undefined);
 })();

@@ -45,6 +45,7 @@
     "@types/request-promise-native": "1.0.17",
     "@types/uuid": "7.0.3",
     "aws-sdk": "2.492.0",
+    "aws-sdk-mock": "5.1.0",
     "jest": "24.4.0",
     "mkdirp": "0.5.1",
     "shx": "0.3.2",
@@ -54,7 +55,7 @@
     "typescript": "3.8.3"
   },
   "dependencies": {
-    "@data-channels/dcSDK": "0.11.2",
+    "@data-channels/dcSDK": "0.13.2-beta.0",
     "csv": "5.3.2",
     "lodash": "4.17.15",
     "request": "2.88.0"

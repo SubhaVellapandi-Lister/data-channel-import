@@ -1,12 +1,28 @@
-import BuiltInRouter from "./Router";
+import { generateHandler } from "@data-channels/dcSDK";
+import Athena from "./processors/Athena";
+import Diff from "./processors/Diff";
+import Echo from "./processors/Echo";
+import GroupBy from "./processors/GroupBy";
+import HelloWorld from "./processors/HelloWorld";
+import SESProcessor from "./processors/SES";
+import SNSProcessor from "./processors/SNS";
+import Sort from "./processors/Sort";
+import ThrowError from "./processors/ThrowError";
+import Translate from "./processors/Translate";
+import Validate from "./processors/Validate";
 
-export async function BuiltInHandler(event: any, context: any): Promise<any> {
-
-    await BuiltInRouter.handleJobEvent(event, context);
-
-    const response = {
-        status: "Work Done"
-    };
-
-    return response;
-}
+export const builtInHandler = generateHandler({
+    echo:  Echo,
+    translate: Translate,
+    sort: Sort,
+    validate: Validate,
+    hello: HelloWorld,
+    helloRow: HelloWorld,
+    sns: SNSProcessor,
+    emailJobInfo: SESProcessor,
+    throwError: ThrowError,
+    diff: Diff,
+    groupby: GroupBy,
+    athena: Athena,
+    sql: Athena
+});

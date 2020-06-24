@@ -13,6 +13,11 @@ export class PipelineStack extends cdk.Stack {
             bucketArn: 'arn:aws:s3:::data-channels-processor-deployments-dev'
         });
 
+        /* build.Project(this, 'SomeProject', {
+            source: {
+            }
+        }) */
+
         const buildProject = new build.PipelineProject(this, 'BuildProject', {
             projectName: 'ss-data-channels-naviance-course-export',
             description: 'Build project for data-channels-naviance-course-export',
