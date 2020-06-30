@@ -4,6 +4,7 @@ import Diff from "./processors/Diff";
 import Echo from "./processors/Echo";
 import GroupBy from "./processors/GroupBy";
 import HelloWorld from "./processors/HelloWorld";
+import SecurityScan from "./processors/SecurityScan";
 import SESProcessor from "./processors/SES";
 import SNSProcessor from "./processors/SNS";
 import Sort from "./processors/Sort";
@@ -24,5 +25,6 @@ export const builtInHandler = generateHandler({
     diff: Diff,
     groupby: GroupBy,
     athena: Athena,
-    sql: Athena
+    sql: Athena,
+    securityscan: SecurityScan,
 });

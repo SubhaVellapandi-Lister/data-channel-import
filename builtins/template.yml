@@ -22,7 +22,9 @@ Resources:
             Effect: Allow
             Action:
               - ssm:GetParameter
-            Resource: 'arn:aws:ssm:*:*:parameter/data-channels/hello-*'
+            Resource:
+              - 'arn:aws:ssm:*:*:parameter/data-channels/hello-*'
+              - 'arn:aws:ssm:*:*:parameter/data-channels-builtin/*'
       - Statement:
         - Sid: SNSPublishPolicy
           Effect: Allow
@@ -71,3 +73,10 @@ Resources:
             - arn:aws:glue:*:*:database/dchan*
             - arn:aws:glue:*:*:table/dchan*
             - arn:aws:glue:*:*:userDefinedFunction/dchan*
+      - Statement:
+        - Sid: S3ClamAVPolicy
+          Action:
+            - s3:*
+          Effect: Allow
+          Resource:
+            arn:aws:s3:::data-channels-work-dev/clamav/*

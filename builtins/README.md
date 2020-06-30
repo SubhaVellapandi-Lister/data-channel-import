@@ -253,7 +253,7 @@ The `modifiedOutput` format:
 | **newAll** | Output all values from the new file |
 | **newChangedOnly** | Output only values that have changed in the new file, replace others with `unmodifiedValue` |
 | **oldAll** | Output all values from the old file |
-| **oldChangedOnly** | Output only values that have changed in the old file, replace others with `unmodifiedValue` | 
+| **oldChangedOnly** | Output only values that have changed in the old file, replace others with `unmodifiedValue` |
 
 
 Example modified config:
@@ -325,3 +325,80 @@ Immediately throws an error.  Useful for testing `alwaysRun` property on subsequ
 | **input name** | N/A |
 | **output name** | N/A |
 | **config property name** | N/A |
+
+
+### SQL / Athena
+
+Allows you to run SQL queries against inputs and create outputs from the resulting queries.
+
+| | |
+| ---- | --- |
+| **method name** | sql |
+| **granularity** | once |
+| **code** | [Athena.ts](src/processors/Athena.ts) |
+| **input name** | Any input name you want, e.g. "data" |
+| **output name** | Any output name you want, must match the query name in your config |
+| **config property name** | sqlConfig |
+
+`sqlConfig` has one required and one optional properties:
+* outputs - Required property should contain one entry per output name
+  * query - The query to run to produce the output
+* inputs - Optional property, should one entry per intput name that needs additonal config
+  * columnTypes - Optional property to define non-string column types for certain columns in the input.  See [Athena Data Types](https://docs.aws.amazon.com/athena/latest/ug/data-types.html) for possible values.
+
+Example Config
+
+```json
+"parameters": {
+  "sqlConfig": {
+    "outputs": {
+      "myQueryOutput": {
+        "query": "select * from myinput"
+      }
+    },
+    "inputs": {
+      "myinput": {
+        "columnTypes": {
+          "someIntegerColumn": "INTEGER"
+        }
+      }
+    }
+  }
+}
+```
+
+### Security Scan
+
+Allows you to scan input files for malware and viruses
+
+| | |
+| ---- | --- |
+| **method name** | securityscan |
+| **granularity** | once |
+| **code** | [SecurityScan.ts](src/processors/SecurityScan.ts) |
+| **input name** | Any input name you want, e.g. "data" |
+| **output name** | No outputs, scan info is put in the results |
+| **config property name** | scanConfig |
+
+`scanConfig` has the following properties:
+* failOnAnyFinding - Fail the job if anything is found, defaults to false.
+* scanTool - `scanii` or `clamav`, defaults to `scanii`.
+* byInput - optional settings, keys are by input name,
+  * failOnFinding - fail job if this input has a finding
+* inputs - Optional property, should one entry per intput name that needs additonal config
+  * columnTypes - Optional property to define non-string column types for certain columns in the input.  See [Athena Data Types](https://docs.aws.amazon.com/athena/latest/ug/data-types.html) for possible values.
+
+Example Config
+
+```json
+"parameters": {
+  "scanConfig": {
+    "byInput": {
+      "myInput": {
+        "failOnFinding": true
+      }
+    },
+    "scanTool": "clamav"
+  }
+}
+```

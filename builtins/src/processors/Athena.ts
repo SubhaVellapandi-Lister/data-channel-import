@@ -15,8 +15,17 @@ import parse from "csv-parse";
 import { Readable } from "stream";
 
 export interface IAthenaConfig {
-    [outputName: string]: {
-        query: string;
+    outputs: {
+        [outputName: string]: {
+            query: string;
+        };
+    };
+    inputs?: {
+        [inputName: string]: {
+            columnTypes?: {
+                [columnName: string]: string
+            };
+        };
     };
 }
 
@@ -25,7 +34,7 @@ async function sleep(milliseconds: number) {
 }
 
 export default class Athena extends BaseProcessor {
-    private config: IAthenaConfig = {};
+    private config: IAthenaConfig = { outputs: {}};
     private dbName: string = '';
     private queryStatistics: { [ouptutName: string]: object} = {};
 
@@ -96,9 +105,18 @@ export default class Athena extends BaseProcessor {
 
             console.log(`wrote temp work file`);
 
+            const config = this.config;
+            function colType(name: string): string {
+                if (config.inputs && config.inputs[inputName] && config.inputs[inputName][name]) {
+                    return ' ' + config.inputs[inputName][name];
+                }
+
+                return ' STRING';
+            }
+
             const createQuery = `
                 CREATE EXTERNAL TABLE IF NOT EXISTS ${inputName} (
-                    ${headers.map((h) => h + ' STRING').join(', ')}
+                    ${headers.map((h) => h + colType(h)).join(', ')}
                 )
                 ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
                 WITH SERDEPROPERTIES (
@@ -122,9 +140,9 @@ export default class Athena extends BaseProcessor {
     }
 
     private async runQueries(input: IFileProcessorInput) {
-        for (const outName of Object.keys(this.config)) {
+        for (const outName of Object.keys(this.config.outputs)) {
             const result = await this.executeSyncQuery({
-                QueryString: this.config[outName].query,
+                QueryString: this.config.outputs[outName].query,
                 QueryExecutionContext: {
                     Database: this.dbName
                 }

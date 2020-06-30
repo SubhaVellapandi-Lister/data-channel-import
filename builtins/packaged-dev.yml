@@ -5,7 +5,7 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-dev/4b2d691ec0f6f5e45fe64286a22a0c28
+      CodeUri: s3://data-channels-processor-deployments-dev/8e4602656fd2f8f4b77bb8f8ee65830f
       FunctionName: data-channels-BuiltInProcessor
       Handler: dist/index.builtInHandler
       Timeout: 300
@@ -21,7 +21,9 @@ Resources:
           Effect: Allow
           Action:
           - ssm:GetParameter
-          Resource: arn:aws:ssm:*:*:parameter/data-channels/hello-*
+          Resource:
+          - arn:aws:ssm:*:*:parameter/data-channels/hello-*
+          - arn:aws:ssm:*:*:parameter/data-channels-builtin/*
       - Statement:
         - Sid: SNSPublishPolicy
           Effect: Allow
@@ -67,3 +69,9 @@ Resources:
           - arn:aws:glue:*:*:database/dchan*
           - arn:aws:glue:*:*:table/dchan*
           - arn:aws:glue:*:*:userDefinedFunction/dchan*
+      - Statement:
+        - Sid: S3ClamAVPolicy
+          Action:
+          - s3:*
+          Effect: Allow
+          Resource: arn:aws:s3:::data-channels-work-dev/clamav/*
