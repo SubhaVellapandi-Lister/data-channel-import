@@ -37,6 +37,7 @@ export default class Athena extends BaseProcessor {
     private config: IAthenaConfig = { outputs: {}};
     private dbName: string = '';
     private queryStatistics: { [ouptutName: string]: object} = {};
+    private queryError = '';
 
     public async sql(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
         return this.athena(input);
@@ -76,6 +77,10 @@ export default class Athena extends BaseProcessor {
             QueryString: `drop database ${this.dbName} cascade`
         });
 
+        if (this.queryError) {
+            await this.job.terminalError('Athena-Query', this.queryError);
+        }
+
         return {
             results: {
                 queryStatistics: this.queryStatistics
@@ -107,8 +112,8 @@ export default class Athena extends BaseProcessor {
 
             const config = this.config;
             function colType(name: string): string {
-                if (config.inputs && config.inputs[inputName] && config.inputs[inputName][name]) {
-                    return ' ' + config.inputs[inputName][name];
+                if (config.inputs && config.inputs[inputName] && config.inputs[inputName].columnTypes?.[name]) {
+                    return ' ' + config.inputs[inputName].columnTypes?.[name];
                 }
 
                 return ' STRING';
@@ -148,6 +153,12 @@ export default class Athena extends BaseProcessor {
                 }
             });
             console.log(result);
+            if (result.QueryExecution?.Status?.State === 'FAILED') {
+                this.queryError = result.QueryExecution?.Status?.StateChangeReason ?? 'Unknown Error';
+
+                return;
+            }
+
             const resultsReadable = await this.getReadable(
                 this.job.workspace!.bucket, `workspace/athena/results/${result.QueryExecution!.QueryExecutionId}.csv`);
             const writeOutput = input.outputs[outName];

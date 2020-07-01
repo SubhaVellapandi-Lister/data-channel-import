@@ -20,6 +20,7 @@ export const builtInHandler = generateHandler({
     hello: HelloWorld,
     helloRow: HelloWorld,
     sns: SNSProcessor,
+    email: SESProcessor,
     emailJobInfo: SESProcessor,
     throwError: ThrowError,
     diff: Diff,

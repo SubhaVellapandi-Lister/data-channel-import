@@ -39,14 +39,15 @@ describe('Athena', () => {
         resultsStringifier.end();
 
         const job = Job.fromConfig(jobConfig);
-        console.log('JOB YO', job);
         const processor = new Athena(job);
         const writeStream = stringify();
         const params: IFileProcessorInput = {
             parameters: {
                 sqlConfig: {
-                    myQuery: {
-                        query: 'select * from data'
+                    outputs: {
+                        myQuery: {
+                            query: 'select * from data'
+                        }
                     }
                 }
             },

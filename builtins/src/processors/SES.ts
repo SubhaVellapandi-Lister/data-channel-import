@@ -2,43 +2,113 @@ import {
     BaseProcessor,
     IFileProcessorInput,
     IFileProcessorOutput,
+    JobStatus,
 } from "@data-channels/dcSDK";
 import AWS from "aws-sdk";
+import _ from "lodash";
 
 export interface ISESParams {
     to: string | string[];
     from?: string;
+    failureOnly?: boolean;
+    successOnly?: boolean;
+    template?: {
+        subject: string;
+        body: string;
+        isHtml?: boolean;
+    };
+}
+
+function validEmail(email: string) {
+    // tslint:disable-next-line
+    const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+
+    return re.test(String(email).toLowerCase());
 }
 
 export default class SESProcessor extends BaseProcessor {
-    public async emailJobInfo(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
+    private config: ISESParams = {
+        to: []
+    };
 
+    private initConfig(input: IFileProcessorInput) {
         const config = input.parameters!['emailConfig'] as ISESParams;
+        if (!config.from) {
+            config.from = "no-reply@data-channels-dev.hobsonsdev.net";
+        }
 
-        const toAddresses = typeof config.to === 'string' ? [config.to] : config.to;
+        config.to = typeof config.to === 'string' ? [config.to] : config.to;
 
+        config.to = config.to.map((addr) => this.templateResolver(addr)).filter((addr) => validEmail(addr));
+    }
+
+    public async emailJobInfo(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
+        this.initConfig(input);
+
+        await this.send(
+            `Data Channels Job - ${this.job.guid} Finished`,
+
+            JSON.stringify({
+                guid: this.job.guid,
+                channel: this.job.channelReference,
+                steps: this.job.steps
+            }, undefined, 2),
+            false,
+        );
+
+        return {};
+    }
+
+    public async email(input: IFileProcessorInput): Promise<IFileProcessorOutput>  {
+        this.initConfig(input);
+
+        if (this.config.successOnly && this.job.status === JobStatus.Failed) {
+            return { results: { sent: false }};
+        }
+
+        if (this.config.failureOnly && this.job.status !== JobStatus.Failed) {
+            return { results: { sent: false }};
+        }
+
+        const defaultTemplate = {
+            subject: 'Data Channels Job - ${job.name} - ${job.status}',
+            body: 'Job has ${job.status} ${job.statusMsg}\n\nStep Results:\n\n${job.steps}',
+            isHtml: false
+        };
+
+        if (!this.config.template) {
+            this.config.template = defaultTemplate;
+        }
+
+        const subject = this.templateResolver(this.config.template.subject);
+        const body = this.templateResolver(this.config.template.body);
+        await this.send(subject, body, this.config.template.isHtml || false);
+
+        return {
+            results: {
+                sent: true,
+                addresses: this.config.to
+            }
+        };
+    }
+
+    private async send(subject: string, body: string, isHtml: boolean) {
         const ses = new AWS.SES();
-
-        /* The following example sends a formatted email: */
 
         const params = {
             Destination: {
-                ToAddresses: toAddresses
+                ToAddresses: this.config.to as string[]
             },
             Message: {
                 Body: {
                     Text: {
                         Charset: "UTF-8",
-                        Data: JSON.stringify({
-                            guid: this.job.guid,
-                            channel: this.job.channelReference,
-                            steps: this.job.steps
-                        }, undefined, 2)
+                        Data: body
                     }
                 },
                 Subject: {
                         Charset: "UTF-8",
-                        Data: `Data Channels Job - ${this.job.guid} Finished`
+                        Data: subject
                 }
             },
             Source: "no-reply@data-channels-dev.hobsonsdev.net"
@@ -54,7 +124,19 @@ export default class SESProcessor extends BaseProcessor {
                 }
             });
         });
+    }
 
-        return {};
+    private templateResolver(template: string): string {
+        const matcher = (templateString: string, templateVariables: object) =>
+            templateString.replace(/\${(.*?)}/g, (x, g) => {
+                let value = _.get(templateVariables, g, '');
+                if (typeof value !== 'string') {
+                    value = JSON.stringify(value);
+                }
+
+                return value;
+            });
+
+        return matcher(template, { job: this.job.rawConfig});
     }
 }

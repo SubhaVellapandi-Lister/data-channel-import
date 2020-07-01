@@ -298,18 +298,41 @@ Send an email out with the basic info of the job.  Note that this method could b
 
 | | |
 | ---- | --- |
-| **method name** | emailJobInfo |
+| **method names** | email |
 | **granularity** | once |
 | **code** | [SES.ts](src/processors/SES.ts) |
 | **input name** | N/A |
 | **output name** | N/A |
 | **config property name** | emailConfig |
 
-`emailConfig` takes `to` property which is a list of email addresses.
+The `email` method defaults to sending out a small generic subject and body with the pertinent details of the job.  You can easily override the subject and body using a template system if desired.  Template strings can use `${job.X}` template variables to fill in job details, where `job` is of type [IJobConfig](https://dcsdk-dev.hesos.net/interfaces/_types_job_.ijobconfig.html).
+
+`emailConfig` takes the following properties:
+* `to` - property which is either a string of an email address, or a list of email addresses.
+* `failureOnly` - optional property, if true, will only send the email if the job failed on a prior step (must be used with `alwaysRun` set to true of the email step)
+* `successOnly` - optional property, is the inverse of failureOnly property.
+* `template` - custom template for the subject and body
+  * `body` - template string to be used for the body
+  * `subject` - template string to be used for the subject
+  * `isHtml` - boolean to specify if body should be sent as html, defaults to false
 
 ```json
 "emailConfig": {
-  "to": ["someone@somewhere.com"]
+  "to": ["someone@somewhere.com"],
+  "failureOnly": true
+}
+```
+
+or with template
+
+```json
+"emailConfig": {
+  "to": ["someone@somewhere.com"],
+  "failureOnly": true,
+  "template": {
+    "subject": "Data Channels Job - ${job.name} - ${job.status}",
+    "body": "Job has ${job.status} ${job.statusMsg}\n\nStep Results:\n\n${job.steps}",
+  }
 }
 ```
 
@@ -385,8 +408,6 @@ Allows you to scan input files for malware and viruses
 * scanTool - `scanii` or `clamav`, defaults to `scanii`.
 * byInput - optional settings, keys are by input name,
   * failOnFinding - fail job if this input has a finding
-* inputs - Optional property, should one entry per intput name that needs additonal config
-  * columnTypes - Optional property to define non-string column types for certain columns in the input.  See [Athena Data Types](https://docs.aws.amazon.com/athena/latest/ug/data-types.html) for possible values.
 
 Example Config
 

@@ -7,6 +7,7 @@ import {
 } from "@data-channels/dcSDK";
 import { execFile } from "child_process";
 import { createWriteStream, mkdirSync, readdirSync } from "fs";
+import _ from "lodash";
 import fetch from "node-fetch";
 import { Readable } from "stream";
 
@@ -51,6 +52,7 @@ export default class SecurityScan extends BaseProcessor {
         scaniiApiKey: '',
         scanTool: ScanTool.SCANII
     };
+    private findingsStrings: string[] = [];
 
     public async securityscan(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
         if (input.parameters && input.parameters!['scanConfig']) {
@@ -72,6 +74,10 @@ export default class SecurityScan extends BaseProcessor {
                 needsToFail = needsToFail || this.config.byInput?.[inputName]?.failOnFinding;
             }
         }
+
+        this.job.setMetaValue('securityScanRun', true);
+        this.job.setMetaValue('securityScanIssuesFound', hasSecurityIssues);
+        this.job.setMetaValue('securityScanFindings', _.uniq(this.findingsStrings.join(',')));
 
         if (hasSecurityIssues && (needsToFail || this.config.failOnAnyFinding)) {
             await this.job.terminalError('Security-Scan', 'Issue found with input');
@@ -110,10 +116,11 @@ export default class SecurityScan extends BaseProcessor {
 
         await this.downloadClamAVDefinition('clamav/main.cvd', '/tmp/clamav/definition.cvd');
         for (const inputName of Object.keys(input.inputs)) {
-            await this.downloadStreamFile(input.inputs[inputName], '/tmp/testFile');
+            const refreshedReadable = await this.refreshInputStream(inputName);
+            await this.downloadStreamFile(refreshedReadable, '/tmp/testFile');
             const mainResults = await this.runClamAV();
             resultsByInput[inputName].hasFindings = resultsByInput[inputName].hasFindings || mainResults.hasFindings;
-            resultsByInput[inputName].rawResults['main'] = resultsByInput.rawResults;
+            resultsByInput[inputName].rawResults['main'] = mainResults.rawResults;
         }
 
         return resultsByInput;
@@ -121,7 +128,12 @@ export default class SecurityScan extends BaseProcessor {
 
     private async runClamAV(): Promise<IFileScanResult> {
         const args = ['-a', '-v', '-d', '/tmp/clamav', '/tmp/testFile'];
-        const options = { env: { LD_LIBRARY_PATH: '/var/task/clamav' }};
+        let ldpath = process.env.LD_LIBRARY_PATH || '';
+        if (ldpath.length) {
+            ldpath += ':';
+        }
+        ldpath += '/var/task/clamav';
+        const options = { env: { LD_LIBRARY_PATH: ldpath }};
 
         console.log(readdirSync('/var/task/clamav'));
 
@@ -141,6 +153,13 @@ export default class SecurityScan extends BaseProcessor {
                 }
 
                 const hasFindings = stdout.includes('Infected files: 1');
+
+                if (hasFindings) {
+                    const findingMatch = (/: (.*?) FOUND/g).exec(stdout);
+                    if (findingMatch) {
+                        this.findingsStrings.push(findingMatch[1]);
+                    }
+                }
 
                 resolve({
                     hasFindings,
@@ -238,6 +257,9 @@ export default class SecurityScan extends BaseProcessor {
                     if (body['content_length'] && body['findings']) {
                         // it's finished
                         const hasFindings = body['findings']?.length;
+                        if (hasFindings) {
+                            this.findingsStrings.concat(body['findings']);
+                        }
                         results[inputName] = {
                             hasFindings,
                             rawResults: body
