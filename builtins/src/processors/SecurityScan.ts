@@ -77,10 +77,10 @@ export default class SecurityScan extends BaseProcessor {
 
         this.job.setMetaValue('securityScanRun', true);
         this.job.setMetaValue('securityScanIssuesFound', hasSecurityIssues);
-        this.job.setMetaValue('securityScanFindings', _.uniq(this.findingsStrings.join(',')));
+        this.job.setMetaValue('securityScanFindings', _.uniq(this.findingsStrings).join(','));
 
         if (hasSecurityIssues && (needsToFail || this.config.failOnAnyFinding)) {
-            await this.job.terminalError('Security-Scan', 'Issue found with input');
+            await this.job.terminalError('Security-Scan', `Security Issue found with input file`);
         }
 
         return {
@@ -134,10 +134,6 @@ export default class SecurityScan extends BaseProcessor {
         }
         ldpath += '/var/task/clamav';
         const options = { env: { LD_LIBRARY_PATH: ldpath }};
-
-        console.log(readdirSync('/var/task/clamav'));
-
-        console.log(readdirSync('/var/task'));
 
         return new Promise((resolve, reject) => {
             execFile('./clamav/clamscan', args, options, (error, stdout, stderr) => {
@@ -256,9 +252,9 @@ export default class SecurityScan extends BaseProcessor {
                     const body = await resp.json();
                     if (body['content_length'] && body['findings']) {
                         // it's finished
-                        const hasFindings = body['findings']?.length;
+                        const hasFindings = body['findings']?.length > 0;
                         if (hasFindings) {
-                            this.findingsStrings.concat(body['findings']);
+                            this.findingsStrings = this.findingsStrings.concat(body['findings']);
                         }
                         results[inputName] = {
                             hasFindings,

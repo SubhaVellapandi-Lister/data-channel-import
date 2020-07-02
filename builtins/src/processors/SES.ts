@@ -12,6 +12,7 @@ export interface ISESParams {
     from?: string;
     failureOnly?: boolean;
     successOnly?: boolean;
+    sendFilter?: string;
     template?: {
         subject: string;
         body: string;
@@ -40,6 +41,8 @@ export default class SESProcessor extends BaseProcessor {
         config.to = typeof config.to === 'string' ? [config.to] : config.to;
 
         config.to = config.to.map((addr) => this.templateResolver(addr)).filter((addr) => validEmail(addr));
+
+        this.config = config;
     }
 
     public async emailJobInfo(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
@@ -62,12 +65,25 @@ export default class SESProcessor extends BaseProcessor {
     public async email(input: IFileProcessorInput): Promise<IFileProcessorOutput>  {
         this.initConfig(input);
 
+        if (!this.config.to.length) {
+            console.log('No To Addresses Found');
+
+            return { results: { sent: false }};
+        }
+
         if (this.config.successOnly && this.job.status === JobStatus.Failed) {
             return { results: { sent: false }};
         }
 
         if (this.config.failureOnly && this.job.status !== JobStatus.Failed) {
             return { results: { sent: false }};
+        }
+
+        if (this.config.sendFilter) {
+            const val = _.get({ job: this.job.rawConfig }, this.config.sendFilter);
+            if (!val) {
+                return { results: { sent: false, sendStatus: "sendFilter not met" }};
+            }
         }
 
         const defaultTemplate = {

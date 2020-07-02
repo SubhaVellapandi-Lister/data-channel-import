@@ -311,6 +311,7 @@ The `email` method defaults to sending out a small generic subject and body with
 * `to` - property which is either a string of an email address, or a list of email addresses.
 * `failureOnly` - optional property, if true, will only send the email if the job failed on a prior step (must be used with `alwaysRun` set to true of the email step)
 * `successOnly` - optional property, is the inverse of failureOnly property.
+* `sendFilter` - lodash compatible path to lookup in the IJobConfig.  If looked up value is truthy, send the email, otherwise do not send the email.
 * `template` - custom template for the subject and body
   * `body` - template string to be used for the body
   * `subject` - template string to be used for the subject
