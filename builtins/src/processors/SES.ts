@@ -80,7 +80,10 @@ export default class SESProcessor extends BaseProcessor {
         }
 
         if (this.config.sendFilter) {
-            const val = _.get({ job: this.job.rawConfig }, this.config.sendFilter);
+            const val = _.get(
+                { job: this.job.rawConfig },
+                this.config.sendFilter.replace(/\${(.*?)}/g, (x, g) => g)
+            );
             if (!val) {
                 return { results: { sent: false, sendStatus: "sendFilter not met" }};
             }
