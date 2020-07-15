@@ -1,6 +1,6 @@
 import { FileUploader, Tenant } from "@data-channels/dcSDK";
 import { createReadStream } from "fs";
-import request from 'request-promise-native';
+import fetch from 'node-fetch';
 
 export async function uploadFile(
     path: string, name: string, product: string, tenant?: Tenant
@@ -10,25 +10,28 @@ export async function uploadFile(
 
     return new Promise((resolve, reject) => {
         try {
-            const bufs: Uint8Array[] = [];
-            writeStream.on('data', (d) => { bufs.push(d); });
+            const buffers: Uint8Array[] = [];
+            writeStream.on('data', (d) => { buffers.push(d); });
             writeStream.on('end', async () => {
-                const buf = bufs.length ? Buffer.concat(bufs) : '';
-                const params: any = {
-                    method: 'PUT',
-                    uri: uploadInfo.url,
-                    headers: {
-                        'Content-Type': 'text/csv'
-                    },
-                    body: buf
-                };
-                const resp = request(params);
+                const buffer = buffers.length ? Buffer.concat(buffers) : '';
                 try {
-                    await resp;
+
+                    const request = await fetch(uploadInfo.url, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'text/csv' },
+                        body: buffer
+                    });
+
+                    if(request.ok) {
+                        resolve(uploadInfo);
+                    } else {
+                        reject(request.statusText);
+                    }
+
                 } catch (err) {
                     reject(err);
                 }
-                resolve(uploadInfo);
+                
             });
         } catch (error) {
             reject(error);

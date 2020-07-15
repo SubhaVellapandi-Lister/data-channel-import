@@ -8,7 +8,7 @@ import {
 } from "@data-channels/dcSDK";
 import * as crypto from 'crypto';
 import parse from "csv-parse";
-import request from 'request-promise-native';
+import fetch from 'node-fetch';
 import {Readable} from "stream";
 
 export enum DiffModifiedOutputType {
@@ -405,7 +405,8 @@ class FileHasher {
     }
 
     async hashFile() {
-        const read = Readable.from(await request.get(this.url));
+        const request = await fetch(this.url)
+        const read = Readable.from(await request.buffer());
         const parser = parse({
             bom: true,
             relax_column_count: true,

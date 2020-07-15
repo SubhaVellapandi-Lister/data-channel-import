@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync  } from 'fs';
 import { homedir } from 'os';
-import request from "request-promise-native";
+import fetch from "node-fetch";
 
 const configFilePath = `${homedir()}/.academic-planner/cli.json`;
 
@@ -16,21 +16,24 @@ function loadLocalConfig(): object {
 async function auth0JWT(): Promise<string> {
     const prodInfo = loadLocalConfig()['prod']['auth0'];
 
-    const options = {
+    const url = `https://${prodInfo.domain}/oauth/token`
+    const auth0Request = await fetch(url, {
         method: 'POST',
-        url: `https://${prodInfo.domain}/oauth/token`,
         headers: { 'content-type': 'application/json' },
-        json: true,
-        body: {
+        body: JSON.stringify({
             client_id: prodInfo.clientId,
             client_secret: prodInfo.clientSecret,
             audience: prodInfo.audience,
             grant_type: "client_credentials"
-        }
-    };
-    const auth0Response = await request(options);
+        })
+    });
 
-    return auth0Response['access_token'];
+    if(auth0Request.ok) {
+        const auth0Response = await auth0Request.json()
+        return auth0Response['access_token'];
+    }
+    
+    throw Error('Cannot obtain JWT from Auth0');
 }
 
 const URLS = {
@@ -41,29 +44,27 @@ const URLS = {
 export async function getApInfo(): Promise<object[]> {
     const jwt = await auth0JWT();
 
-    const nsOptions = {
+   
+    const nsUrl = `${URLS.repoHost}/namespaces`
+    const nsRequest = await fetch(nsUrl,{
         method: 'GET',
-        url: `${URLS.repoHost}/namespaces`,
         headers: {
             'content-type': 'application/json',
             'authorization': `Bearer ${jwt}`
         },
-        json: true
-    };
+    });
+    const nsResponse = await nsRequest.json()
 
-    const nsResponse = await request(nsOptions);
 
-    const scopeOptions = {
+    const scopeUrl = `${URLS.engineHost}/scopes`
+    const scopeRequest = await fetch(scopeUrl, {
         method: 'GET',
-        url: `${URLS.engineHost}/scopes`,
         headers: {
             'content-type': 'application/json',
             'authorization': `Bearer ${jwt}`
-        },
-        json: true
-    };
-
-    const scopeResponse = await request(scopeOptions);
+        }
+    });
+    const scopeResponse = await scopeRequest.json()
 
     return [nsResponse, scopeResponse];
 }

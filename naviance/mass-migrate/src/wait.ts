@@ -5,7 +5,7 @@ import {
 } from "@data-channels/dcSDK";
 import { createWriteStream, mkdirSync } from "fs";
 import path from "path";
-import request from "request-promise-native";
+import fetch from "node-fetch";
 import {printJobStep} from "./print";
 import spin from "./utils/spinner";
 
@@ -57,19 +57,23 @@ export async function waitOnJobExecution(
 export async function downloadFile(uri: string, destination: string) {
     const file = createWriteStream(destination);
     await new Promise((resolve, reject) => {
-        request({
-            uri,
+        const request = fetch(uri, {
+            method: 'GET',
             headers: {
                 Accept: 'text/csv',
             },
-            gzip: true
-        })
-        .pipe(file)
-        .on('finish', () => {
-            resolve();
-        })
-        .on('error', (error) => {
-            reject(error);
+            compress: true
         });
+        request.catch((err) => {
+            reject(err);
+        });
+        request.then(response => {
+            response.body.pipe(file).on('finish', () => {
+                resolve();
+            }).on('error', (error) => {
+                reject(error);
+            });
+        });
+
     });
 }
