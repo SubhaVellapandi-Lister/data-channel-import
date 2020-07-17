@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import cdk = require('@aws-cdk/core');
-import { PipelineStack } from '../lib/pipeline-stack';
-
+import { DchanStarterStack } from "../lib/starter-stack";
+import { DchanBuiltinStack } from '../lib/builtin-stack';
 const app = new cdk.App();
-new PipelineStack(app, 'ss-data-channels-naviance-course-planner-export');
+new DchanStarterStack(app, 'ss-data-channels-starter');
+new DchanBuiltinStack(app, 'ss-data-channels-builtins');

@@ -4,6 +4,7 @@ import build = require('@aws-cdk/aws-codebuild');
 import pipeline = require('@aws-cdk/aws-codepipeline');
 import actions = require('@aws-cdk/aws-codepipeline-actions');
 import cfn = require('@aws-cdk/aws-cloudformation');
+import iam = require('@aws-cdk/aws-iam');
 
 export class PipelineStack extends cdk.Stack {
     constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -13,12 +14,107 @@ export class PipelineStack extends cdk.Stack {
             bucketArn: 'arn:aws:s3:::data-channels-processor-deployments-dev'
         });
 
+        const samInitContext = {
+            project_name: "testproject",
+            function_name: "test-function",
+            function_description: "Description of function",
+            function_method_name: "testMethod"
+        };
+
+        const starterBuild = new build.Project(this, 'ss-starter-project', {
+            projectName: 'ss-data-channels-starter',
+            description: 'Data channels starter project CI',
+            source: build.Source.gitHub({
+                owner: 'Hobsons',
+                repo: 'data-channels-starter',
+                webhook: true,
+                webhookFilters: [
+                    build.FilterGroup.inEventOf(build.EventAction.PUSH).andBranchIs('master'),
+                    build.FilterGroup.inEventOf(build.EventAction.PULL_REQUEST_CREATED),
+                    build.FilterGroup.inEventOf(build.EventAction.PULL_REQUEST_UPDATED)
+                ],
+            }),
+            environment: {
+                buildImage: build.LinuxBuildImage.STANDARD_3_0
+            },
+            environmentVariables: {
+                'BUILD_ARTIFACT_BUCKET': {
+                    type: build.BuildEnvironmentVariableType.PLAINTEXT,
+                    value: deploymentsBucket.bucketName
+                },
+                'NPM_USER': {
+                    type: build.BuildEnvironmentVariableType.PLAINTEXT,
+                    value: 'hpt-npm-user-ro'
+                },
+                'NPM_PASS': {
+                    type: build.BuildEnvironmentVariableType.PARAMETER_STORE,
+                    value: '/data-channels/artifactoryPass'
+                },
+                'NPM_EMAIL': {
+                    type: build.BuildEnvironmentVariableType.PLAINTEXT,
+                    value: 'dl-devops-all@hobsons.com'
+                },
+                'NPM_REGISTRY': {
+                    type: build.BuildEnvironmentVariableType.PLAINTEXT,
+                    value: 'https://hobsons.jfrog.io/hobsons/api/npm/hobsons-platform-team/'
+                }
+            },
+            cache: build.Cache.bucket(deploymentsBucket, { prefix: 'ss-data-channels-starter-codebuild-cache'}),
+            buildSpec: build.BuildSpec.fromObject({
+                'version': '0.2',
+                'phases': {
+                    'install': {
+                        'runtime-versions': {
+                            'nodejs': 12,
+                        },
+                        'commands': [
+                            'echo "--------INSTALL PHASE--------"',
+                            'pip3 install aws-sam-cli',
+                            'npm install -g npm-cli-login',
+                        ]
+                    },
+                    'pre_build': {
+                        'commands': [
+                            'echo "--------NPM LOGIN--------"',
+                            'npm-cli-login -s @data-channels',
+                            'npm-cli-login -s @academic-planner',
+                            `sed -i 's/team\\/\\//team\\//g' ~/.npmrc`,
+                        ]
+                    },
+                    'build': {
+                        'commands': [
+                            'echo "--------BUILD PHASE--------"',
+                            `sam init -l . --no-interactive --no-input --extra-context '${JSON.stringify(samInitContext)}'`,
+                            'cd testproject',
+                            'npm run build',
+                            'npm run test'
+                        ]
+                    },
+                    'post_build': {
+                        'commands': [
+                            'echo "--------POST-BUILD PHASE--------"',
+                            'echo "Starter build completed on `date`"',
+                        ]
+                    }
+                },
+                'cache': {
+                    'paths': ['/root/.cache/pip'],
+                }
+            })
+        });
+
+        starterBuild.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: ["ssm:GetParameter", "ssm:GetParameters"],
+            resources: [`arn:aws:ssm:*:*:parameter/data-channels/artifactoryPass`]
+        }));
+
         /* build.Project(this, 'SomeProject', {
             source: {
             }
         }) */
 
-        const buildProject = new build.PipelineProject(this, 'BuildProject', {
+    /*    const buildProject = new build.PipelineProject(this, 'BuildProject', {
             projectName: 'ss-data-channels-naviance-course-export',
             description: 'Build project for data-channels-naviance-course-export',
             environment: {
@@ -82,7 +178,7 @@ export class PipelineStack extends cdk.Stack {
                 }
             })
         });
-
+ */
 
         /* buildProject.addToRolePolicy(new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
@@ -100,7 +196,7 @@ export class PipelineStack extends cdk.Stack {
             resources: [`arn:aws:s3:::${props.readyBucketName}/*`]
         })); */
 
-        const sourceOutput = new pipeline.Artifact();
+       /* const sourceOutput = new pipeline.Artifact();
         const buildOutput = new pipeline.Artifact();
        // const cfnOutput = new pipeline.Artifact();
 
@@ -153,7 +249,7 @@ export class PipelineStack extends cdk.Stack {
                 ],
               },
             ],
-          });
+          }); */
 
 
         //  NOTE: This Stage/Action requires a manual OAuth handshake in the browser be complete before automated deployment can occur
