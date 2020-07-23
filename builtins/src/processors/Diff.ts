@@ -405,7 +405,7 @@ class FileHasher {
     }
 
     async hashFile() {
-        const request = await fetch(this.url)
+        const request = await fetch(this.url);
         const read = Readable.from(await request.buffer());
         const parser = parse({
             bom: true,
