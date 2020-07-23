@@ -27,7 +27,7 @@ export class DchanStarterStack extends cdk.Stack {
 
         const starterBuild = buildProject(
             this,
-            'ss-starter-project',
+            'ss-dchan-starter-project',
             'Data channels starter project CI',
             'Hobsons',
             'data-channels-starter',

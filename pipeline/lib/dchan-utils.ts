@@ -2,9 +2,10 @@ import cdk = require('@aws-cdk/core');
 import build = require('@aws-cdk/aws-codebuild');
 import iam = require('@aws-cdk/aws-iam');
 import s3 = require('@aws-cdk/aws-s3');
+import { IArtifacts } from '@aws-cdk/aws-codebuild';
 
-export function devDeploymentsBucket(stack: cdk.Stack) {
-    return s3.Bucket.fromBucketAttributes(stack, 'ImportedBucket', {
+export function devDeploymentsBucket(stack: cdk.Stack, id: string = 'ImportedBucket') {
+    return s3.Bucket.fromBucketAttributes(stack, id, {
         bucketArn: 'arn:aws:s3:::data-channels-processor-deployments-dev'
     });
 }
@@ -20,9 +21,12 @@ export function buildProject(
     repoOwner: string,
     repoName: string,
     buildCommands: string[],
-    webhookFilters: build.FilterGroup[]
+    webhookFilters: build.FilterGroup[],
+    artifacts?: IArtifacts,
+    buildSpecArtifacts?: object
 ): build.Project {
-    const bucket = devDeploymentsBucket(stack);
+
+    const bucket = devDeploymentsBucket(stack, `ImportedBucket-${projectName}`);
     const project = new build.Project(stack, projectName, {
         projectName,
         description,
@@ -37,7 +41,8 @@ export function buildProject(
         },
         environmentVariables: envVars(bucket.bucketName),
         cache: build.Cache.bucket(bucket, { prefix: `${projectName}-codebuild-cache`}),
-        buildSpec: buildSpec(buildCommands)
+        buildSpec: buildSpec(buildCommands, buildSpecArtifacts),
+        artifacts
     });
 
     project.addToRolePolicy(new iam.PolicyStatement({
@@ -49,8 +54,8 @@ export function buildProject(
     return project;
 }
 
-export function buildSpec(buildCommands: string[]): build.BuildSpec {
-    const spec = build.BuildSpec.fromObject({
+export function buildSpec(buildCommands: string[], artifacts?: object): build.BuildSpec {
+    const specObject: any = {
         'version': '0.2',
         'phases': {
             'install': {
@@ -84,9 +89,13 @@ export function buildSpec(buildCommands: string[]): build.BuildSpec {
         'cache': {
             'paths': ['/root/.cache/pip'],
         }
-    });
+    };
 
-    return spec;
+    if (artifacts) {
+        specObject['artifacts'] = artifacts;
+    }
+
+    return build.BuildSpec.fromObject(specObject);
 }
 
 export function envVars(artifactBucketName?: string): { [name: string]: build.BuildEnvironmentVariable }  {

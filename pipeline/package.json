@@ -8,7 +8,9 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "deploy-starter": "npm run build && npm run cdk deploy ss-data-channels-starter",
+    "deploy-builtin": "npm run build && npm run cdk deploy ss-data-channels-builtins"
   },
   "devDependencies": {
     "@aws-cdk/assert": "^1.15.0",
