@@ -6,7 +6,7 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: "./course-planner-import.zip"
+      CodeUri: "./"
       FunctionName: cf-naviance-dc-ap-import
       Handler: dist/index.lambdaHandler
       Timeout: 900
