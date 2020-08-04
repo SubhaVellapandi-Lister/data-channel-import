@@ -47,14 +47,14 @@ Resources:
             - s3:ListMultipartUploadParts
           Effect: Allow
           Resource:
-            arn:aws:s3:::data-channels-work-dev
+            arn:aws:s3:::data-channels-work-*
       - Statement:
         - Sid: S3WorkspaceObjectPolicy
           Action:
             - s3:*
           Effect: Allow
           Resource:
-            arn:aws:s3:::data-channels-work-dev/workspace/athena/*
+            arn:aws:s3:::data-channels-work-*/workspace/athena/*
       - Statement:
         - Sid: AthenaQueryPolicy
           Action:
@@ -79,4 +79,4 @@ Resources:
             - s3:*
           Effect: Allow
           Resource:
-            arn:aws:s3:::data-channels-work-dev/clamav/*
+            arn:aws:s3:::data-channels-work-*/clamav/*

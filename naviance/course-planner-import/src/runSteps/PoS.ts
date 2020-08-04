@@ -61,6 +61,7 @@ async function processJob(jobToRun: any, namespace: string, filesIn: any[]) {
     console.log(JSON.stringify(processor.job, undefined, 2));
 }
 
+// tslint:disable-next-line
 (async () => {
     // lincoln
     /*await processJob(

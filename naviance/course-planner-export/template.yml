@@ -10,7 +10,7 @@ Resources:
       FunctionName: cf-naviance-dc-ap-export
       Handler: dist/index.exportHandler
       Timeout: 900
-      MemorySize: 2048
+      MemorySize: 3000
       Runtime: nodejs10.x
       Policies:
       - Statement:
@@ -22,11 +22,7 @@ Resources:
           Effect: Allow
           Action:
           - ssm:GetParameter
-          Resource: arn:aws:ssm:*:*:parameter/academic-planner/*
-        - Sid: SSMGetQAParameterPolicy
-          Effect: Allow
-          Action:
-          - ssm:GetParameter
-          Resource: arn:aws:ssm:*:*:parameter/academic-planner-qa/*
+          - ssm:GetParameters
+          Resource: arn:aws:ssm:*:*:parameter/academic-planner*
 
 

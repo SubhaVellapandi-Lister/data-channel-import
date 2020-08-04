@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Naviance academic-planner export lambda
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  ProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: "./course-planner-import.zip"
+      FunctionName: cf-naviance-dc-ap-import
+      Handler: dist/index.lambdaHandler
+      Timeout: 900
+      MemorySize: 3000
+      Runtime: nodejs12.x
+      Policies:
+      - Statement:
+          Action: lambda:InvokeFunction
+          Effect: Allow
+          Resource: arn:aws:lambda:*:*:function:cdk-data-channels-core-st-cfdatachannelsloggrabber
+      - Statement:
+        - Sid: SSMGetParameterPolicy
+          Effect: Allow
+          Action:
+          - ssm:GetParameter
+          - ssm:GetParameters
+          Resource: arn:aws:ssm:*:*:parameter/academic-planner-*/*

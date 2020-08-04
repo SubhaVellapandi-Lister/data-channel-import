@@ -299,6 +299,7 @@ async function noMapping(ns: string, bucket: string, key: string, singleHighScho
     ]);
 }
 
+// tslint:disable-next-line
 (async () => {
 
     // await migrate('district-1201770DUS');

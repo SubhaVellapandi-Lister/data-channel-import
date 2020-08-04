@@ -342,7 +342,7 @@ export class CourseImport {
             if (updatesNeeded.length > 0) {
                 updatesCount += updatesNeeded.length;
                 const b = new Batch({namespace: new Namespace(namespace) });
-                b.addItems(updatesNeeded);
+                await b.addItems(updatesNeeded);
                 await b.createOrUpdate();
                 updatesNeeded = [];
             }

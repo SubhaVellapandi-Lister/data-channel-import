@@ -272,7 +272,7 @@ export class CPImportProcessor extends BaseProcessor {
             }
         }
         this.coursesPushed += validCourses.length;
-        b.addItems(validCourses);
+        await b.addItems(validCourses);
 
         console.log('COURSES', validCourses.length);
 

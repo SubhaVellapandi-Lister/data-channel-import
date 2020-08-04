@@ -213,7 +213,7 @@ export class PlanImport {
                 try {
                     await plan.save();
                 } catch (err) {
-                    sleep(500);
+                    await sleep(500);
                     await plan.save();
                 }
                 console.log(`updated ${plan.guid} - migrated from ${migratedId}`);
@@ -236,7 +236,7 @@ export class PlanImport {
                 const saved = await plan.save();
                 guid = saved.guid;
             } catch (err) {
-                sleep(500);
+                await sleep(500);
                 const saved = await plan.save();
                 guid = saved.guid;
             }
