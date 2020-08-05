@@ -114,5 +114,6 @@ const jobConfig = {
         exportCourses: {
             finished: false,
         }
-    }
+    },
+    noTaskLogs: false
 };

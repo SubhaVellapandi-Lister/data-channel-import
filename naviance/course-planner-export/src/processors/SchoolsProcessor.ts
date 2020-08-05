@@ -8,6 +8,7 @@ export class SchoolsProcessor extends BaseProcessor {
     private schoolNamesById: { [navId: string]: string } = {};
 
     public async findSchools(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
+
         if (input.index === 1 || input.data['HasLegacyCP'] !== '1') {
             return {
                 outputs: {}

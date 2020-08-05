@@ -11,7 +11,7 @@ Resources:
       Handler: dist/index.exportHandler
       Timeout: 900
       MemorySize: 3000
-      Runtime: nodejs10.x
+      Runtime: nodejs12.x
       Policies:
       - Statement:
           Action: lambda:InvokeFunction

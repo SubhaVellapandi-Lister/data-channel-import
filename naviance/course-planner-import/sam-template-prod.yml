@@ -11,7 +11,7 @@ Resources:
       Handler: dist/index.lambdaHandler
       Timeout: 900
       MemorySize: 2048
-      Runtime: nodejs10.x
+      Runtime: nodejs12.x
       Policies:
       - Statement:
           Action: lambda:InvokeFunction
