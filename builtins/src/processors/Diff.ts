@@ -178,6 +178,15 @@ export default class Diff extends BaseProcessor {
             return;
         }
 
+        try {
+            await this.lastJob.initChannel();
+        } catch (error) {
+            console.log('Error initializing last job');
+            console.log(error);
+
+            return;
+        }
+
         await this.hashPreviousFiles(input);
     }
 
@@ -290,23 +299,24 @@ export default class Diff extends BaseProcessor {
             }
         }
 
-        if (this.lastJob.workspace?.fileUrls == null) {
-            return undefined;
-        }
-
         // Check all fileUrls to check step outputs
-        for (const fileKey in this.lastJob.workspace.fileUrls) {
-            if (!this.lastJob.workspace.fileUrls.hasOwnProperty(fileKey)) {
+        for (const step of this.lastJob.flow) {
+            const stepDetatils = this.lastJob.steps[step];
+
+            if (stepDetatils == null || stepDetatils.fileDownloadUrls == null) {
                 continue;
             }
 
-            const name = fileKey.split('_').slice(0, -1).join();
+            // tslint:disable-next-line:forin
+            for (const fileKey in stepDetatils.fileDownloadUrls) {
+                const [job, jobGuid, ...file] = fileKey.split('/');
 
-            if (name !== filename || !fileKey.includes('READ')) {
-                continue;
+                if (!file.join().includes(`${filename}.output`)) {
+                    continue;
+                }
+
+                return stepDetatils.fileDownloadUrls[fileKey];
             }
-
-            return this.lastJob.workspace.fileUrls[fileKey];
         }
 
         return undefined;
