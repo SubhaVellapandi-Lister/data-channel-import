@@ -233,7 +233,7 @@ export default class Diff extends BaseProcessor {
 
     public async after_diff(input: IStepAfterInput): Promise<IStepAfterOutput> {
         for (const filename in this.hashers) {
-            if (!this.hashers.hasOwnProperty(filename)) {
+            if (!this.hashers.hasOwnProperty(filename) || !(`${filename}Deleted` in input.outputs)) {
                 continue;
             }
 
@@ -290,7 +290,25 @@ export default class Diff extends BaseProcessor {
             }
         }
 
-        // TODO check steps
+        if (this.lastJob.workspace?.fileUrls == null) {
+            return undefined;
+        }
+
+        // Check all fileUrls to check step outputs
+        for (const fileKey in this.lastJob.workspace.fileUrls) {
+            if (!this.lastJob.workspace.fileUrls.hasOwnProperty(fileKey)) {
+                continue;
+            }
+
+            const name = fileKey.split('_').slice(0, -1).join();
+
+            if (name !== filename || !fileKey.includes('READ')) {
+                continue;
+            }
+
+            return this.lastJob.workspace.fileUrls[fileKey];
+        }
+
         return undefined;
     }
 }
