@@ -5,7 +5,7 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-sandbox/4f2722122b7f1b83b1ec42800364fcff
+      CodeUri: s3://data-channels-processor-deployments-sandbox/bd5d7426ff7328d43eed694ae44da336
       FunctionName: data-channels-BuiltInProcessor
       Handler: dist/index.builtInHandler
       Timeout: 300
@@ -45,13 +45,13 @@ Resources:
           - s3:ListBucketMultipartUploads
           - s3:ListMultipartUploadParts
           Effect: Allow
-          Resource: arn:aws:s3:::data-channels-work-dev
+          Resource: arn:aws:s3:::data-channels-work-*
       - Statement:
         - Sid: S3WorkspaceObjectPolicy
           Action:
           - s3:*
           Effect: Allow
-          Resource: arn:aws:s3:::data-channels-work-dev/workspace/athena/*
+          Resource: arn:aws:s3:::data-channels-work-*/workspace/athena/*
       - Statement:
         - Sid: AthenaQueryPolicy
           Action:
@@ -74,4 +74,4 @@ Resources:
           Action:
           - s3:*
           Effect: Allow
-          Resource: arn:aws:s3:::data-channels-work-dev/clamav/*
+          Resource: arn:aws:s3:::data-channels-work-*/clamav/*

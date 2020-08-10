@@ -74,6 +74,13 @@ export interface IDiffParameters {
  * The Diff processor looks at a previous job run and outputs four files for each input,
  * named: {filename}Added/Modified/Deleted/Unmodified.
  *
+ * Previous jobs are determined by these criteria:
+ *
+ * 1. Previous jobs must be Completed
+ * 2. Previous jobs must have the same name and product.
+ * 3. Previous jobs must have the same ingress or channel config
+ * 4. Previous jobs must have the same tenant or both have no tenant
+ *
  * Each input file must have a corresponding [[IFileDiffConfig]] specified in parameters.
  *
  * Example diff step:
@@ -117,8 +124,22 @@ export default class Diff extends BaseProcessor {
         const findCriteria: IJobPageOptions['findCriteria'] = {
             status: {
                 value: JobStatus.Completed
+            },
+            name: {
+                value: this.job.name
+            },
+            channel: {
+                value: {
+                    guid: this.job.channel.guid
+                }
             }
         };
+
+        if (this.job.product != null) {
+            findCriteria.product = {
+                value: this.job.product
+            };
+        }
 
         if (this.job.tenant) {
             findCriteria.tenant = {
@@ -132,12 +153,6 @@ export default class Diff extends BaseProcessor {
             findCriteria.ingress = {
                 value: {
                     guid: this.job.ingress.guid
-                }
-            };
-        } else {
-            findCriteria.channel = {
-                value: {
-                    guid: this.job.channel.guid
                 }
             };
         }
@@ -160,6 +175,15 @@ export default class Diff extends BaseProcessor {
         }
 
         if (this.lastJob == null) {
+            return;
+        }
+
+        try {
+            await this.lastJob.initChannel();
+        } catch (error) {
+            console.log('Error initializing last job');
+            console.log(error);
+
             return;
         }
 
@@ -218,7 +242,7 @@ export default class Diff extends BaseProcessor {
 
     public async after_diff(input: IStepAfterInput): Promise<IStepAfterOutput> {
         for (const filename in this.hashers) {
-            if (!this.hashers.hasOwnProperty(filename)) {
+            if (!this.hashers.hasOwnProperty(filename) || !(`${filename}Deleted` in input.outputs)) {
                 continue;
             }
 
@@ -254,7 +278,14 @@ export default class Diff extends BaseProcessor {
 
             const hasher = new FileHasher(filename, input.parameters[filename], url);
 
-            await hasher.hashFile();
+            try {
+                await hasher.hashFile();
+            } catch (err) {
+                console.log(`Error hashing previous file for ${filename}. Will be treated as a new file`);
+                console.log(err);
+
+                continue;
+            }
 
             this.hashers[filename] = hasher;
         }
@@ -268,7 +299,26 @@ export default class Diff extends BaseProcessor {
             }
         }
 
-        // TODO check steps
+        // Check all fileUrls to check step outputs
+        for (const step of this.lastJob.flow) {
+            const stepDetatils = this.lastJob.steps[step];
+
+            if (stepDetatils == null || stepDetatils.fileDownloadUrls == null) {
+                continue;
+            }
+
+            // tslint:disable-next-line:forin
+            for (const fileKey in stepDetatils.fileDownloadUrls) {
+                const [job, jobGuid, ...file] = fileKey.split('/');
+
+                if (!file.join().includes(`${filename}.output`)) {
+                    continue;
+                }
+
+                return stepDetatils.fileDownloadUrls[fileKey];
+            }
+        }
+
         return undefined;
     }
 }
