@@ -957,6 +957,9 @@ async function loadHighschoolPlans(
     planBatchSize: number, showSpin: boolean, logName: string,
     allowUpdates: boolean = false, totalJobs?: number, totalStudents?: number
 ) {
+    if (!catalogLog[districtId]) {
+        catalogLog[districtId] = {};
+    }
     if (!catalogLog[districtId].student) {
         catalogLog[districtId].student = {};
     }
