@@ -1,6 +1,13 @@
-
 import {
-    ChuteToObject, Course, CourseStatement, PlanningEngine, RulesRepository
+  AndExpression,
+  AnnotationOperator,
+  Annotations,
+  ChuteToObject,
+  Course,
+  CourseStatement,
+  EquivalentStatement,
+  PlanningEngine,
+  RulesRepository
 } from "@academic-planner/apSDK";
 import { IRowData } from "@data-channels/dcSDK";
 import _ from "lodash";
@@ -41,6 +48,35 @@ export function initServices(parameters: object) {
     repoConfig.product = 'naviance';
     repoConfig.url = parameters['rulesRepoUrl'];
     RulesRepository.init(repoConfig);
+}
+
+export function convertToAndExpressions(ids: string[]): AndExpression | string {
+  const id: string = ids[0];
+  ids = ids.slice(1);
+
+  return !ids.length
+    ? id
+    : new AndExpression(id, convertToAndExpressions(ids));
+}
+
+export function creditRecoveryStatement(value: string): EquivalentStatement | null {
+  try {
+    const ids = value.split('|').map((id) => id.trim());
+    const andExpression = convertToAndExpressions(ids);
+    const annotation = new Annotations({
+      recovery: {
+        value: true,
+        operator: AnnotationOperator.EQUALS,
+      },
+    });
+
+    return new EquivalentStatement(andExpression, undefined, annotation);
+  } catch (err) {
+    console.log(`could not parse credit recovery ${value}`);
+    console.log(err);
+
+    return null;
+  }
 }
 
 export function prereqCourseStatement(preqString: string): CourseStatement | null {
