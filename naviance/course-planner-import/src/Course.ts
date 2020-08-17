@@ -19,7 +19,7 @@ import {
 import { instructionalLevelMap } from "./Contants";
 import { getCombinedSubjectArea, getMigratedSubjectArea, ISubjectAreaLoad, loadExistingSubjectAreas,
     parseSubjectAreaRow, saveSubjectAreas } from "./SubjectAreas";
-import { getRowVal, prereqCourseStatement, prereqCourseStatementFromJson, sleep } from "./Utils";
+import { creditRecoveryStatement, getRowVal, prereqCourseStatement, prereqCourseStatementFromJson, sleep } from "./Utils";
 
 export class CourseImport {
     public static finalCourseId(courseId: string) {
@@ -153,7 +153,19 @@ export class CourseImport {
             };
         }
 
-        const hasPreqColumns = rowData['Prereq_ID'] !== undefined || rowData['Coreq_ID'] !== undefined;
+        if (getRowVal(rowData, 'Recommendation_Required')) {
+          const isRecommended = getRowVal(rowData, 'Recommendation_Required') === 'Y' ? 1 : 0;
+          annoItems['elective'] = { value: isRecommended, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS };
+        }
+
+        if (getRowVal(rowData, 'Repeatable')) {
+          const isRepeatable = getRowVal(rowData, 'Repeatable') === 'Y' ? 1 : 0;
+          annoItems['elective'] = { value: isRepeatable, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS };
+        }
+
+        const hasPreqColumns = rowData['Prereq_ID'] !== undefined ||
+          rowData['Coreq_ID'] !== undefined ||
+          rowData['Credit_Recovery'] !== undefined;
         const statements: CourseStatement[] = existingCourse && !hasPreqColumns ? existingCourse.statements : [];
 
         if (getRowVal(rowData, 'Prereq_ID')) {
@@ -169,6 +181,13 @@ export class CourseImport {
                 cs.annotations = Annotations.simple({coreq: true});
                 statements.push(cs);
             }
+        }
+
+        if (getRowVal(rowData, 'Credit_Recovery')) {
+          const cs = creditRecoveryStatement(getRowVal(rowData, 'Credit_Recovery') || '');
+          if (cs) {
+            statements.push(cs);
+          }
         }
 
         const course = new Course(
