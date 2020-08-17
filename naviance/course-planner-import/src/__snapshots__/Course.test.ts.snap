@@ -1,0 +1,51 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`CourseImport tests courseFromRowData imports csv data 1`] = `
+EquivalentStatement {
+  "annotations": Annotations {
+    "items": Object {
+      "recovery": Object {
+        "operator": "=",
+        "value": true,
+      },
+    },
+  },
+  "kind": "equivalent",
+  "matches": undefined,
+  "modifiers": undefined,
+  "neededCount": "all",
+  "tree": AndExpression {
+    "annotations": undefined,
+    "isNot": undefined,
+    "left": ModifierChutable {
+      "annotations": undefined,
+      "identifier": "1",
+      "isNot": undefined,
+      "modifiers": undefined,
+      "statementUnique": undefined,
+    },
+    "modifiers": undefined,
+    "op": "and",
+    "right": AndExpression {
+      "annotations": undefined,
+      "isNot": undefined,
+      "left": ModifierChutable {
+        "annotations": undefined,
+        "identifier": "2",
+        "isNot": undefined,
+        "modifiers": undefined,
+        "statementUnique": undefined,
+      },
+      "modifiers": undefined,
+      "op": "and",
+      "right": ModifierChutable {
+        "annotations": undefined,
+        "identifier": "3",
+        "isNot": undefined,
+        "modifiers": undefined,
+        "statementUnique": undefined,
+      },
+    },
+  },
+}
+`;

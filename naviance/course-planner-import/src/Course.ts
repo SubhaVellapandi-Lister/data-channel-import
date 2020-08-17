@@ -17,9 +17,20 @@ import {
     IStepBeforeInput
 } from "@data-channels/dcSDK";
 import { instructionalLevelMap } from "./Contants";
-import { getCombinedSubjectArea, getMigratedSubjectArea, ISubjectAreaLoad, loadExistingSubjectAreas,
-    parseSubjectAreaRow, saveSubjectAreas } from "./SubjectAreas";
-import { creditRecoveryStatement, getRowVal, prereqCourseStatement, prereqCourseStatementFromJson, sleep } from "./Utils";
+import { getCombinedSubjectArea,
+  getMigratedSubjectArea,
+  ISubjectAreaLoad,
+  loadExistingSubjectAreas,
+  parseSubjectAreaRow,
+  saveSubjectAreas
+} from "./SubjectAreas";
+import {
+  creditRecoveryStatement,
+  getRowVal,
+  prereqCourseStatement,
+  prereqCourseStatementFromJson,
+  sleep
+} from "./Utils";
 
 export class CourseImport {
     public static finalCourseId(courseId: string) {

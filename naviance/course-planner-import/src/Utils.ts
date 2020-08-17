@@ -1,6 +1,13 @@
-
 import {
-    AndExpression, AnnotationOperator, Annotations, ChuteToObject, Course, CourseStatement, EquivalentStatement, PlanningEngine, RulesRepository
+  AndExpression,
+  AnnotationOperator,
+  Annotations,
+  ChuteToObject,
+  Course,
+  CourseStatement,
+  EquivalentStatement,
+  PlanningEngine,
+  RulesRepository
 } from "@academic-planner/apSDK";
 import { IRowData } from "@data-channels/dcSDK";
 import _ from "lodash";
@@ -55,9 +62,6 @@ export function convertToAndExpressions(ids: string[]): AndExpression | string {
 export function creditRecoveryStatement(value: string): EquivalentStatement | null {
   try {
     const ids = value.split('|').map((id) => id.trim());
-    if (!ids.length) {
-      return null;
-    }
     const andExpression = convertToAndExpressions(ids);
     const annotation = new Annotations({
       recovery: {
