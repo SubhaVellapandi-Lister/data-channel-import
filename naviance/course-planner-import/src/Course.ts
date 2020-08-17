@@ -155,12 +155,16 @@ export class CourseImport {
 
         if (getRowVal(rowData, 'Recommendation_Required')) {
           const isRecommended = getRowVal(rowData, 'Recommendation_Required') === 'Y' ? 1 : 0;
-          annoItems['elective'] = { value: isRecommended, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS };
+          annoItems['permissionRequired'] = {
+            value: isRecommended,
+            type: 'BOOLEAN',
+            operator: AnnotationOperator.EQUALS
+          };
         }
 
         if (getRowVal(rowData, 'Repeatable')) {
           const isRepeatable = getRowVal(rowData, 'Repeatable') === 'Y' ? 1 : 0;
-          annoItems['elective'] = { value: isRepeatable, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS };
+          annoItems['repeatable'] = { value: isRepeatable, type: 'BOOLEAN', operator: AnnotationOperator.EQUALS };
         }
 
         const hasPreqColumns = rowData['Prereq_ID'] !== undefined ||
