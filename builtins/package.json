@@ -55,7 +55,7 @@
     "typescript": "3.8.3"
   },
   "dependencies": {
-    "@data-channels/dcSDK": "0.18.3",
+    "@data-channels/dcSDK": "0.19.0-alpha.14",
     "csv": "5.3.2",
     "lodash": "4.17.15",
     "node-fetch": "2.6.0"
