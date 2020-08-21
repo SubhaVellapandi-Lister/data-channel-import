@@ -13,6 +13,7 @@ import {
 import AWS from "aws-sdk";
 import parse from "csv-parse";
 import { Readable } from "stream";
+import { sleep } from "../utils";
 
 export interface IAthenaConfig {
     outputs: {
@@ -27,10 +28,6 @@ export interface IAthenaConfig {
             };
         };
     };
-}
-
-async function sleep(milliseconds: number) {
-    return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 export default class Athena extends BaseProcessor {

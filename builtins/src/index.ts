@@ -2,6 +2,7 @@ import { generateHandler } from "@data-channels/dcSDK";
 import Athena from "./processors/Athena";
 import Diff from "./processors/Diff";
 import Echo from "./processors/Echo";
+import Generate from "./processors/Generate";
 import GroupBy from "./processors/GroupBy";
 import HelloWorld from "./processors/HelloWorld";
 import SecurityScan from "./processors/SecurityScan";
@@ -28,4 +29,5 @@ export const builtInHandler = generateHandler({
     athena: Athena,
     sql: Athena,
     securityscan: SecurityScan,
+    generate: Generate
 });
