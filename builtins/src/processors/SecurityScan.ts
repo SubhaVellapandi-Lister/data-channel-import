@@ -10,6 +10,7 @@ import { createWriteStream, mkdirSync, readdirSync } from "fs";
 import _ from "lodash";
 import fetch from "node-fetch";
 import { Readable } from "stream";
+import { sleep } from "../utils";
 
 export enum ScanTool {
     SCANII = 'scanii',
@@ -38,10 +39,6 @@ export interface IScanResults {
 }
 
 const SCANII_URL = 'https://api.scanii.com/v2.1/files';
-
-async function sleep(milliseconds: number) {
-    return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
 
 interface IScaniiIdByName {
     [iname: string]: string;
