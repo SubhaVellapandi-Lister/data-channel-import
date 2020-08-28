@@ -5,9 +5,9 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-navprod/56168a54d26945d0bad25a83eb373ee5
+      CodeUri: s3://data-channels-processor-deployments-navprod/90c663356455aeb7c45ff928a6002fd9
       FunctionName: data-channels-BuiltInProcessor
-      Handler: dist/index.BuiltInHandler
+      Handler: dist/index.builtInHandler
       Timeout: 300
       MemorySize: 3008
       Runtime: nodejs12.x
@@ -21,10 +21,57 @@ Resources:
           Effect: Allow
           Action:
           - ssm:GetParameter
-          Resource: arn:aws:ssm:*:*:parameter/data-channels/hello-*
+          Resource:
+          - arn:aws:ssm:*:*:parameter/data-channels/hello-*
+          - arn:aws:ssm:*:*:parameter/data-channels-builtin/*
       - Statement:
         - Sid: SNSPublishPolicy
           Effect: Allow
           Action:
           - SNS:Publish
           Resource: '*'
+      - Statement:
+        - Sid: SESSendPolicy
+          Effect: Allow
+          Action:
+          - SES:SendEmail
+          - SES:SendRawEmail
+          Resource: '*'
+      - Statement:
+        - Sid: S3WorkspaceListPolicy
+          Action:
+          - s3:GetBucketLocation
+          - s3:ListBucket
+          - s3:ListBucketMultipartUploads
+          - s3:ListMultipartUploadParts
+          Effect: Allow
+          Resource: arn:aws:s3:::data-channels-work-*
+      - Statement:
+        - Sid: S3WorkspaceObjectPolicy
+          Action:
+          - s3:*
+          Effect: Allow
+          Resource: arn:aws:s3:::data-channels-work-*/workspace/athena/*
+      - Statement:
+        - Sid: AthenaQueryPolicy
+          Action:
+          - athena:StartQueryExecution
+          - athena:GetQueryExecution
+          Effect: Allow
+          Resource: arn:aws:athena:*:*:workgroup/primary
+      - Statement:
+        - Sid: GlueDBPolicy
+          Action:
+          - glue:*
+          Effect: Allow
+          Resource:
+          - arn:aws:glue:*:*:catalog
+          - arn:aws:glue:*:*:database/dchan*
+          - arn:aws:glue:*:*:table/dchan*
+          - arn:aws:glue:*:*:userDefinedFunction/dchan*
+      - Statement:
+        - Sid: S3ClamAVPolicy
+          Action:
+          - s3:*
+          Effect: Allow
+          Resource: arn:aws:s3:::data-channels-work-*/clamav/*
