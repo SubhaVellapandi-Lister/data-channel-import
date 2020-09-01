@@ -80,3 +80,5 @@ system-tests/reports/*
 
 # lambda packages
 *.zip
+
+builtins/packaged.yml

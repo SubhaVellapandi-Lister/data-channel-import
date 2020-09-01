@@ -23,7 +23,8 @@
     "deploy-dev": "npm run build && sam build && npm run sam-package-dev && npm run sam-deploy-dev",
     "sam-package-navprod": "sam package --output-template-file packaged-navprod.yml --s3-bucket data-channels-processor-deployments-navprod --profile data-channels-naviance-prod",
     "sam-deploy-navprod": "sam deploy --template-file ./packaged-navprod.yml --stack-name data-channels-builtin-processor-navprod --capabilities CAPABILITY_IAM --region us-east-1",
-    "deploy-navprod": "npm run build && sam build && npm run sam-package-navprod && npm run sam-deploy-navprod"
+    "deploy-navprod": "npm run build && sam build && npm run sam-package-navprod && npm run sam-deploy-navprod",
+    "deploy": "node deploy.js"
   },
   "repository": {
     "type": "git",

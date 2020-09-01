@@ -1,43 +1,74 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Data-Channels Builtins Lambda
+Transform: AWS::Serverless-2016-10-31
 Resources:
   ProcessorFunction:
-    Properties:
-      CodeUri: s3://data-channels-processor-deployments-sandbox/343f11fab7be90cadc0250714f7f420f
-      FunctionName: data-channels-BuiltInProcessor
-      Handler: dist/index.BuiltInHandler
-      Policies:
-        - Statement:
-            Action: lambda:InvokeFunction
-            Effect: Allow
-            Resource: arn:aws:lambda:*:*:function:cdk-data-channels-core-st-cfdatachannelsloggrabber
-        - Statement:
-            - Action:
-                - ssm:GetParameter
-              Effect: Allow
-              Resource: arn:aws:ssm:*:*:parameter/data-channels/hello-*
-              Sid: SSMGetParameterPolicy
-        - Statement:
-          -
-            Action:
-              - s3:ListBucket
-            Effect: Allow
-            Resource:
-              arn:aws:s3:::data-channels-work-dev
-          -
-            Action:
-              - s3:*
-            Effect: Allow
-            Resource:
-              arn:aws:s3:::data-channels-work-dev/workspace/athena/*
-          -
-            Action:
-              - athena:StartQueryExecution
-              - athena:GetQueryExecution
-            Effect: Allow
-            Resource:
-              arn:aws:athena:*:*:workgroup/primary
-      Runtime: nodejs12.x
-      Timeout: 300
     Type: AWS::Serverless::Function
-Transform: AWS::Serverless-2016-10-31
+    Properties:
+      CodeUri: s3://ss-data-channels-processor-deployments-platsandbox/c0c64bc0bf6d1e180027ae65b96632f5
+      FunctionName: ss-data-channels-BuiltInProcessor
+      Handler: dist/index.builtInHandler
+      Timeout: 300
+      MemorySize: 3008
+      Runtime: nodejs12.x
+      PermissionsBoundary: arn:aws:iam::701991169879:policy/tf-iam-permission-boundary
+      Policies:
+      - Statement:
+        - Sid: SSMGetParameterPolicy
+          Effect: Allow
+          Action:
+          - ssm:GetParameter
+          Resource:
+          - arn:aws:ssm:*:*:parameter/data-channels/hello-*
+          - arn:aws:ssm:*:*:parameter/data-channels-builtin/*
+      - Statement:
+        - Sid: SNSPublishPolicy
+          Effect: Allow
+          Action:
+          - SNS:Publish
+          Resource: '*'
+      - Statement:
+        - Sid: SESSendPolicy
+          Effect: Allow
+          Action:
+          - SES:SendEmail
+          - SES:SendRawEmail
+          Resource: '*'
+      - Statement:
+        - Sid: S3WorkspaceListPolicy
+          Action:
+          - s3:GetBucketLocation
+          - s3:ListBucket
+          - s3:ListBucketMultipartUploads
+          - s3:ListMultipartUploadParts
+          Effect: Allow
+          Resource: arn:aws:s3:::data-channels-work-*
+      - Statement:
+        - Sid: S3WorkspaceObjectPolicy
+          Action:
+          - s3:*
+          Effect: Allow
+          Resource: arn:aws:s3:::*data-channels-work-*/workspace/athena/*
+      - Statement:
+        - Sid: AthenaQueryPolicy
+          Action:
+          - athena:StartQueryExecution
+          - athena:GetQueryExecution
+          Effect: Allow
+          Resource: arn:aws:athena:*:*:workgroup/primary
+      - Statement:
+        - Sid: GlueDBPolicy
+          Action:
+          - glue:*
+          Effect: Allow
+          Resource:
+          - arn:aws:glue:*:*:catalog
+          - arn:aws:glue:*:*:database/dchan*
+          - arn:aws:glue:*:*:table/dchan*
+          - arn:aws:glue:*:*:userDefinedFunction/dchan*
+      - Statement:
+        - Sid: S3ClamAVPolicy
+          Action:
+          - s3:*
+          Effect: Allow
+          Resource: arn:aws:s3:::*data-channels-work-*/clamav/*
