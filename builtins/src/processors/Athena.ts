@@ -88,35 +88,39 @@ export default class Athena extends BaseProcessor {
     private async createTables(input: IFileProcessorInput) {
         for (const inputName of Object.keys(input.inputs)) {
             console.log(`creating table for ${inputName}`);
-            let inputStream = input.inputs[inputName];
-            const headers = await fileHeaders(inputStream);
-            if (!headers.length) {
-                console.log(`Empty file found for ${inputName}`);
-                continue;
-            }
-            console.log(`found headers ${headers}`);
-            inputStream = await this.refreshInputStream(inputName);
+            let inputStreams = input.inputs[inputName];
 
-            const tempFolder = `workspace/athena/${this.dbName}/${inputName}/`;
-            const tempKey = `${tempFolder}data.csv`;
+            for (const stream of inputStreams) {
+                const headers = await fileHeaders(stream.readable);
 
-            const tempOutDetails = this.getWritableDetails(this.job.workspace!.bucket!, tempKey);
-            const parser = parse({ bom: true, skip_empty_lines: true, skip_lines_with_empty_values: true});
-            inputStream.pipe(parser).pipe(tempOutDetails.writeStream);
-            await tempOutDetails.uploadResponsePromise;
-
-            console.log(`wrote temp work file`);
-
-            const config = this.config;
-            function colType(name: string): string {
-                if (config.inputs && config.inputs[inputName] && config.inputs[inputName].columnTypes?.[name]) {
-                    return ' ' + config.inputs[inputName].columnTypes?.[name];
+                if (!headers.length) {
+                    console.log(`Empty file found for ${inputName}`);
+                    continue;
                 }
 
-                return ' STRING';
-            }
+                console.log(`found headers ${headers}`);
+                inputStreams = await this.refreshInputStream(inputName);
 
-            const createQuery = `
+                const tempFolder = `workspace/athena/${this.dbName}/${inputName}/`;
+                const tempKey = `${tempFolder}data.csv`;
+
+                const tempOutDetails = await this.getWritableDetails(this.job.workspace!.bucket!, tempKey);
+                const parser = parse({ bom: true, skip_empty_lines: true, skip_lines_with_empty_values: true});
+                stream.readable.pipe(parser).pipe(tempOutDetails.writeStream);
+                await tempOutDetails.uploadResponsePromise;
+
+                console.log(`wrote temp work file`);
+
+                const config = this.config;
+                function colType(name: string): string {
+                    if (config.inputs && config.inputs[inputName] && config.inputs[inputName].columnTypes?.[name]) {
+                        return ' ' + config.inputs[inputName].columnTypes?.[name];
+                    }
+
+                    return ' STRING';
+                }
+
+                const createQuery = `
                 CREATE EXTERNAL TABLE IF NOT EXISTS ${inputName} (
                     ${headers.map((h) => h + colType(h)).join(', ')}
                 )
@@ -128,16 +132,17 @@ export default class Athena extends BaseProcessor {
                 TBLPROPERTIES ( "skip.header.line.count"="1" )
             `;
 
-            console.log(createQuery);
+                console.log(createQuery);
 
-            const createTableResult = await this.executeSyncQuery({
-                QueryString: createQuery,
-                QueryExecutionContext: {
-                    Database: this.dbName
-                }
-            });
+                const createTableResult = await this.executeSyncQuery({
+                    QueryString: createQuery,
+                    QueryExecutionContext: {
+                        Database: this.dbName
+                    }
+                });
 
-            console.log(createTableResult);
+                console.log(createTableResult);
+            }
         }
     }
 
@@ -213,7 +218,7 @@ export default class Athena extends BaseProcessor {
         }
     }
 
-    private getWritableDetails(bucket: string, key: string): IOutputFileStreamDetails {
+    private async getWritableDetails(bucket: string, key: string): Promise<IOutputFileStreamDetails> {
         return s3CsvWriteable(bucket, key);
     }
 

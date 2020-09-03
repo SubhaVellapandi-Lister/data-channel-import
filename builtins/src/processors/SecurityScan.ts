@@ -101,23 +101,31 @@ export default class SecurityScan extends BaseProcessor {
 
         const resultsByInput: IScanResults = {};
         for (const inputName of Object.keys(input.inputs)) {
-            await this.downloadStreamFile(input.inputs[inputName], '/tmp/testFile');
-            const dailyResults = await this.runClamAV();
-            resultsByInput[inputName] = {
-                hasFindings: dailyResults.hasFindings,
-                rawResults: {
-                    daily: dailyResults.rawResults
-                }
-            };
+            for (const file of input.inputs[inputName]) {
+                await this.downloadStreamFile(file.readable, '/tmp/testFile');
+
+                const dailyResults = await this.runClamAV();
+                resultsByInput[inputName] = {
+                    hasFindings: dailyResults.hasFindings,
+                    rawResults: {
+                        daily: dailyResults.rawResults
+                    }
+                };
+            }
         }
 
         await this.downloadClamAVDefinition('clamav/main.cvd', '/tmp/clamav/definition.cvd');
+
         for (const inputName of Object.keys(input.inputs)) {
-            const refreshedReadable = await this.refreshInputStream(inputName);
-            await this.downloadStreamFile(refreshedReadable, '/tmp/testFile');
-            const mainResults = await this.runClamAV();
-            resultsByInput[inputName].hasFindings = resultsByInput[inputName].hasFindings || mainResults.hasFindings;
-            resultsByInput[inputName].rawResults['main'] = mainResults.rawResults;
+            const refreshedReadables = await this.refreshInputStream(inputName);
+
+            for (let i = 0; i < input.inputs[inputName].length; i++) {
+                await this.downloadStreamFile(refreshedReadables[i].readable, '/tmp/testFile');
+                const mainResults = await this.runClamAV();
+                resultsByInput[inputName].hasFindings =
+                    resultsByInput[inputName].hasFindings ?? mainResults.hasFindings;
+                resultsByInput[inputName].rawResults['main'] = mainResults.rawResults;
+            }
         }
 
         return resultsByInput;

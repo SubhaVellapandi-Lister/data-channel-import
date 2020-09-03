@@ -19,11 +19,11 @@ export default class HelloWorld extends BaseProcessor {
     }
 
     public async helloRow(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
-        console.log(`Hello Row ${input.index}: ${JSON.stringify(input.data)}`);
+        console.log(`Hello Row ${input.index} ${input.fileIndex}: ${JSON.stringify(input.data)}`);
 
         return {
             outputs: {
-                helloOut: [input.index, `Hello Row ${input.index}`]
+                helloOut: [input.index, `Hello Row ${input.index}`, input.fileIndex]
             }
         };
     }
