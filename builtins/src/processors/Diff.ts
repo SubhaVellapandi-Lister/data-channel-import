@@ -272,6 +272,8 @@ export default class Diff extends BaseProcessor {
             const url = this.findURLForFile(filename);
 
             if (url == null) {
+                console.warn(`Could not find url for ${filename}`);
+
                 // Possible new file
                 continue;
             }
@@ -294,8 +296,8 @@ export default class Diff extends BaseProcessor {
     private findURLForFile(filename: string): string | undefined {
         // check filesIn/filesOut before digging into steps
         for (const file of [...this.lastJob.filesIn, ...this.lastJob.filesOut]) {
-            if (file.name === filename && file.s3?.downloadURL != null) {
-                return file.s3.downloadURL;
+            if (file.name === filename && file.s3?.events?.length === 1 && file.s3.events[0].downloadURL != null) {
+                return file.s3.events[0].downloadURL;
             }
         }
 

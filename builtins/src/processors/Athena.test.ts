@@ -52,7 +52,7 @@ describe('Athena', () => {
                 }
             },
             inputs: {
-                data: inputStringifier as any
+                data: [{ readable: inputStringifier, details: {} } as any]
             },
             outputs: {
                 myQuery: {
@@ -64,13 +64,13 @@ describe('Athena', () => {
             }
         };
 
-        processor['refreshInputStream'] = async () => refreshStringifier;
-        processor['getWritableDetails'] = () => ({
+        processor['refreshInputStream'] = async () => [ { readable: refreshStringifier, details: {} }];
+        processor['getWritableDetails'] = () => (new Promise((resolve, reject)  => resolve({
             writeStream: stringify(),
-            uploadResponsePromise: new Promise((resolve, reject) => resolve()),
+            uploadResponsePromise: new Promise((res, rej) => res()),
             bucket: 'some-bucket',
             key: 'some-key'
-        });
+        })));
         processor['getReadable'] = async () => resultsStringifier;
 
         await processor['before_sql'](params);
