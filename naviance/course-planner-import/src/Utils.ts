@@ -9,7 +9,7 @@ import {
   PlanningEngine,
   RulesRepository
 } from "@academic-planner/apSDK";
-import { IRowData } from "@data-channels/dcSDK";
+import { IRowData, ITenantReference, ServiceInterfacer } from "@data-channels/dcSDK";
 import _ from "lodash";
 
 export function initRulesRepo(params: object) {
@@ -145,3 +145,26 @@ export function getRowVal(rowData: IRowData, colName: string) {
 export async function sleep(milliseconds: number) {
     return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
+
+export const runStudentCoursePlanRecalculationJob = (
+  tenant: ITenantReference,
+  studentIds?: string[],
+) => {
+  return ServiceInterfacer.getInstance().newJob(
+    {
+      product: 'naviance',
+      name: 'studentCoursePlanRecalculationJob',
+      tenant,
+      channel: {
+        product: 'naviance',
+        name: 'studentCoursePlanRecalculationChannel',
+      },
+      parameters: {
+        all: {
+          studentIds,
+        },
+      },
+    },
+    true,
+  );
+};
