@@ -1,0 +1,97 @@
+{
+  "name": "student-course-plan-recalculation",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "prestart": "npm run -s build",
+    "start": "node dist/index.js",
+    "build": "mkdirp dist && npm run compile",
+    "lint": "tslint --project tsconfig.json",
+    "clean": "shx rm -rf dist coverage",
+    "compile": "tsc",
+    "compile:once": "tsc --noEmit",
+    "compile:watch": "tsc --watch --noEmit",
+    "test": "npm run lint && npm run compile:once && npm run test:cov",
+    "test:cov": "jest --coverage --no-cache --runInBand",
+    "test:nocov": "jest --no-cache --runInBand",
+    "pack": "npm-pack-zip",
+    "sam-package-dev": "sam package --template-file sam-template-dev.yml --output-template-file sam-packaged-dev.yml --s3-bucket data-channels-processor-deployments-dev",
+    "sam-deploy-dev": "sam deploy --template-file ./sam-packaged-dev.yml --stack-name cf-naviance-dc-ap-import-dev --capabilities CAPABILITY_IAM --region us-east-1",
+    "deploy-dev": "npm run build && npm run pack && npm run sam-package-dev && npm run sam-deploy-dev && rm course-planner-import.zip",
+    "sam-package-prod": "sam package --template-file sam-template-prod.yml --output-template-file sam-packaged-prod.yml --s3-bucket data-channels-processor-deployments-dev",
+    "sam-deploy-prod": "sam deploy --template-file ./sam-packaged-prod.yml --stack-name cf-naviance-dc-ap-import-prod --capabilities CAPABILITY_IAM --region us-east-1",
+    "deploy-prod": "npm run build && npm run pack && npm run sam-package-prod && npm run sam-deploy-prod && rm course-planner-import.zip",
+    "sam-package-navprod": "sam package --template-file sam-template-prod.yml --output-template-file sam-packaged-navprod.yml --s3-bucket data-channels-processor-deployments-navprod",
+    "sam-deploy-navprod": "sam deploy --template-file ./sam-packaged-navprod.yml --stack-name cf-naviance-dc-ap-import-prod --capabilities CAPABILITY_IAM --region us-east-1",
+    "deploy-navprod": "npm run build && npm run pack && npm run sam-package-navprod && npm run sam-deploy-navprod && rm course-planner-import.zip"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hobsons/data-channels.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Hobsons/data-channels/issues"
+  },
+  "homepage": "https://github.com/Hobsons/data-channels#readme",
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.31",
+    "@types/jest": "24.0.11",
+    "@types/lodash": "4.14.117",
+    "@types/node": "10.14.17",
+    "@types/uuid": "^7.0.0",
+    "@types/node-fetch": "2.5.7",
+    "aws-sdk": "^2.492.0",
+    "jest": "24.4.0",
+    "mkdirp": "0.5.1",
+    "npm-pack-zip": "^1.2.7",
+    "shx": "0.3.2",
+    "ts-jest": "24.0.0",
+    "ts-node": "8.5.4",
+    "tslint": "5.11.0",
+    "typescript": "3.7.3"
+  },
+  "dependencies": {
+    "@academic-planner/apSDK": "1.17.1",
+    "@data-channels/dcSDK": "0.15.6",
+    "lodash": "4.17.15",
+    "node-fetch": "2.6.0",
+    "uuid": "^3.3.3"
+  },
+  "bundleDependencies": [
+    "@data-channels/dcSDK",
+    "@academic-planner/apSDK",
+    "node-fetch",
+    "lodash",
+    "request",
+    "uuid"
+  ],
+  "jest": {
+    "collectCoverageFrom": [
+      "src/**/*.ts",
+      "!<rootDir>/node_modules/",
+      "!src/**/__*__/*.ts",
+      "!src/types/*.d.ts",
+      "!src/index.ts"
+    ],
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ],
+    "roots": [
+      "src"
+    ],
+    "testURL": "http://localhost",
+    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.ts$",
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "verbose": true
+  }
+}
