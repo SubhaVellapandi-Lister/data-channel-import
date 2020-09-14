@@ -4,7 +4,7 @@ The Data Channels built-ins are free for everyone to contribute to using an "inn
 
 ## Flow
 
-1. Create an instance the [Data Channels Starter]() for initial development of your processor
+1. Create an instance the [Data Channels Starter](https://github.com/Hobsons/data-channels-starter) for initial development of your processor
 2. Develop and test your processor created from the starter
 3. Fork this repository
 4. Copy your processor class into the [src/processors](src/processors) directory

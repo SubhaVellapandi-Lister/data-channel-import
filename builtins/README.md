@@ -37,7 +37,7 @@ Example step config that uses a built-in:
 
 ## Contributing to the Built-ins
 
-See the [Contributing Guid](contributing.md)
+See the [Contributing Guide](contributing.md)
 
 ## Function Usage Reference
 
