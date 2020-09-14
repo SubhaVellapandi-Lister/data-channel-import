@@ -35,6 +35,10 @@ Example step config that uses a built-in:
 
 ```
 
+## Contributing to the Built-ins
+
+See the [Contributing Guid](contributing.md)
+
 ## Function Usage Reference
 
 ### Echo
