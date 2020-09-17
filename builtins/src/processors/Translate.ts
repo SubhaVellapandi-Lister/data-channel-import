@@ -3,7 +3,7 @@ import {
   IRowProcessorInput,
   IRowProcessorOutput,
 } from "@data-channels/dcSDK";
-import * as _ from 'lodash';
+import _ from 'lodash';
 
 export interface IValueMapping {
   fromValue: string;
@@ -56,11 +56,11 @@ export default class Translate extends BaseProcessor {
   private newHeaders: string[] = [];
   private config!: ITranslateConfig;
 
-  private emptyHeaders: number[] = []
-  private currentRow: string[] = []
+  private emptyHeaders: number[] = [];
+  private currentRow: string[] = [];
 
   public async translate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
-    this.currentRow = input.raw
+    this.currentRow = input.raw;
     this.config = _.cloneDeep(input.parameters!["translateConfig"]) as ITranslateConfig;
 
     if (this.config == null) {
@@ -68,7 +68,7 @@ export default class Translate extends BaseProcessor {
     }
 
     if (input.index === 1) {
-      
+
       await this.removeEmptyColumn(RowType.HEADER);
       this.originalHeaders = this.currentRow;
       this.newHeaders = this.originalHeaders.map((h, i) =>
@@ -101,7 +101,7 @@ export default class Translate extends BaseProcessor {
       };
     }
 
-    await this.removeEmptyColumn()
+    await this.removeEmptyColumn();
     if (this.config.valueMappings == null) {
       return {
         index: input.index,
@@ -150,7 +150,9 @@ export default class Translate extends BaseProcessor {
       throw new Error('Headerless column length does not match mapping. Be sure indexMapping accounts for all columns');
     }
 
-    const sortedCols = _.sortBy(Object.entries(this.config.indexMappings), (val) => val[0]).map((keyVal) => keyVal[1]);
+    const sortedCols = _.sortBy(
+      Object.entries(this.config.indexMappings), (val) => Number(val[0])).map((keyVal) => keyVal[1]
+    );
 
     // @ts-ignore
     this._outputStreams.writeOutputValues({
@@ -208,26 +210,28 @@ export default class Translate extends BaseProcessor {
     await channel.update({ steps });
   }
   private async removeEmptyColumn(type?: RowType): Promise<void> {
-    if(type === RowType.HEADER) {
-      this.currentRow.forEach((value, idx) => {
-        if(value === '') {
-          //Saving index for header 
+    if (type === RowType.HEADER) {
+      for (let idx = 0; idx < this.currentRow.length; idx++) {
+        if (this.currentRow[idx] === '') {
+          // Saving index for header
           this.emptyHeaders.push(idx);
 
           // Removing empty header column from both headers
           this.currentRow.splice(idx, 1);
         }
-      })
+      } 
     } else {
 
-      if(this.emptyHeaders.length === 0) {
+      if (this.emptyHeaders.length === 0) {
         return;
-      } 
-      this.currentRow.forEach((value, idx) => {
-        if(this.emptyHeaders.includes(idx)) {
+      }
+
+      for (let idx = 0; idx < this.currentRow.length; idx++) {
+        if (this.emptyHeaders.includes(idx)) {
           this.currentRow.splice(idx, 1);
         }
-      })
+      }
+      
     }
-  } 
+  }
 }
