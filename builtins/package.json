@@ -7,7 +7,7 @@
     "prestart": "npm run -s build",
     "start": "node dist/index.js",
     "build": "mkdirp dist && npm run compile",
-    "lint": "tslint --project tsconfig.json",
+    "lint": "tslint --fix --project tsconfig.json",
     "clean": "shx rm -rf dist coverage",
     "compile": "tsc",
     "compile:once": "tsc --noEmit",
