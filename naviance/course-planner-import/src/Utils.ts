@@ -181,7 +181,7 @@ export const findOrCreateQueue = async (name: string): Promise<JobQueue | undefi
     return queues[0];
   }
 
-  const queue = JobQueue.newQueue({
+  const queue = await JobQueue.newQueue({
     product: 'naviance',
     name: `studentCoursePlanRecalculation_${name}`,
     maxRunning: 1,
