@@ -445,12 +445,11 @@ export class CPImportProcessor extends BaseProcessor {
         await this.historyHandler!.processLeftovers();
 
         if (this.job.tenant && this.historyHandler) {
-          const { name, reference } = this.job.tenant;
           const studentIds = this.historyHandler.getStudentIds();
           console.log(
-            `Running student plan recalculate job for ${name} with ${studentIds}`
+            `Running student plan recalculate job for ${this.job.tenant.name} with ${studentIds}`
           );
-          await runStudentCoursePlanRecalculationJob(reference, studentIds);
+          await runStudentCoursePlanRecalculationJob(this.job.tenant, studentIds);
         }
 
         return { results: {

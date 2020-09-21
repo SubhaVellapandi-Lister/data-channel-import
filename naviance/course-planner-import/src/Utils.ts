@@ -9,7 +9,7 @@ import {
   PlanningEngine,
   RulesRepository
 } from "@academic-planner/apSDK";
-import { IRowData, ITenantReference, ServiceInterfacer } from "@data-channels/dcSDK";
+import { IRowData, JobQueue, ServiceInterfacer, Tenant } from "@data-channels/dcSDK";
 import _ from "lodash";
 
 export function initRulesRepo(params: object) {
@@ -146,15 +146,18 @@ export async function sleep(milliseconds: number) {
     return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-export const runStudentCoursePlanRecalculationJob = (
-  tenant: ITenantReference,
+export const runStudentCoursePlanRecalculationJob = async (
+  tenant: Tenant,
   studentIds?: string[],
 ) => {
+  const queueDetails = await findOrCreateQueue(tenant.name || '');
+
   return ServiceInterfacer.getInstance().newJob(
     {
       product: 'naviance',
       name: 'studentCoursePlanRecalculationJob',
-      tenant,
+      tenant: tenant.reference,
+      queueDetails,
       channel: {
         product: 'naviance',
         name: 'studentCoursePlanRecalculationChannel',
@@ -167,4 +170,26 @@ export const runStudentCoursePlanRecalculationJob = (
     },
     true,
   );
+};
+
+export const findOrCreateQueue = async (name: string): Promise<JobQueue | undefined> => {
+  const queues = await JobQueue.find({
+    findCriteria: { name: { value: name }, product: { value: 'naviance' } },
+  }).all();
+
+  if (queues.length) {
+    return queues[0];
+  }
+
+  const queue = JobQueue.newQueue({
+    product: 'naviance',
+    name: `studentCoursePlanRecalculation_${name}`,
+    maxRunning: 1,
+  });
+
+  if (!queue) {
+    console.error('Failed creating job queue');
+  }
+
+  return queue;
 };
