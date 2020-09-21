@@ -3,7 +3,7 @@ import {
   IRowProcessorInput,
   IRowProcessorOutput,
 } from "@data-channels/dcSDK";
-import * as _ from 'lodash';
+import _ from 'lodash';
 
 export interface IValueMapping {
   fromValue: string;
@@ -46,12 +46,21 @@ export interface ITranslateConfig {
   headerlessFile?: boolean;
 }
 
+export enum RowType {
+  ROW = "ROW",
+  HEADER = "HEADER"
+}
+
 export default class Translate extends BaseProcessor {
   private originalHeaders: string[] = [];
   private newHeaders: string[] = [];
   private config!: ITranslateConfig;
 
+  private emptyHeaders: number[] = [];
+  private currentRow: string[] = [];
+
   public async translate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
+    this.currentRow = input.raw;
     this.config = _.cloneDeep(input.parameters!["translateConfig"]) as ITranslateConfig;
 
     if (this.config == null) {
@@ -59,13 +68,15 @@ export default class Translate extends BaseProcessor {
     }
 
     if (input.index === 1) {
-      this.originalHeaders = input.raw;
+
+      await this.removeEmptyColumn(RowType.HEADER);
+      this.originalHeaders = this.currentRow;
       this.newHeaders = this.originalHeaders.map((h, i) =>
         this.mappedHeader(h, i + 1)
       );
 
       console.log(this.config);
-      console.log('new headers', this.newHeaders);
+      console.log('New Headers', this.newHeaders);
 
       if (this.config.saveIndexMappings) {
         await this.saveIndexMappings();
@@ -77,7 +88,7 @@ export default class Translate extends BaseProcessor {
         return {
           index: input.index,
           outputs: {
-            [`${input.name}Translated`]: input.raw,
+            [`${input.name}Translated`]: this.currentRow,
           },
         };
       }
@@ -90,11 +101,12 @@ export default class Translate extends BaseProcessor {
       };
     }
 
+    await this.removeEmptyColumn();
     if (this.config.valueMappings == null) {
       return {
         index: input.index,
         outputs: {
-          [`${input.name}Translated`]: input.raw,
+          [`${input.name}Translated`]: this.currentRow,
         },
       };
     }
@@ -102,7 +114,7 @@ export default class Translate extends BaseProcessor {
     const vmapConfig = this.config.valueMappings;
     const newRow: string[] = [];
 
-    for (const [idx, val] of input.raw.entries()) {
+    for (const [idx, val] of this.currentRow.entries()) {
       const originalHeader = this.originalHeaders[idx];
       const newHeader = this.newHeaders[idx];
       const vmap = vmapConfig[newHeader] ?? (vmapConfig[originalHeader] ?? []);
@@ -138,7 +150,9 @@ export default class Translate extends BaseProcessor {
       throw new Error('Headerless column length does not match mapping. Be sure indexMapping accounts for all columns');
     }
 
-    const sortedCols = _.sortBy(Object.entries(this.config.indexMappings), (val) => val[0]).map((keyVal) => keyVal[1]);
+    const sortedCols = _.sortBy(
+      Object.entries(this.config.indexMappings), (val) => Number(val[0])).map((keyVal) => keyVal[1]
+    );
 
     // @ts-ignore
     this._outputStreams.writeOutputValues({
@@ -194,5 +208,30 @@ export default class Translate extends BaseProcessor {
     currentStep.parameters['translateConfig'] = this.config;
 
     await channel.update({ steps });
+  }
+  private async removeEmptyColumn(type?: RowType): Promise<void> {
+    if (type === RowType.HEADER) {
+      for (let idx = 0; idx < this.currentRow.length; idx++) {
+        if (this.currentRow[idx] === '') {
+          // Saving index for header
+          this.emptyHeaders.push(idx);
+
+          // Removing empty header column from both headers
+          this.currentRow.splice(idx, 1);
+        }
+      } 
+    } else {
+
+      if (this.emptyHeaders.length === 0) {
+        return;
+      }
+
+      for (let idx = 0; idx < this.currentRow.length; idx++) {
+        if (this.emptyHeaders.includes(idx)) {
+          this.currentRow.splice(idx, 1);
+        }
+      }
+      
+    }
   }
 }
