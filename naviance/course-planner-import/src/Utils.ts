@@ -9,7 +9,7 @@ import {
   PlanningEngine,
   RulesRepository
 } from "@academic-planner/apSDK";
-import { IRowData, JobQueue, ServiceInterfacer, Tenant } from "@data-channels/dcSDK";
+import { IJobQueue, IRowData, JobQueue, ServiceInterfacer, Tenant } from "@data-channels/dcSDK";
 import _ from "lodash";
 
 export function initRulesRepo(params: object) {
@@ -172,24 +172,30 @@ export const runStudentCoursePlanRecalculationJob = async (
   );
 };
 
-export const findOrCreateQueue = async (name: string): Promise<JobQueue | undefined> => {
+export const findOrCreateQueue = async (tenantName: string): Promise<IJobQueue | undefined> => {
+  const name = `studentCoursePlanRecalculation_${tenantName}`;
   const queues = await JobQueue.find({
     findCriteria: { name: { value: name }, product: { value: 'naviance' } },
   }).all();
 
-  if (queues.length) {
-    return queues[0];
-  }
-
-  const queue = await JobQueue.newQueue({
-    product: 'naviance',
-    name: `studentCoursePlanRecalculation_${name}`,
-    maxRunning: 1,
-  });
+  const queue =
+    queues?.[0] ??
+    (await JobQueue.newQueue({
+      product: 'naviance',
+      name,
+      maxRunning: 1,
+    }));
 
   if (!queue) {
     console.error('Failed creating job queue');
+
+    return undefined;
   }
 
-  return queue;
+  return {
+    guid: queue.guid,
+    name: queue.name,
+    maxRunning: queue.maxRunning,
+    product: queue.product,
+  };
 };
