@@ -19,11 +19,36 @@ export default class HelloWorld extends BaseProcessor {
     }
 
     public async helloRow(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
-        console.log(`Hello Row ${input.index} ${input.fileIndex}: ${JSON.stringify(input.data)}`);
+        console.log(`Hello Row ${input.index} ${input.fileInfo!.key}: ${JSON.stringify(input.data)}`);
 
         return {
             outputs: {
                 helloOut: [input.index, `Hello Row ${input.index}`, input.fileIndex]
+            }
+        };
+    }
+
+    public async dynamicHelloWorld(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
+        const name = input.fileInfo?.key?.match(new RegExp(`(${input.name}\\d?)\\.csv`))?.[1] ?? 'fail';
+
+        if (input.index === 1) {
+            await this.createOutput({
+                name: `dynOut${name}`,
+                details: {
+                    name: `dynOut${name}`,
+                    s3: {
+                        key: `ready/data-channels-sftp-sandbox/nuke/\${tenant.name}/dynamic${name}.csv`,
+                        bucket: 'data-channels-work-sandbox'
+                    }
+                }
+            });
+
+            await this.createInput({ name: `dynOut${name}`, step: 'helloRow' });
+        }
+
+        return {
+            outputs: {
+                [`dynOut${name}`]: input.raw
             }
         };
     }

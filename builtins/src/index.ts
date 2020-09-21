@@ -29,5 +29,6 @@ export const builtInHandler = generateHandler({
     athena: Athena,
     sql: Athena,
     securityscan: SecurityScan,
-    generate: Generate
+    generate: Generate,
+    dynamicHelloWorld: HelloWorld
 });
