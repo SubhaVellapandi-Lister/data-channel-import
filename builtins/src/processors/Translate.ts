@@ -68,13 +68,10 @@ export default class Translate extends BaseProcessor {
     }
 
     if (input.index === 1) {
+      this.originalHeaders = this.currentRow;
+      this.newHeaders = this.originalHeaders.map((h, i) => this.mappedHeader(h, i + 1));
 
       await this.removeEmptyColumn(RowType.HEADER);
-      this.originalHeaders = this.currentRow;
-      this.newHeaders = this.originalHeaders.map((h, i) =>
-        this.mappedHeader(h, i + 1)
-      );
-
       console.log(this.config);
       console.log('New Headers', this.newHeaders);
 
@@ -162,9 +159,9 @@ export default class Translate extends BaseProcessor {
 
   private mappedHeader(original: string, index: number): string {
     if (this.config.headerMappings) {
-      return this.config.headerMappings[original] ?? original;
+      return this.config.headerMappings[original] ?? '';
     } else if (this.config.indexMappings) {
-      return this.config.indexMappings[index] ?? original;
+      return this.config.indexMappings[index] ?? '';
     }
 
     return original;
@@ -211,27 +208,31 @@ export default class Translate extends BaseProcessor {
   }
   private async removeEmptyColumn(type?: RowType): Promise<void> {
     if (type === RowType.HEADER) {
-      for (let idx = 0; idx < this.currentRow.length; idx++) {
-        if (this.currentRow[idx] === '') {
-          // Saving index for header
+      for (let idx = 0; idx < this.newHeaders.length; idx++) {
+        if (this.newHeaders[idx] === '') {
+          // Saving index for empty header
           this.emptyHeaders.push(idx);
-
-          // Removing empty header column from both headers
-          this.currentRow.splice(idx, 1);
         }
-      } 
+      }
+
+      for (let i = this.emptyHeaders.length - 1; i >= 0; i--) {
+       // Removing empty header column from both headers
+        this.originalHeaders.splice(this.emptyHeaders[i], 1);
+        this.newHeaders.splice(this.emptyHeaders[i], 1);
+     }
+
     } else {
 
       if (this.emptyHeaders.length === 0) {
         return;
       }
 
-      for (let idx = 0; idx < this.currentRow.length; idx++) {
-        if (this.emptyHeaders.includes(idx)) {
-          this.currentRow.splice(idx, 1);
+      for (let i = this.currentRow.length - 1; i >= 0; i--) {
+        if (this.emptyHeaders.includes(i)) {
+          this.currentRow.splice(i, 1);
         }
       }
-      
+
     }
   }
 }
