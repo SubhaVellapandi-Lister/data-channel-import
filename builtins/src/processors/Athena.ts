@@ -56,7 +56,6 @@ export default class Athena extends BaseProcessor {
     }
 
     public async before_athena(input: IStepBeforeInput) {
-        console.log(this.job);
         this.config = (input.parameters!['athenaConfig'] || input.parameters!['sqlConfig'] || {}) as IAthenaConfig;
         this.dbName = 'dchan' + this.job.guid.replace(/-/g, '');
 

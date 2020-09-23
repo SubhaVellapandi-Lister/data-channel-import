@@ -45,7 +45,7 @@
     "@types/node": "13.13.5",
     "@types/node-fetch": "2.5.7",
     "@types/uuid": "7.0.3",
-    "aws-sdk": "2.492.0",
+    "aws-sdk": "2.758.0",
     "aws-sdk-mock": "5.1.0",
     "jest": "24.4.0",
     "mkdirp": "0.5.1",
