@@ -44,6 +44,18 @@ export interface ITranslateConfig {
    * `indexMappings` if needed.
    */
   headerlessFile?: boolean;
+
+  /**
+   * If set, then translate config should not remove empty header column from in output
+   */
+  removeEmptyHeaders?: boolean;
+
+  /**
+   * If set, then translate config should not remove unmapped header row based on
+   * `indexMappings`.
+   */
+  removeUnmappedHeaders?: boolean;
+
 }
 
 export enum RowType {
@@ -61,17 +73,21 @@ export default class Translate extends BaseProcessor {
 
   public async translate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
     this.currentRow = input.raw;
-    this.config = _.cloneDeep(input.parameters!["translateConfig"]) as ITranslateConfig;
-
-    if (this.config == null) {
-      throw new Error('Missing translateConfig in Translate-Builtin');
-    }
 
     if (input.index === 1) {
+      this.config = _.cloneDeep(input.parameters!["translateConfig"]) as ITranslateConfig;
+
+      if (this.config == null) {
+        throw new Error('Missing translateConfig in Translate-Builtin');
+      }
+
       this.originalHeaders = this.currentRow;
       this.newHeaders = this.originalHeaders.map((h, i) => this.mappedHeader(h, i + 1));
 
-      await this.removeEmptyColumn(RowType.HEADER);
+      if (this.config.removeEmptyHeaders === undefined || this.config.removeEmptyHeaders === true) {
+        await this.removeEmptyColumn(RowType.HEADER);
+      }
+
       console.log(this.config);
       console.log('New Headers', this.newHeaders);
 
@@ -98,7 +114,10 @@ export default class Translate extends BaseProcessor {
       };
     }
 
-    await this.removeEmptyColumn();
+    if (this.config.removeEmptyHeaders === undefined || this.config.removeEmptyHeaders === true) {
+      await this.removeEmptyColumn(RowType.ROW);
+    }
+
     if (this.config.valueMappings == null) {
       return {
         index: input.index,
@@ -135,6 +154,21 @@ export default class Translate extends BaseProcessor {
     };
   }
 
+  private mappedHeader(original: string, index: number): string {
+    if ((this.config.headerMappings || this.config.indexMappings) && 
+        (this.config.removeUnmappedHeaders === undefined || this.config.removeUnmappedHeaders === true)) {
+        original = '';
+    }
+
+    if (this.config.headerMappings) {
+      return this.config.headerMappings[original] ?? original;
+    } else if (this.config.indexMappings) {
+      return this.config.indexMappings[index] ?? original;
+    }
+
+    return original;
+  }
+
   /**
    * Check if we are missing a header row, or if we have one, make sure that it aligns with the headerMappings
    */
@@ -155,16 +189,6 @@ export default class Translate extends BaseProcessor {
     this._outputStreams.writeOutputValues({
       [`${name}Translated`]: sortedCols,
     });
-  }
-
-  private mappedHeader(original: string, index: number): string {
-    if (this.config.headerMappings) {
-      return this.config.headerMappings[original] ?? '';
-    } else if (this.config.indexMappings) {
-      return this.config.indexMappings[index] ?? '';
-    }
-
-    return original;
   }
 
   private async saveIndexMappings() {
@@ -206,6 +230,7 @@ export default class Translate extends BaseProcessor {
 
     await channel.update({ steps });
   }
+
   private async removeEmptyColumn(type?: RowType): Promise<void> {
     if (type === RowType.HEADER) {
       for (let idx = 0; idx < this.newHeaders.length; idx++) {
