@@ -14,11 +14,6 @@ import { readFileSync } from "fs";
 import { Readable } from "stream";
 import { sleep } from "../utils";
 
-export enum EtlJobType {
-    TABLE = 'table',
-    QUERY = 'query'
-}
-
 export interface IGlueConfig {
     outputs: {
         [outputName: string]: IOutputConfig;
@@ -26,18 +21,18 @@ export interface IGlueConfig {
 }
 
 export interface IOutputConfig {
-    glueSourceDatabase: {
-        name: string;
+    glue: {
+        connections: string[]; // list of connection names
+        databaseName: string; // name of the database in glue
     };
     etlJob: {
-        roleArn: string;
-        connections: string[];
-        dchanEtlJobType: EtlJobType;
+        roleArn: string; // needs glue, cloudwatch, and s3 access for the script
         dumpTableName?: string;
         sqlTableNames?: string[];
         sqlQuery?: string;
-        numWorkers?: number;
-        workerType?: string;
+        numWorkers?: number; // defaults to 2, which is glue minimum
+        workerType?: string; // defaults to G.1X
+        scriptS3Location?: string; // script will be created for you if not provided
     };
 }
 
@@ -135,13 +130,33 @@ export default class Glue extends BaseProcessor {
     }
 
     private async createJob(glue: AWS.Glue, name: string, config: IOutputConfig) {
-        const scriptKey = `workspace/glue/scripts/${this.job.guid}-${name}.py`;
-        const scriptAsString = readFileSync('glueetl/glueSparkDefault.py').toString();
 
-        console.log(`Creating script at ${scriptKey}`);
-        await s3Writeable(this.job.workspace?.bucket!, scriptKey, Readable.from([scriptAsString]));
+        let scriptLocation = config.etlJob.scriptS3Location;
+
+        if (!scriptLocation) {
+            const scriptKey = `workspace/glue/scripts/${this.job.guid}-${name}.py`;
+            const scriptAsString = readFileSync('glueetl/glueSparkDefault.py').toString();
+
+            console.log(`Creating script at ${scriptKey}`);
+            await s3Writeable(this.job.workspace?.bucket!, scriptKey, Readable.from([scriptAsString]));
+            scriptLocation = `s3://${this.job.workspace?.bucket!}/${scriptKey}`;
+        }
 
         const jobName = this.glueJobName(name);
+
+        const jobArgs = {
+            '--sql_table_name': 'UNSET',
+            '--aws_region': process.env.AWS_REGION ?? 'us-east-1',
+            '--query_str': 'something here',
+            '--s3_output_path':
+                `s3://${this.job.workspace?.bucket!}/workspace/glue/outputs/${this.job.guid}-${name}`,
+            '--glue_database': config.glue.databaseName,
+            '--glue_table_name': config.etlJob.dumpTableName ?? 'UNSET',
+            '--spark_sql_table_name': config.etlJob.sqlTableNames?.length ?
+                config.etlJob.sqlTableNames.join(',') : 'UNSET',
+            '--spark_sql_query': config.etlJob.sqlQuery ?? 'UNSET'
+        };
+
         console.log(`Creating job ${jobName}`);
         const jobCreateResult: AWS.Glue.CreateJobResponse = await new Promise((resolve, reject) => {
             glue.createJob({
@@ -150,23 +165,15 @@ export default class Glue extends BaseProcessor {
                 Command: {
                     Name: 'glueetl',
                     PythonVersion: '3',
-                    ScriptLocation: `s3://${this.job.workspace?.bucket!}/${scriptKey}`
+                    ScriptLocation: scriptLocation
                 },
                 Connections: {
-                    Connections: config.etlJob.connections
+                    Connections: config.glue.connections
                 },
-                DefaultArguments: {
-                    '--aws_region': process.env.AWS_REGION ?? 'us-east-1',
-                    '--s3_output_path':
-                        `s3://${this.job.workspace?.bucket!}/workspace/glue/outputs/${this.job.guid}-${name}`,
-                    '--glue_database': config.glueSourceDatabase.name,
-                    '--glue_table_name': config.etlJob.dumpTableName ?? '',
-                    '--spark_sql_table_names': (config.etlJob.sqlTableNames ?? []).join(','),
-                    '--spark_sql_query': config.etlJob.sqlQuery ?? ''
-                },
+                DefaultArguments: jobArgs,
                 WorkerType: config.etlJob.workerType ?? 'G.1X',
                 GlueVersion: '2.0',
-                NumberOfWorkers: config.etlJob.numWorkers ?? 1
+                NumberOfWorkers: config.etlJob.numWorkers ?? 2
             }, (err, data) => {
                 if (err) {
                     console.log(err, err.stack);

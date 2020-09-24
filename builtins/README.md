@@ -395,6 +395,71 @@ Example Config
 }
 ```
 
+### Glue *BETA*
+
+Allows you to dump tables and run queries against AWS Glue databases.  Currently you need to setup your glue database, tables, and job role beforehand.  This setup may be done automatically by this method in the future.
+
+| | |
+| ---- | --- |
+| **method name** | glue |
+| **granularity** | once |
+| **code** | [Glue.ts](src/processors/Glue.ts) |
+| **input name** | No inputs, glue method is currently export only |
+| **output name** | Any output name you want, must match your config |
+| **config property name** | glueConfig |
+
+`glueConfig` is a map of ouput names to configurations.  Each configuration needs the following:
+* glue - Required property for glue info
+  * databaseName - String name of the glue database to query against
+  * connections - String list of names of glue connections needed
+* etlJob
+  *  roleArn - ARN of the role that the job should use to run.  This role needs glue access, cloudwatch access, and s3 read access to the script location (`arn:aws:s3:::data-channels-work*/workspace/glue/*` for default script location)
+  * dumpTableName - Either this or sqlTableNames + sqlQuery are required.  If set, it should be the name of a glue table to export into csv as the output
+  * sqlTableNames - Either this and sqlQuery or dumpTableName are required.  If set, the names of all the glue tables to be used in the sqlQuery.
+  * sqlQuery - Full SQL query to run against the glue database
+  * numWorkers - Number of workers to use for the job run, defaults to the minimum of two
+  * workerType - Defaults to G.1X
+  * scriptS3Location - Full s3 path the the spark script to run.  Not needed if you are using dumpTableName or sqlQuery
+
+Example dump table Config
+
+```json
+"parameters": {
+  "glueConfig": {
+    "myOutput": {
+      "glue": {
+        "databaseName": "SomeGlueDatabase",
+        "connections": ["SomeConnectionName"]
+      },
+      "etlJob": {
+        "roleArn": "arn:aws:iam::315912493465:role/ss-my-role-name",
+        "dumpTableName": "MyTableToDump"
+      }
+    }
+  }
+}
+```
+
+Example SQL Query Config
+
+```json
+"parameters": {
+  "glueConfig": {
+    "myOutput": {
+      "glue": {
+        "databaseName": "SomeGlueDatabase",
+        "connections": ["SomeConnectionName"]
+      },
+      "etlJob": {
+        "roleArn": "arn:aws:iam::315912493465:role/ss-my-role-name",
+        "sqlTableNames": ["MyTableToDump"],
+        "sqlQuery": "select guid, name from MyTableToDump"
+      }
+    }
+  }
+}
+```
+
 ### Security Scan
 
 Allows you to scan input files for malware and viruses
