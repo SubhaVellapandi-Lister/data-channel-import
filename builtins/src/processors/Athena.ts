@@ -89,59 +89,69 @@ export default class Athena extends BaseProcessor {
             console.log(`creating table for ${inputName}`);
             let inputStreams = input.inputs[inputName];
 
-            for (const stream of inputStreams) {
-                const headers = await fileHeaders(stream.readable);
+            const headers = await fileHeaders(inputStreams[0].readable);
 
-                if (!headers.length) {
-                    console.log(`Empty file found for ${inputName}`);
-                    continue;
-                }
+            if (!headers.length) {
+                console.log(`Empty file found for ${inputName}`);
+                continue;
+            }
 
-                console.log(`found headers ${headers}`);
-                inputStreams = await this.refreshInputStream(inputName);
+            console.log(`found headers ${headers}`);
+            inputStreams = await this.refreshInputStream(inputName);
+            const tempFolder = `workspace/athena/${this.dbName}/${inputName}/`;
 
-                const tempFolder = `workspace/athena/${this.dbName}/${inputName}/`;
-                const tempKey = `${tempFolder}data.csv`;
+            for (const [idx, stream] of inputStreams.entries()) {
+
+                const tempKey = `${tempFolder}data.${idx}.csv`;
 
                 const tempOutDetails = await this.getWritableDetails(this.job.workspace!.bucket!, tempKey);
                 const parser = parse({ bom: true, skip_empty_lines: true, skip_lines_with_empty_values: true});
-                stream.readable.pipe(parser).pipe(tempOutDetails.writeStream);
+                const finalStream = stream.readable.pipe(parser).pipe(tempOutDetails.writeStream);
+
+                console.log(`writing temp work file ${tempKey}`);
+                await new Promise((resolve, reject) => {
+                    finalStream.on("finish", resolve);
+                    finalStream.on("end", resolve);
+                });
+
+                console.log('writing temp work file streaming finished');
+
                 await tempOutDetails.uploadResponsePromise;
 
                 console.log(`wrote temp work file`);
+            }
 
-                const config = this.config;
-                function colType(name: string): string {
-                    if (config.inputs && config.inputs[inputName] && config.inputs[inputName].columnTypes?.[name]) {
-                        return ' ' + config.inputs[inputName].columnTypes?.[name];
-                    }
-
-                    return ' STRING';
+            const config = this.config;
+            function colType(name: string): string {
+                if (config.inputs && config.inputs[inputName] && config.inputs[inputName].columnTypes?.[name]) {
+                    return ' ' + config.inputs[inputName].columnTypes?.[name];
                 }
 
-                const createQuery = `
-                CREATE EXTERNAL TABLE IF NOT EXISTS ${inputName} (
-                    ${headers.map((h) => h + colType(h)).join(', ')}
-                )
-                ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
-                WITH SERDEPROPERTIES (
-                    'separatorChar' = ',', 'quoteChar' = '\\"', 'escapeChar' = '\\\\' )
-                STORED AS TEXTFILE
-                LOCATION 's3://${this.job.workspace!.bucket}/${tempFolder}'
-                TBLPROPERTIES ( "skip.header.line.count"="1" )
+                return ' STRING';
+            }
+
+            const createQuery = `
+            CREATE EXTERNAL TABLE IF NOT EXISTS ${inputName} (
+                ${headers.map((h) => h + colType(h)).join(', ')}
+            )
+            ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+            WITH SERDEPROPERTIES (
+                'separatorChar' = ',', 'quoteChar' = '\\"', 'escapeChar' = '\\\\' )
+            STORED AS TEXTFILE
+            LOCATION 's3://${this.job.workspace!.bucket}/${tempFolder}'
+            TBLPROPERTIES ( "skip.header.line.count"="1" )
             `;
 
-                console.log(createQuery);
+            console.log(createQuery);
 
-                const createTableResult = await this.executeSyncQuery({
-                    QueryString: createQuery,
-                    QueryExecutionContext: {
-                        Database: this.dbName
-                    }
-                });
+            const createTableResult = await this.executeSyncQuery({
+                QueryString: createQuery,
+                QueryExecutionContext: {
+                    Database: this.dbName
+                }
+            });
 
-                console.log(createTableResult);
-            }
+            console.log(createTableResult);
         }
     }
 
