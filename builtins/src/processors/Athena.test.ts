@@ -1,13 +1,16 @@
-import { csvReadableToStrings, IFileProcessorInput, Job, JobStatus } from "@data-channels/dcSDK";
+import internal from "stream";
+
+import { csvReadableToStrings, IFileProcessorInput, IInput, IOutputFileStreamDetails, Job, JobStatus } from "@data-channels/dcSDK";
 import AWS from "aws-sdk";
 import AWSMock from "aws-sdk-mock";
 import stringify from "csv-stringify";
+
 import 'jest';
+
 import Athena from "./Athena";
 
 describe('Athena', () => {
     test('test athena built-in', async () => {
-
         const stop = { stopDate: new Date() };
         AWSMock.setSDKInstance(AWS);
         AWSMock.mock("Athena", "startQueryExecution", { QueryExecutionId: '111' });
@@ -64,14 +67,14 @@ describe('Athena', () => {
             }
         };
 
-        processor['refreshInputStream'] = async () => [ { readable: refreshStringifier, details: {} }];
-        processor['getWritableDetails'] = () => (new Promise((resolve, reject)  => resolve({
+        processor['refreshInputStream'] = async (): Promise<IInput[]> => [{ readable: refreshStringifier, details: {} }];
+        processor['getWritableDetails'] = (): Promise<IOutputFileStreamDetails> => (new Promise((resolve, reject) => resolve({
             writeStream: stringify(),
             uploadResponsePromise: new Promise((res, rej) => res()),
             bucket: 'some-bucket',
             key: 'some-key'
         })));
-        processor['getReadable'] = async () => resultsStringifier;
+        processor['getReadable'] = async (): Promise<internal.Readable> => resultsStringifier;
 
         await processor['before_sql'](params);
         await processor['sql'](params);

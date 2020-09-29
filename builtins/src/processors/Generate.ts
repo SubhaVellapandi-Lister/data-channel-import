@@ -50,7 +50,6 @@ const LAST_NAMES = [
 ];
 
 export default class Generate extends BaseProcessor {
-
     public async generate(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
         const config = input.parameters!['generateConfig'] as IGenerateConfig;
 
@@ -62,30 +61,30 @@ export default class Generate extends BaseProcessor {
                 const row: string[] = [];
                 for (const dType of outConfig.dataTypes) {
                     switch (dType) {
-                        case DataType.String: {
-                            row.push(this.randomString(16));
-                            break;
+                    case DataType.String: {
+                        row.push(this.randomString(16));
+                        break;
+                    }
+                    case DataType.Integer: {
+                        row.push(Math.floor(Math.random() * 100).toString());
+                        break;
+                    }
+                    case DataType.Decimal: {
+                        row.push((Math.random() * 100).toString());
+                        break;
+                    }
+                    case DataType.Name: {
+                        row.push(this.randomEntry(FIRST_NAMES) + ' ' + this.randomEntry(LAST_NAMES));
+                        break;
+                    }
+                    default: {
+                        if (Array.isArray(dType)) {
+                            row.push(this.randomEntry(dType));
+                        } else {
+                            row.push('');
                         }
-                        case DataType.Integer: {
-                            row.push(Math.floor(Math.random() * 100).toString());
-                            break;
-                        }
-                        case DataType.Decimal: {
-                            row.push((Math.random() * 100).toString());
-                            break;
-                        }
-                        case DataType.Name: {
-                            row.push(this.randomEntry(FIRST_NAMES) + ' ' + this.randomEntry(LAST_NAMES));
-                            break;
-                        }
-                        default: {
-                            if (Array.isArray(dType)) {
-                                row.push(this.randomEntry(dType));
-                            } else {
-                                row.push('');
-                            }
-                            break;
-                        }
+                        break;
+                    }
                     }
                 }
                 this.writeOutputRow(output, row);

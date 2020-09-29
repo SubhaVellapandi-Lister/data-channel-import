@@ -1,0 +1,48 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "@typescript-eslint",
+    "import"
+  ],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "rules": {
+    "indent": ["error", 4],
+    "eol-last": ["error", "always"],
+    "comma-dangle": "off",
+    "no-trailing-spaces": "error",
+    "no-case-declarations": "off",
+    "no-multiple-empty-lines": ["error", {
+      "max": 1,
+      "maxBOF": 0,
+      "maxEOF": 0
+    }],
+    "object-curly-spacing": ["error", "always"],
+    "padded-blocks": ["error", "never"],
+    "no-multi-spaces": "error",
+    "keyword-spacing": "error",
+    "space-in-parens": "error",
+    "comma-spacing": "error",
+    "array-bracket-spacing": "error",
+    "import/order": ["error", {
+      "newlines-between": "always",
+      "alphabetize": {
+        "order": "asc",
+        "caseInsensitive": true
+      }
+    }],
+    "no-async-promise-executor": 0,
+    "@typescript-eslint/interface-name-prefix": [ "error", { "prefixWithI": "always" }],
+    "@typescript-eslint/no-non-null-assertion": "off",
+    "@typescript-eslint/ban-ts-ignore": "off",
+    "@typescript-eslint/no-inferrable-types": "off",
+    "@typescript-eslint/no-explicit-any":"off",
+    "@typescript-eslint/no-use-before-define": "off",
+    "@typescript-eslint/no-unused-vars": "off",
+    "@typescript-eslint/camelcase": "off"
+  }
+}

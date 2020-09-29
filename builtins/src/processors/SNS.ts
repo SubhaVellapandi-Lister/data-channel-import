@@ -11,7 +11,6 @@ export interface ISNSParams {
 
 export default class SNSProcessor extends BaseProcessor {
     public async sns(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
-
         const inputParams = input.parameters as ISNSParams;
 
         const sns = new AWS.SNS();

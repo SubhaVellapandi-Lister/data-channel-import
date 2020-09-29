@@ -1,6 +1,5 @@
 import { builtInHandler } from "./index";
 
-// tslint:disable-next-line
-(async () => {
+(async (): Promise<void> => {
     await builtInHandler(undefined, undefined);
 })();
