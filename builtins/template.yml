@@ -54,7 +54,7 @@ Resources:
             - s3:*
           Effect: Allow
           Resource:
-            arn:aws:s3:::data-channels-work-*/workspace/athena/*
+            arn:aws:s3:::data-channels-work-*/workspace/*
       - Statement:
         - Sid: AthenaQueryPolicy
           Action:
@@ -71,8 +71,18 @@ Resources:
           Resource:
             - arn:aws:glue:*:*:catalog
             - arn:aws:glue:*:*:database/dchan*
+            - arn:aws:glue:*:*:database/data-channel*
             - arn:aws:glue:*:*:table/dchan*
+            - arn:aws:glue:*:*:table/data-channel*
+            - arn:aws:glue:*:*:job/data-channel*
             - arn:aws:glue:*:*:userDefinedFunction/dchan*
+      - Statement:
+        - Sid: GluePassRole
+          Action:
+            - iam:PassRole
+          Effect: Allow
+          Resource:
+            - arn:aws:iam::*:role/*data-channel*
       - Statement:
         - Sid: S3ClamAVPolicy
           Action:
