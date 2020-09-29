@@ -84,9 +84,11 @@ export default class Translate extends BaseProcessor {
       this.originalHeaders = this.currentRow;
       this.newHeaders = this.originalHeaders.map((h, i) => this.mappedHeader(h, i + 1));
 
-      if (this.config.removeEmptyHeaders === undefined || this.config.removeEmptyHeaders === true) {
+      if (this.config.removeEmptyHeaders === undefined ||
+        this.config.removeEmptyHeaders === true ||
+        this.config.removeUnmappedHeaders === true) {
         await this.removeEmptyColumn(RowType.HEADER);
-      }
+    }
 
       console.log(this.config);
       console.log('New Headers', this.newHeaders);
@@ -114,7 +116,9 @@ export default class Translate extends BaseProcessor {
       };
     }
 
-    if (this.config.removeEmptyHeaders === undefined || this.config.removeEmptyHeaders === true) {
+    if (this.config.removeEmptyHeaders === undefined ||
+      this.config.removeEmptyHeaders === true ||
+      this.config.removeUnmappedHeaders === true) {
       await this.removeEmptyColumn(RowType.ROW);
     }
 
@@ -127,18 +131,18 @@ export default class Translate extends BaseProcessor {
       };
     }
 
-    const vmapConfig = this.config.valueMappings;
+    const valueMappings = this.config.valueMappings;
     const newRow: string[] = [];
 
     for (const [idx, val] of this.currentRow.entries()) {
       const originalHeader = this.originalHeaders[idx];
       const newHeader = this.newHeaders[idx];
-      const vmap = vmapConfig[newHeader] ?? (vmapConfig[originalHeader] ?? []);
+      const valueMapping = valueMappings[newHeader] ?? (valueMappings[originalHeader] ?? []);
       let value = val;
 
-      for (const mappedVal of vmap) {
-        if (mappedVal.fromValue === val) {
-          value = mappedVal.toValue;
+      for (const mappedValue of valueMapping) {
+        if (mappedValue.fromValue === val) {
+          value = mappedValue.toValue;
           break;
         }
       }
@@ -234,7 +238,7 @@ export default class Translate extends BaseProcessor {
   private async removeEmptyColumn(type?: RowType): Promise<void> {
     if (type === RowType.HEADER) {
       for (let idx = 0; idx < this.newHeaders.length; idx++) {
-        if (this.newHeaders[idx] === '') {
+        if (this.newHeaders[idx].trim() === '') {
           // Saving index for empty header
           this.emptyHeaders.push(idx);
         }
