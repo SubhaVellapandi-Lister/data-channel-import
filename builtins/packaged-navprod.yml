@@ -5,7 +5,7 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-navprod/0b5bb2fdcc5b39177119bcd4449453e6
+      CodeUri: s3://data-channels-processor-deployments-navprod/f22cae9f122c0398650cf7b14ff1a554
       FunctionName: data-channels-BuiltInProcessor
       Handler: dist/index.builtInHandler
       Timeout: 300
@@ -51,7 +51,7 @@ Resources:
           Action:
           - s3:*
           Effect: Allow
-          Resource: arn:aws:s3:::data-channels-work-*/workspace/athena/*
+          Resource: arn:aws:s3:::data-channels-work-*/workspace/*
       - Statement:
         - Sid: AthenaQueryPolicy
           Action:
@@ -67,8 +67,18 @@ Resources:
           Resource:
           - arn:aws:glue:*:*:catalog
           - arn:aws:glue:*:*:database/dchan*
+          - arn:aws:glue:*:*:database/data-channel*
           - arn:aws:glue:*:*:table/dchan*
+          - arn:aws:glue:*:*:table/data-channel*
+          - arn:aws:glue:*:*:job/data-channel*
           - arn:aws:glue:*:*:userDefinedFunction/dchan*
+      - Statement:
+        - Sid: GluePassRole
+          Action:
+          - iam:PassRole
+          Effect: Allow
+          Resource:
+          - arn:aws:iam::*:role/*data-channel*
       - Statement:
         - Sid: S3ClamAVPolicy
           Action:

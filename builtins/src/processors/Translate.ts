@@ -155,7 +155,7 @@ export default class Translate extends BaseProcessor {
   }
 
   private mappedHeader(original: string, index: number): string {
-    if ((this.config.headerMappings || this.config.indexMappings) && 
+    if ((this.config.headerMappings || this.config.indexMappings) &&
         (this.config.removeUnmappedHeaders === undefined || this.config.removeUnmappedHeaders === true)) {
         original = '';
     }
