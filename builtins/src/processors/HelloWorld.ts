@@ -52,5 +52,4 @@ export default class HelloWorld extends BaseProcessor {
             }
         };
     }
-
 }

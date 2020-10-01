@@ -1,3 +1,6 @@
+import * as crypto from 'crypto';
+import { Readable } from "stream";
+
 import {
     BaseProcessor, IJobPageOptions,
     IRowProcessorInput,
@@ -6,10 +9,8 @@ import {
     Job, JobStatus, OutputStreams,
     SlimJob
 } from "@data-channels/dcSDK";
-import * as crypto from 'crypto';
 import parse from "csv-parse";
 import fetch from 'node-fetch';
-import {Readable} from "stream";
 
 export enum DiffModifiedOutputType {
     /**
@@ -118,9 +119,7 @@ export default class Diff extends BaseProcessor {
     private lastJob!: Job;
     private hashers: { [filename: string]: FileHasher } = {};
 
-    public async before_diff(input: IStepBeforeInput) {
-        let jobs: SlimJob[];
-
+    public async before_diff(input: IStepBeforeInput): Promise<void> {
         const findCriteria: IJobPageOptions['findCriteria'] = {
             status: {
                 value: JobStatus.Completed
@@ -158,8 +157,7 @@ export default class Diff extends BaseProcessor {
         }
 
         // Find last job to run
-        jobs = await Job.find({ findCriteria }).page(1);
-
+        const jobs: SlimJob[] = await Job.find({ findCriteria }).page(1);
         for (const job of jobs) {
             if (
                 job.created > this.job.created ||
@@ -242,7 +240,7 @@ export default class Diff extends BaseProcessor {
 
     public async after_diff(input: IStepAfterInput): Promise<IStepAfterOutput> {
         for (const filename in this.hashers) {
-            if (!this.hashers.hasOwnProperty(filename) || !(`${filename}Deleted` in input.outputs)) {
+            if (!Object.prototype.hasOwnProperty.call(this.hashers, filename) || !(`${filename}Deleted` in input.outputs)) {
                 continue;
             }
 
@@ -259,13 +257,13 @@ export default class Diff extends BaseProcessor {
         };
     }
 
-    private async hashPreviousFiles(input: IStepBeforeInput) {
+    private async hashPreviousFiles(input: IStepBeforeInput): Promise<void> {
         if (input.parameters == null) {
             throw new Error('Diff config missing');
         }
 
         for (const filename in input.parameters as IDiffParameters) {
-            if (!input.parameters.hasOwnProperty(filename)) {
+            if (!Object.prototype.hasOwnProperty.call(input.parameters, filename)) {
                 continue;
             }
 
@@ -303,21 +301,20 @@ export default class Diff extends BaseProcessor {
 
         // Check all fileUrls to check step outputs
         for (const step of this.lastJob.flow) {
-            const stepDetatils = this.lastJob.steps[step];
+            const stepDetails = this.lastJob.steps[step];
 
-            if (stepDetatils == null || stepDetatils.fileDownloadUrls == null) {
+            if (stepDetails == null || stepDetails.fileDownloadUrls == null) {
                 continue;
             }
 
-            // tslint:disable-next-line:forin
-            for (const fileKey in stepDetatils.fileDownloadUrls) {
+            for (const fileKey in stepDetails.fileDownloadUrls) {
                 const [job, jobGuid, ...file] = fileKey.split('/');
 
                 if (!file.join().includes(`${filename}.output`)) {
                     continue;
                 }
 
-                return stepDetatils.fileDownloadUrls[fileKey];
+                return stepDetails.fileDownloadUrls[fileKey];
             }
         }
 
@@ -456,7 +453,7 @@ class FileHasher {
         return [pkHasher.digest('hex'), rowHasher.digest('hex')];
     }
 
-    async hashFile() {
+    async hashFile(): Promise<void> {
         const request = await fetch(this.url);
         const read = Readable.from(await request.buffer());
         const parser = parse({
@@ -517,7 +514,7 @@ class FileHasher {
                     return;
                 }
 
-                isReading =  false;
+                isReading = false;
 
                 if (isEnded) {
                     // if we've already received an 'end' notification then just resolve the promise

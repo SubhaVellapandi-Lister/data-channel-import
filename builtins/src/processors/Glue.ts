@@ -1,3 +1,6 @@
+import { readFileSync } from "fs";
+import { Readable } from "stream";
+
 import {
     BaseProcessor,
     IFileProcessorInput,
@@ -10,8 +13,7 @@ import {
 } from "@data-channels/dcSDK";
 import AWS from "aws-sdk";
 import parse from "csv-parse";
-import { readFileSync } from "fs";
-import { Readable } from "stream";
+
 import { sleep } from "../utils";
 
 export interface IGlueConfig {
@@ -46,7 +48,7 @@ interface IJobRun {
 }
 
 export default class Glue extends BaseProcessor {
-    private config: IGlueConfig = { outputs: {}};
+    private config: IGlueConfig = { outputs: {} };
     private waitingJobs: IJobRun[] = [];
 
     public async glue(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
@@ -84,7 +86,7 @@ export default class Glue extends BaseProcessor {
                         const resultsReadable = await this.getReadable(
                             this.job.workspace!.bucket, outputKeys[0]);
                         const writeOutput = input.outputs[job.outputName];
-                        const parser = parse({ bom: true, skip_empty_lines: true, skip_lines_with_empty_values: true});
+                        const parser = parse({ bom: true, skip_empty_lines: true, skip_lines_with_empty_values: true });
                         const finalStream = resultsReadable.pipe(parser).pipe(writeOutput.writeStream);
 
                         console.log(`Writing ${outputKeys[0]} to job folder`);
@@ -96,7 +98,6 @@ export default class Glue extends BaseProcessor {
                     }
 
                     console.log(`Finished with job ${job.jobName}`);
-
                 } else {
                     unfinishedJobs = true;
                 }
@@ -106,7 +107,7 @@ export default class Glue extends BaseProcessor {
         return {};
     }
 
-    public async before_glue(input: IStepBeforeInput) {
+    public async before_glue(input: IStepBeforeInput): Promise<void> {
         this.config = (input.parameters!['glueConfig'] || {}) as IGlueConfig;
         const glue = new AWS.Glue();
 
@@ -129,8 +130,7 @@ export default class Glue extends BaseProcessor {
         };
     }
 
-    private async createJob(glue: AWS.Glue, name: string, config: IOutputConfig) {
-
+    private async createJob(glue: AWS.Glue, name: string, config: IOutputConfig): Promise<void> {
         let scriptLocation = config.etlJob.scriptS3Location;
 
         if (!scriptLocation) {
@@ -228,7 +228,7 @@ export default class Glue extends BaseProcessor {
     }
 
     private async outputKeyList(bucket: string, path: string): Promise<string[]> {
-        const s3 = new AWS.S3({ region: process.env.AWS_REGION ?? 'us-east-1'});
+        const s3 = new AWS.S3({ region: process.env.AWS_REGION ?? 'us-east-1' });
 
         const response: AWS.S3.ListObjectsV2Output = await new Promise((resolve, reject) => {
             s3.listObjectsV2({
@@ -247,7 +247,7 @@ export default class Glue extends BaseProcessor {
         return response.Contents!.map((item) => item.Key!);
     }
 
-    private async deleteJob(glue: AWS.Glue, jobName: string) {
+    private async deleteJob(glue: AWS.Glue, jobName: string): Promise<void> {
         await new Promise((resolve, reject) => {
             glue.deleteJob({
                 JobName: jobName

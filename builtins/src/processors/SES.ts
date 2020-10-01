@@ -20,9 +20,9 @@ export interface ISESParams {
     };
 }
 
-function validEmail(email: string) {
+function validEmail(email: string): boolean {
     // tslint:disable-next-line
-    const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 
     return re.test(String(email).toLowerCase());
 }
@@ -32,7 +32,7 @@ export default class SESProcessor extends BaseProcessor {
         to: []
     };
 
-    private initConfig(input: IFileProcessorInput) {
+    private initConfig(input: IFileProcessorInput): void {
         const config = input.parameters!['emailConfig'] as ISESParams;
         if (!config.from) {
             config.from = "no-reply@data-channels-dev.hobsonsdev.net";
@@ -62,21 +62,21 @@ export default class SESProcessor extends BaseProcessor {
         return {};
     }
 
-    public async email(input: IFileProcessorInput): Promise<IFileProcessorOutput>  {
+    public async email(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
         this.initConfig(input);
 
         if (!this.config.to.length) {
             console.log('No To Addresses Found');
 
-            return { results: { sent: false }};
+            return { results: { sent: false } };
         }
 
         if (this.config.successOnly && this.job.status === JobStatus.Failed) {
-            return { results: { sent: false }};
+            return { results: { sent: false } };
         }
 
         if (this.config.failureOnly && this.job.status !== JobStatus.Failed) {
-            return { results: { sent: false }};
+            return { results: { sent: false } };
         }
 
         if (this.config.sendFilter) {
@@ -85,7 +85,7 @@ export default class SESProcessor extends BaseProcessor {
                 this.config.sendFilter.replace(/\${(.*?)}/g, (x, g) => g)
             );
             if (!val) {
-                return { results: { sent: false, sendStatus: "sendFilter not met" }};
+                return { results: { sent: false, sendStatus: "sendFilter not met" } };
             }
         }
 
@@ -111,7 +111,7 @@ export default class SESProcessor extends BaseProcessor {
         };
     }
 
-    private async send(subject: string, body: string, isHtml: boolean) {
+    private async send(subject: string, body: string, isHtml: boolean): Promise<void> {
         const ses = new AWS.SES();
 
         const params = {
@@ -126,8 +126,8 @@ export default class SESProcessor extends BaseProcessor {
                     }
                 },
                 Subject: {
-                        Charset: "UTF-8",
-                        Data: subject
+                    Charset: "UTF-8",
+                    Data: subject
                 }
             },
             Source: "no-reply@data-channels-dev.hobsonsdev.net"
@@ -146,7 +146,7 @@ export default class SESProcessor extends BaseProcessor {
     }
 
     private templateResolver(template: string): string {
-        const matcher = (templateString: string, templateVariables: object) =>
+        const matcher = (templateString: string, templateVariables: object): string =>
             templateString.replace(/\${(.*?)}/g, (x, g) => {
                 let value = _.get(templateVariables, g, '');
                 if (typeof value !== 'string') {
@@ -156,6 +156,6 @@ export default class SESProcessor extends BaseProcessor {
                 return value;
             });
 
-        return matcher(template, { job: this.job.rawConfig});
+        return matcher(template, { job: this.job.rawConfig });
     }
 }

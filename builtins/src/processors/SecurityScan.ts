@@ -1,3 +1,7 @@
+import { execFile } from "child_process";
+import { createWriteStream, mkdirSync, readdirSync } from "fs";
+import { Readable } from "stream";
+
 import {
     BaseProcessor,
     getSSMValue,
@@ -5,11 +9,9 @@ import {
     IFileProcessorOutput,
     s3Readable
 } from "@data-channels/dcSDK";
-import { execFile } from "child_process";
-import { createWriteStream, mkdirSync, readdirSync } from "fs";
 import _ from "lodash";
 import fetch from "node-fetch";
-import { Readable } from "stream";
+
 import { sleep } from "../utils";
 
 export enum ScanTool {
@@ -138,7 +140,7 @@ export default class SecurityScan extends BaseProcessor {
             ldpath += ':';
         }
         ldpath += '/var/task/clamav';
-        const options = { env: { LD_LIBRARY_PATH: ldpath }};
+        const options = { env: { LD_LIBRARY_PATH: ldpath } };
 
         return new Promise((resolve, reject) => {
             execFile('./clamav/clamscan', args, options, (error, stdout, stderr) => {
@@ -176,7 +178,7 @@ export default class SecurityScan extends BaseProcessor {
     private async downloadStreamFile(stream: Readable, path: string): Promise<void> {
         return new Promise((resolve, reject) => {
             try {
-                const  wstream = stream.pipe(createWriteStream(path));
+                const wstream = stream.pipe(createWriteStream(path));
                 wstream.on('finish', () => {
                     resolve();
                 });
@@ -219,7 +221,6 @@ export default class SecurityScan extends BaseProcessor {
             if (resp.status < 400) {
                 const body = await resp.json();
                 results[inputName] = body['id'];
-
             } else {
                 console.log(`Scanii fetch call failure`, resp.status, resp.statusText);
             }
