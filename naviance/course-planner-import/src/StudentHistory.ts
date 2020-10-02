@@ -348,4 +348,8 @@ export class StudentHistory {
             console.log(`Processed batch of ${this.historyBatch.length} students`);
         }
     }
+
+    getStudentIds() {
+      return this.historyForStudent.map((i) => i.studentId);
+    }
 }

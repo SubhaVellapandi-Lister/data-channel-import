@@ -24,7 +24,7 @@ import { PlanImport } from "./StudentCoursePlan";
 import { IHistoryRow, StudentHistory } from "./StudentHistory";
 import { ISubjectAreaLoad, loadExistingSubjectAreas,
     parseSubjectAreaRow, saveDefaultAnnotationTypes, saveSubjectAreas } from "./SubjectAreas";
-import { getRowVal, initRulesRepo, initServices } from "./Utils";
+import { getRowVal, initRulesRepo, initServices, runStudentCoursePlanRecalculationJob } from "./Utils";
 
 export class CPImportProcessor extends BaseProcessor {
     /* PoS variables */
@@ -443,6 +443,14 @@ export class CPImportProcessor extends BaseProcessor {
     public async after_importHistories(input: IStepBeforeInput): Promise<IStepAfterOutput> {
         console.log('finishing up import histories call');
         await this.historyHandler!.processLeftovers();
+
+        if (this.job.tenant && this.historyHandler) {
+          const studentIds = this.historyHandler.getStudentIds();
+          console.log(
+            `Running student plan recalculate job for ${this.job.tenant.name} with ${studentIds}`
+          );
+          await runStudentCoursePlanRecalculationJob(this.job.tenant, studentIds);
+        }
 
         return { results: {
             createdCount: this.historyHandler!.createdCount,
