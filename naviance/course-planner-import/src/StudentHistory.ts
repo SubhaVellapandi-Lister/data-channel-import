@@ -349,7 +349,7 @@ export class StudentHistory {
         }
     }
 
-    getStudentIds() {
-      return this.historyForStudent.map((i) => i.studentId);
+    getStudentIdMap() {
+      return this.studentIdMap;
     }
 }

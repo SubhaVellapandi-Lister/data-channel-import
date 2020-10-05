@@ -148,10 +148,9 @@ export async function sleep(milliseconds: number) {
 
 export const runStudentCoursePlanRecalculationJob = async (
   tenant: Tenant,
-  studentIds?: string[],
+  queueDetails: IJobQueue | undefined,
+  parameters: { studentIds?: string[], highschoolIds?: string[] }
 ) => {
-  const queueDetails = await findOrCreateQueue(tenant.name || '');
-
   return ServiceInterfacer.getInstance().newJob(
     {
       product: 'naviance',
@@ -163,9 +162,7 @@ export const runStudentCoursePlanRecalculationJob = async (
         name: 'studentCoursePlanRecalculationChannel',
       },
       parameters: {
-        all: {
-          studentIds,
-        },
+        all: parameters,
       },
     },
     true,
