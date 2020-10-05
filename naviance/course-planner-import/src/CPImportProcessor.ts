@@ -15,6 +15,7 @@ import {
     IStepAfterOutput,
     IStepBeforeInput
 } from "@data-channels/dcSDK";
+import { flatten } from 'lodash';
 import { v5 as uuidv5} from "uuid";
 import { CourseImport } from "./Course";
 import { PoSImport } from "./PoS";
@@ -24,7 +25,7 @@ import { PlanImport } from "./StudentCoursePlan";
 import { IHistoryRow, StudentHistory } from "./StudentHistory";
 import { ISubjectAreaLoad, loadExistingSubjectAreas,
     parseSubjectAreaRow, saveDefaultAnnotationTypes, saveSubjectAreas } from "./SubjectAreas";
-import { getRowVal, initRulesRepo, initServices, runStudentCoursePlanRecalculationJob } from "./Utils";
+import { findOrCreateQueue, getRowVal, initRulesRepo, initServices, runStudentCoursePlanRecalculationJob } from "./Utils";
 
 export class CPImportProcessor extends BaseProcessor {
     /* PoS variables */
@@ -445,11 +446,20 @@ export class CPImportProcessor extends BaseProcessor {
         await this.historyHandler!.processLeftovers();
 
         if (this.job.tenant && this.historyHandler) {
-          const studentIds = this.historyHandler.getStudentIds();
+          const queueDetails = await findOrCreateQueue(this.job.tenant.name || '');
+          const studentIdMap = this.historyHandler.getStudentIdMap();
+          const highschoolIds = Object.keys(studentIdMap);
+          const studentIds = flatten(Object.values(studentIdMap)).map(({ id }) => id.toString());
+
           console.log(
-            `Running student plan recalculate job for ${this.job.tenant.name} with ${studentIds}`
+            `Running student plan recalculate job for ${this.job.tenant.name} of ${highschoolIds} with ${studentIds}`
           );
-          await runStudentCoursePlanRecalculationJob(this.job.tenant, studentIds);
+
+          void runStudentCoursePlanRecalculationJob(
+            this.job.tenant,
+            queueDetails,
+            { studentIds, highschoolIds },
+          );
         }
 
         return { results: {
