@@ -25,7 +25,13 @@ import { PlanImport } from "./StudentCoursePlan";
 import { IHistoryRow, StudentHistory } from "./StudentHistory";
 import { ISubjectAreaLoad, loadExistingSubjectAreas,
     parseSubjectAreaRow, saveDefaultAnnotationTypes, saveSubjectAreas } from "./SubjectAreas";
-import { findOrCreateQueue, getRowVal, initRulesRepo, initServices, runStudentCoursePlanRecalculationJob } from "./Utils";
+import {
+  findOrCreateQueue,
+  getRowVal,
+  initRulesRepo,
+  initServices,
+  runStudentCoursePlanRecalculationJob
+} from "./Utils";
 
 export class CPImportProcessor extends BaseProcessor {
     /* PoS variables */
