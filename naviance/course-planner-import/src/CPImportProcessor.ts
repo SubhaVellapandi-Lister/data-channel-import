@@ -453,9 +453,9 @@ export class CPImportProcessor extends BaseProcessor {
 
         if (this.job.tenant && this.historyHandler) {
           const queueDetails = await findOrCreateQueue(this.job.tenant.name || '');
-          const studentIdMap = this.historyHandler.getStudentIdMap();
+          const studentIdMap = this.historyHandler.getProcessedStudentIdMap();
           const highschoolIds = Object.keys(studentIdMap);
-          const studentIds = flatten(Object.values(studentIdMap)).map(({ id }) => id.toString());
+          const studentIds = flatten(Object.values(studentIdMap));
 
           console.log(
             `Running student plan recalculate job for ${this.job.tenant.name} of ${highschoolIds} with ${studentIds}`
