@@ -5,12 +5,15 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-sandbox/2f0b9f383e0053690bd117b2222d5feb
+      CodeUri: s3://data-channels-processor-deployments-sandbox/8f208ff433993df95f8311f6040a447c
       FunctionName: data-channels-BuiltInProcessor
       Handler: dist/index.builtInHandler
       Timeout: 300
       MemorySize: 3008
       Runtime: nodejs12.x
+      Environment:
+        Variables:
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
       Policies:
       - Statement:
           Action: lambda:InvokeFunction
