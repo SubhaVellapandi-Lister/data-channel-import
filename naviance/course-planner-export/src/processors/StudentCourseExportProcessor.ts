@@ -798,7 +798,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         if (numStudents < numPlans) {
             // search for plans by student ID in chunks
             const studentIds = Object.keys(this.studentsById);
-            const chunkSize = 100;
+            const chunkSize = 25;
             const idChunks =  Array.from({ length: Math.ceil(studentIds.length / chunkSize) }, (_v, i) =>
                 studentIds.slice(i * chunkSize, i * chunkSize + chunkSize),
             );
