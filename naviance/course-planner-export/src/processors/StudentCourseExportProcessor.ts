@@ -510,7 +510,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         return flatRow;
     }
 
-    private async rowsFromSlimPlan(
+    async rowsFromSlimPlan(
         studentId: string, splan: SlimStudentPlan, headers: string[],
         namespace: Namespace, hsId: string, expandCourses: boolean, currentOnly: boolean,
         academicYear: number | undefined, academicYearOrGreater: boolean | undefined
@@ -611,6 +611,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             const instLevel = (course.annotations.getValue('instructionalLevel') || '') as string;
             const active = course.annotations.getValue('status') === 'ACTIVE';
             const courseYear = this.courseAcademicYear(splan.studentPrincipleId, record as ICourseRecord);
+            const globalAlternateCourse = record?.record?.isUsedByAlternateRequirement === true ? 1 : 0;
+            const alternatePriority = typeof record?.record?.priorityInAlternateRequirement === 'number' ? record?.record?.priorityInAlternateRequirement : '';
 
             courseRowData.push({
                 Grade: (record.gradeLevel || record.numericGrade || '').toString(),
@@ -622,7 +624,9 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                 SCED_Code: sced,
                 CSSC_Code: cssc,
                 Instructional_Level: instLevel,
-                Is_Planned: `${courseYear}-${courseYear + 1}`
+                Is_Planned: `${courseYear}-${courseYear + 1}`,
+                Global_Alternate_Course: globalAlternateCourse,
+                Alternate_Priority: alternatePriority
             });
         }
 
