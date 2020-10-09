@@ -163,7 +163,9 @@ const courseHeaders = [
     'Course_Active',
     'SCED_Code',
     'CSSC_Code',
-    'Instructional_Level'
+    'Instructional_Level',
+    'Global_Alternate_Course',
+    'Alternate_Priority'
 ];
 
 export class StudentCourseExportProcessor extends BaseProcessor {
