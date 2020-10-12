@@ -5,13 +5,13 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://ss-data-channels-processor-deployments-platsandbox/9d2f0042baf1e295133730349e0f80b1
+      CodeUri: s3://ss-data-channels-processor-deployments-sfdev/d508d16e4c4f0281053d392ea6567c7e
       FunctionName: ss-data-channels-BuiltInProcessor
       Handler: dist/index.builtInHandler
       Timeout: 300
       MemorySize: 3008
       Runtime: nodejs12.x
-      PermissionsBoundary: arn:aws:iam::701991169879:policy/tf-iam-permission-boundary
+      PermissionsBoundary: arn:aws:iam::133782148567:policy/tf-iam-permission-boundary
       Policies:
       - Statement:
         - Sid: SSMGetParameterPolicy
@@ -48,7 +48,7 @@ Resources:
           Action:
           - s3:*
           Effect: Allow
-          Resource: arn:aws:s3:::*data-channels-work-*/workspace/athena/*
+          Resource: arn:aws:s3:::*data-channels-work-*/workspace/*
       - Statement:
         - Sid: AthenaQueryPolicy
           Action:
@@ -64,8 +64,18 @@ Resources:
           Resource:
           - arn:aws:glue:*:*:catalog
           - arn:aws:glue:*:*:database/dchan*
+          - arn:aws:glue:*:*:database/data-channel*
           - arn:aws:glue:*:*:table/dchan*
+          - arn:aws:glue:*:*:table/data-channel*
+          - arn:aws:glue:*:*:job/data-channel*
           - arn:aws:glue:*:*:userDefinedFunction/dchan*
+      - Statement:
+        - Sid: GluePassRole
+          Action:
+          - iam:PassRole
+          Effect: Allow
+          Resource:
+          - arn:aws:iam::*:role/*data-channel*
       - Statement:
         - Sid: S3ClamAVPolicy
           Action:
