@@ -36,7 +36,7 @@ export default class Echo extends BaseProcessor {
         };
     }
 
-    public async before_echo(input: IStepBeforeInput) {
+    public async before_echo(input: IStepBeforeInput): Promise<void> {
         this.config = (input.parameters!['echoConfig'] || {}) as IEchoConfig;
     }
 
@@ -52,7 +52,7 @@ export default class Echo extends BaseProcessor {
         };
     }
 
-    private pushRow(row: any, inputName: string) {
+    private pushRow(row: any, inputName: string): void {
         if (!this.rows[inputName]) {
             this.rows[inputName] = [row];
 
@@ -65,5 +65,4 @@ export default class Echo extends BaseProcessor {
             this.rows[inputName][1] = row;
         }
     }
-
 }

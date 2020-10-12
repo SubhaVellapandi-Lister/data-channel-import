@@ -9,7 +9,7 @@ import {
 } from "@data-channels/dcSDK";
 
 enum GroupMode {
-    Objects = 'objects',  // grouped data should be put into an array as objects with headers as properties
+    Objects = 'objects', // grouped data should be put into an array as objects with headers as properties
     Rows = 'rows' // grouped data should be put into an array of string arrays
 }
 
@@ -86,7 +86,6 @@ export default class GroupBy extends BaseProcessor {
     }
 
     public async after_groupby(input: IStepAfterInput): Promise<IStepAfterOutput> {
-
         const config: IGroupByConfig = input.parameters!['groupByConfig'] || {};
 
         const outputs = {};

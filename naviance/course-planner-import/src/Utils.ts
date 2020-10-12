@@ -9,7 +9,7 @@ import {
   PlanningEngine,
   RulesRepository
 } from "@academic-planner/apSDK";
-import { IRowData } from "@data-channels/dcSDK";
+import { IJobQueue, IRowData, JobQueue, ServiceInterfacer, Tenant } from "@data-channels/dcSDK";
 import _ from "lodash";
 
 export function initRulesRepo(params: object) {
@@ -145,3 +145,54 @@ export function getRowVal(rowData: IRowData, colName: string) {
 export async function sleep(milliseconds: number) {
     return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
+
+export const runStudentCoursePlanRecalculationJob = async (
+  tenant: Tenant,
+  queueDetails: IJobQueue | undefined,
+  parameters: { studentIds?: string[], highschoolIds?: string[] }
+) => {
+  return ServiceInterfacer.getInstance().newJob(
+    {
+      product: 'naviance',
+      name: 'studentCoursePlanRecalculationJob',
+      tenant: tenant.reference,
+      queueDetails,
+      channel: {
+        product: 'naviance',
+        name: 'studentCoursePlanRecalculationChannel',
+      },
+      parameters: {
+        all: parameters,
+      },
+    },
+    true,
+  );
+};
+
+export const findOrCreateQueue = async (tenantName: string): Promise<IJobQueue | undefined> => {
+  const name = `studentCoursePlanRecalculation_${tenantName}`;
+  const queues = await JobQueue.find({
+    findCriteria: { name: { value: name }, product: { value: 'naviance' } },
+  }).all();
+
+  const queue =
+    queues?.[0] ??
+    (await JobQueue.newQueue({
+      product: 'naviance',
+      name,
+      maxRunning: 1,
+    }));
+
+  if (!queue) {
+    console.error('Failed creating job queue');
+
+    return undefined;
+  }
+
+  return {
+    guid: queue.guid,
+    name: queue.name,
+    maxRunning: queue.maxRunning,
+    product: queue.product,
+  };
+};

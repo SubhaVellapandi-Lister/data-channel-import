@@ -199,32 +199,33 @@ export default class Validate extends BaseProcessor {
         let hasValidType = false;
         const upperData = data.toUpperCase();
         switch (typeToCheck) {
-            case ValidateDataType.Boolean: {
-                if (['TRUE', 'FALSE', '1', '0'].includes(upperData)) {
-                    hasValidType = true;
-                }
-                break;
-            }
-            case ValidateDataType.Integer: {
-                if (!data.includes('.') && !isNaN(parseInt(data))) {
-                    hasValidType = true;
-                }
-                break;
-            }
-            case ValidateDataType.Decimal: {
-                if (!isNaN(parseFloat(data))) {
-                    hasValidType = true;
-                }
-                break;
-            }
-            case ValidateDataType.Datetime: {
-                if (!isNaN(Date.parse(data))) {
-                    hasValidType = true;
-                }
-            }
-            case ValidateDataType.String: {
+        case ValidateDataType.Boolean: {
+            if (['TRUE', 'FALSE', '1', '0'].includes(upperData)) {
                 hasValidType = true;
             }
+            break;
+        }
+        case ValidateDataType.Integer: {
+            if (!data.includes('.') && !isNaN(parseInt(data))) {
+                hasValidType = true;
+            }
+            break;
+        }
+        case ValidateDataType.Decimal: {
+            if (!isNaN(parseFloat(data))) {
+                hasValidType = true;
+            }
+            break;
+        }
+        case ValidateDataType.Datetime: {
+            if (!isNaN(Date.parse(data))) {
+                hasValidType = true;
+            }
+        }
+        // eslint-disable-next-line no-fallthrough
+        case ValidateDataType.String: {
+            hasValidType = true;
+        }
         }
 
         return hasValidType;

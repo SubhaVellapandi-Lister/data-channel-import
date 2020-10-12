@@ -15,6 +15,7 @@ import {
     IStepAfterOutput,
     IStepBeforeInput
 } from "@data-channels/dcSDK";
+import { flatten } from 'lodash';
 import { v5 as uuidv5} from "uuid";
 import { CourseImport } from "./Course";
 import { PoSImport } from "./PoS";
@@ -24,7 +25,13 @@ import { PlanImport } from "./StudentCoursePlan";
 import { IHistoryRow, StudentHistory } from "./StudentHistory";
 import { ISubjectAreaLoad, loadExistingSubjectAreas,
     parseSubjectAreaRow, saveDefaultAnnotationTypes, saveSubjectAreas } from "./SubjectAreas";
-import { getRowVal, initRulesRepo, initServices } from "./Utils";
+import {
+  findOrCreateQueue,
+  getRowVal,
+  initRulesRepo,
+  initServices,
+  runStudentCoursePlanRecalculationJob
+} from "./Utils";
 
 export class CPImportProcessor extends BaseProcessor {
     /* PoS variables */
@@ -443,6 +450,23 @@ export class CPImportProcessor extends BaseProcessor {
     public async after_importHistories(input: IStepBeforeInput): Promise<IStepAfterOutput> {
         console.log('finishing up import histories call');
         await this.historyHandler!.processLeftovers();
+
+        if (this.job.tenant && this.historyHandler) {
+          const queueDetails = await findOrCreateQueue(this.job.tenant.name || '');
+          const studentIdMap = this.historyHandler.getProcessedStudentIdMap();
+          const highschoolIds = Object.keys(studentIdMap);
+          const studentIds = flatten(Object.values(studentIdMap));
+
+          console.log(
+            `Running student plan recalculate job for ${this.job.tenant.name} of ${highschoolIds} with ${studentIds}`
+          );
+
+          void runStudentCoursePlanRecalculationJob(
+            this.job.tenant,
+            queueDetails,
+            { studentIds, highschoolIds },
+          );
+        }
 
         return { results: {
             createdCount: this.historyHandler!.createdCount,

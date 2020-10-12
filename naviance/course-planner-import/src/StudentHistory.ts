@@ -33,6 +33,7 @@ export class StudentHistory {
     public updatedCount = 0;
     public errorCount = 0;
     private studentIdMap: INavianceStudentIDMap = {};
+    private processedStudentIdMap: Record<string, string[]> = {};
     private historyStudentId = '';
     private historyForStudent: IHistoryRow[] = [];
     private historyBatch: IHistoryRow[][] = [];
@@ -335,6 +336,14 @@ export class StudentHistory {
                     }
                 }
                 this.historyForStudent.push(record);
+
+                if (record.schoolId) {
+                  if (this.processedStudentIdMap[record.schoolId]) {
+                    this.processedStudentIdMap[record.schoolId].push(record.studentId);
+                  } else {
+                    this.processedStudentIdMap[record.schoolId] = [record.studentId];
+                  }
+                }
             }
         }
     }
@@ -347,5 +356,9 @@ export class StudentHistory {
             await this.processBatch(this.historyBatch);
             console.log(`Processed batch of ${this.historyBatch.length} students`);
         }
+    }
+
+    getProcessedStudentIdMap() {
+      return this.processedStudentIdMap;
     }
 }

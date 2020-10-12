@@ -493,3 +493,42 @@ Example Config
   }
 }
 ```
+
+### Webhook
+
+Allows you to call a webhook with provided information
+
+| | |
+| ---- | --- |
+| **method name** | webhook |
+| **granularity** | once |
+| **code** | [Webhook.ts](src/processors/Webhook.ts) |
+| **input name** | N/A |
+| **output name** | Any output name you want |
+| **config property name** | webhookConfig |
+
+`webhookConfig` has the following properties:
+* url - url of the webhook to be called.
+* method - http verb for making a request: GET| POST | PUT | PATCH | DELETE.
+* headers - optional headers to attatch with request
+* body - request payload in case of post/put/patch/delete method
+* timeout - Request cancellation after specified number of milliseconds 
+
+Example Config 
+
+```json
+"parameters": {
+        "webhookConfig": {
+          "url": "https://jsonplaceholder.typicode.com/posts/1",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "Application/Json"
+          },
+          "body": {
+            "title": "titan",
+            "body": "quick brown fox"
+          },
+          "timeout": 30000,
+        }
+      }
+      

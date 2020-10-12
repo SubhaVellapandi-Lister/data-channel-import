@@ -21,7 +21,6 @@ export default class Sort extends BaseProcessor {
     private headers: string[] = [];
 
     public async sort(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
-
         if (input.index === 1) {
             this.headers = input.raw;
 
@@ -43,7 +42,6 @@ export default class Sort extends BaseProcessor {
     }
 
     public async after_sort(input: IStepAfterInput): Promise<IStepAfterOutput> {
-
         const config = input.parameters!['sortConfig'] || {};
 
         for (const [inputName, rows] of Object.entries(this.dataRowsByInputName)) {

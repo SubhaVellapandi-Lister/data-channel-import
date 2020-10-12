@@ -1,4 +1,5 @@
 import { generateHandler } from "@data-channels/dcSDK";
+
 import Athena from "./processors/Athena";
 import Diff from "./processors/Diff";
 import Echo from "./processors/Echo";
@@ -13,6 +14,7 @@ import Sort from "./processors/Sort";
 import ThrowError from "./processors/ThrowError";
 import Translate from "./processors/Translate";
 import Validate from "./processors/Validate";
+import Webhook from './processors/Webhook';
 
 export const builtInHandler = generateHandler({
     echo:  Echo,
@@ -32,5 +34,6 @@ export const builtInHandler = generateHandler({
     securityscan: SecurityScan,
     generate: Generate,
     dynamicHelloWorld: HelloWorld,
-    glue: Glue
+    glue: Glue,
+    webhook: Webhook
 });

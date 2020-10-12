@@ -12,6 +12,9 @@ Resources:
       Timeout: 300
       MemorySize: 3008
       Runtime: nodejs12.x
+      Environment:
+        Variables:
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
       Policies:
       - Statement:
           Action: lambda:InvokeFunction

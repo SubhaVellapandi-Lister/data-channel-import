@@ -1,3 +1,5 @@
+import { Readable } from "stream";
+
 import {
     BaseProcessor,
     fileHeaders,
@@ -12,7 +14,7 @@ import {
 } from "@data-channels/dcSDK";
 import AWS from "aws-sdk";
 import parse from "csv-parse";
-import { Readable } from "stream";
+
 import { sleep } from "../utils";
 
 export interface IAthenaConfig {
@@ -24,27 +26,27 @@ export interface IAthenaConfig {
     inputs?: {
         [inputName: string]: {
             columnTypes?: {
-                [columnName: string]: string
+                [columnName: string]: string;
             };
         };
     };
 }
 
 export default class Athena extends BaseProcessor {
-    private config: IAthenaConfig = { outputs: {}};
+    private config: IAthenaConfig = { outputs: {} };
     private dbName: string = '';
-    private queryStatistics: { [ouptutName: string]: object} = {};
+    private queryStatistics: { [outputName: string]: object} = {};
     private queryError = '';
 
     public async sql(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
         return this.athena(input);
     }
 
-    public async before_sql(input: IStepBeforeInput) {
+    public async before_sql(input: IStepBeforeInput): Promise<void> {
         return this.before_athena(input);
     }
 
-    public async after_sql(input: IStepAfterInput) {
+    public async after_sql(input: IStepAfterInput): Promise<IStepAfterOutput> {
         return this.after_athena(input);
     }
 
@@ -55,7 +57,7 @@ export default class Athena extends BaseProcessor {
         return {};
     }
 
-    public async before_athena(input: IStepBeforeInput) {
+    public async before_athena(input: IStepBeforeInput): Promise<void> {
         this.config = (input.parameters!['athenaConfig'] || input.parameters!['sqlConfig'] || {}) as IAthenaConfig;
         this.dbName = 'dchan' + this.job.guid.replace(/-/g, '');
 
@@ -84,7 +86,7 @@ export default class Athena extends BaseProcessor {
         };
     }
 
-    private async createTables(input: IFileProcessorInput) {
+    private async createTables(input: IFileProcessorInput): Promise<void> {
         for (const inputName of Object.keys(input.inputs)) {
             console.log(`creating table for ${inputName}`);
             let inputStreams = input.inputs[inputName];
@@ -101,11 +103,10 @@ export default class Athena extends BaseProcessor {
             const tempFolder = `workspace/athena/${this.dbName}/${inputName}/`;
 
             for (const [idx, stream] of inputStreams.entries()) {
-
                 const tempKey = `${tempFolder}data.${idx}.csv`;
 
                 const tempOutDetails = await this.getWritableDetails(this.job.workspace!.bucket!, tempKey);
-                const parser = parse({ bom: true, skip_empty_lines: true, skip_lines_with_empty_values: true});
+                const parser = parse({ bom: true, skip_empty_lines: true, skip_lines_with_empty_values: true });
                 const finalStream = stream.readable.pipe(parser).pipe(tempOutDetails.writeStream);
 
                 console.log(`writing temp work file ${tempKey}`);
@@ -122,6 +123,7 @@ export default class Athena extends BaseProcessor {
             }
 
             const config = this.config;
+            // eslint-disable-next-line no-inner-declarations
             function colType(name: string): string {
                 if (config.inputs && config.inputs[inputName] && config.inputs[inputName].columnTypes?.[name]) {
                     return ' ' + config.inputs[inputName].columnTypes?.[name];
@@ -155,7 +157,7 @@ export default class Athena extends BaseProcessor {
         }
     }
 
-    private async runQueries(input: IFileProcessorInput) {
+    private async runQueries(input: IFileProcessorInput): Promise<void> {
         for (const outName of Object.keys(this.config.outputs)) {
             const result = await this.executeSyncQuery({
                 QueryString: this.config.outputs[outName].query,
@@ -173,16 +175,14 @@ export default class Athena extends BaseProcessor {
             const resultsReadable = await this.getReadable(
                 this.job.workspace!.bucket, `workspace/athena/results/${result.QueryExecution!.QueryExecutionId}.csv`);
             const writeOutput = input.outputs[outName];
-            const parser = parse({ bom: true, skip_empty_lines: true, skip_lines_with_empty_values: true});
+            const parser = parse({ bom: true, skip_empty_lines: true, skip_lines_with_empty_values: true });
             resultsReadable.pipe(parser).pipe(writeOutput.writeStream);
 
             this.queryStatistics[outName] = result.QueryExecution?.Statistics ?? {};
         }
     }
 
-    private async executeSyncQuery(
-        params: AWS.Athena.StartQueryExecutionInput
-    ): Promise<AWS.Athena.GetQueryExecutionOutput> {
+    private async executeSyncQuery(params: AWS.Athena.StartQueryExecutionInput): Promise<AWS.Athena.GetQueryExecutionOutput> {
         const athena = new AWS.Athena();
 
         if (!params.ResultConfiguration) {
@@ -203,6 +203,7 @@ export default class Athena extends BaseProcessor {
             });
         });
 
+        // eslint-disable-next-line no-constant-condition
         while (true) {
             const statusResult: AWS.Athena.GetQueryExecutionOutput = await new Promise((resolve, reject) => {
                 athena.getQueryExecution({
