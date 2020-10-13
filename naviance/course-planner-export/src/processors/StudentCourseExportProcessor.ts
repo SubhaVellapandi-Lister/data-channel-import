@@ -517,6 +517,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         namespace: Namespace, hsId: string, expandCourses: boolean, currentOnly: boolean,
         academicYear: number | undefined, academicYearOrGreater: boolean | undefined
     ): Promise<string[][]> {
+        console.log(`rowsFromSlimPlan - headers: ${JSON.stringify(headers)}`);
+
         const results: string[][] = [];
 
         const scopeAsNamespace = new Namespace(`namespace.${hsId}`);
@@ -542,6 +544,9 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                     this.courseAcademicYear(splan.studentPrincipleId, crec as ICourseRecord) > academicYear
                 )
             );
+
+        console.log(`filtered courses: ${JSON.stringify(filteredCourses)}`);
+
 
         if (!filteredCourses.length) {
             console.log(`no filtered courses, ${splan.guid} ${academicYear}, ${splan.courses}`);
@@ -569,6 +574,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                 updateDate = new Date(splan.meta['lastEdited'] as number);
             }
         }
+
+        console.log(`plan type: ${JSON.stringify(currentOnly)} ${JSON.stringify(studentPlanType)}`);
 
         if (currentOnly && studentPlanType === 'draft') {
             return [];
@@ -605,6 +612,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         for (const record of filteredCourses) {
             const course = await this.findCourse(namespace, scopeAsNamespace, record.number);
             if (!course) {
+                console.log(`course not found: ${namespace} ${scopeAsNamespace} ${record.number}`);
                 continue;
             }
 
@@ -631,6 +639,10 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                 Alternate_Priority: alternatePriority
             });
         }
+
+        console.log(`courseRowData: ${JSON.stringify(courseRowData)}`);
+
+        console.log(`expandCourses: ${JSON.stringify(expandCourses)}`);
 
         if (expandCourses) {
             // column per course record
@@ -740,6 +752,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                     const academicYearOrGreater = params.academicYearOrGreater || exportConf.academicYearOrGreater;
 
                     if (exportConf.mode === ExportMode.Course) {
+                        console.log(`export mode: course`);
+
                         const rowsFromPlan = await this.rowsFromSlimPlan(
                             studentId,
                             splan,
@@ -756,6 +770,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                         );
                     }
                     if (exportConf.mode === ExportMode.Audit) {
+                        console.log(`export mode: audit`);
+
                         const rowsFromPlan = await this.auditRowsFromPlan(
                            studentId,
                            splan,
