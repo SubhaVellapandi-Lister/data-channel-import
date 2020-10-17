@@ -37,8 +37,8 @@ export default class HelloWorld extends BaseProcessor {
                 details: {
                     name: `dynOut${name}`,
                     s3: {
-                        key: `ready/data-channels-sftp-sandbox/nuke/\${tenant.name}/dynamic${name}.csv`,
-                        bucket: 'data-channels-work-sandbox'
+                        key: `${input.parameters!['key']}/dynamic${name}.csv`,
+                        bucket: this.job.workspace!.bucket
                     }
                 }
             });
