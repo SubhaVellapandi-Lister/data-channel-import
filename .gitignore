@@ -82,3 +82,5 @@ system-tests/reports/*
 *.zip
 
 builtins/packaged.yml
+builtins/cdk.context.json
+*.out
