@@ -1,0 +1,8 @@
+
+{
+    "cdk": {
+        "environment": "sandbox",
+        "functionName": "data-channels-BuiltInProcessor",
+        "stackName": "data-channels-builtin-processor"
+    }
+}

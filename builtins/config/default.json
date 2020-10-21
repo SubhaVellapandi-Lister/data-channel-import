@@ -1,0 +1,15 @@
+{
+    "cdk": {
+        "productLine": "platform",
+        "productComponent": "data-channels",
+        "permissionBoundaryArn": "",
+        "functionName": "ss-data-channels-BuiltInProcessor",
+        "stackName": "ss-data-channels-builtins",
+        "permissions": {
+            "snsPublish": true,
+            "sesSend": true,
+            "athenaGlue": true,
+            "athenaWorkGroup": "primary"
+        }
+    }
+}

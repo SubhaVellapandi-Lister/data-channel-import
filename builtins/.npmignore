@@ -1,0 +1,13 @@
+cdk.out
+stack
+src
+*.zip
+Dockerfile
+cdk.json
+*.png
+*.md
+tsconfig.json
+tslint.json
+.aws-sam
+.vscode
+coverage

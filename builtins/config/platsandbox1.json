@@ -1,0 +1,7 @@
+
+{
+    "cdk": {
+        "environment": "platsandbox1",
+        "permissionBoundaryArn": "arn:aws:iam::701991169879:policy/tf-iam-permission-boundary"
+    }
+}
