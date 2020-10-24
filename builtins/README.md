@@ -2,7 +2,12 @@
 
 These processors will be tailored for accomplishing common tasks that are used by many projects.  This repo is "inner-source", please share any ideas you have for future built-ins and request access to create PRs.
 
-Built-ins are published on the `data-channels-BuiltInProcessor` processor lambda.
+Built-ins are published on the `ss-data-channels-BuiltInProcessor` processor lambda.  You can also deploy your own personal copy of this lambda:
+
+```bash
+# deploys lambda named ss-data-channels-BuiltInProcessor-[username]
+$ AWS_PROFILE=myprofile npm run deploy-personal
+```
 
 Example step config that uses a built-in:
 
@@ -512,9 +517,9 @@ Allows you to call a webhook with provided information
 * method - http verb for making a request: GET| POST | PUT | PATCH | DELETE.
 * headers - optional headers to attatch with request
 * body - request payload in case of post/put/patch/delete method
-* timeout - Request cancellation after specified number of milliseconds 
+* timeout - Request cancellation after specified number of milliseconds
 
-Example Config 
+Example Config
 
 ```json
 "parameters": {
@@ -531,4 +536,3 @@ Example Config
           "timeout": 30000,
         }
       }
-      
