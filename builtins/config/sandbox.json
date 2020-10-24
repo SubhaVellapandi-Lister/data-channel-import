@@ -3,6 +3,7 @@
     "cdk": {
         "environment": "sandbox",
         "functionName": "data-channels-BuiltInProcessor",
-        "stackName": "data-channels-builtin-processor"
+        "stackName": "data-channels-builtin-processor",
+        "permissionBoundary": ""
     }
 }

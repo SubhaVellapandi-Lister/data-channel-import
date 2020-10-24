@@ -5,12 +5,21 @@ import config from "config";
 
 import { tagAppStack } from "./permBoundary";
 
-const functionName = config.get<string>('cdk.functionName');
-const stackName = config.get<string>('cdk.stackName');
+let functionName = config.get<string>('cdk.functionName');
+const environment = config.get<string>('cdk.environment');
+let stackName = config.get<string>('cdk.stackName');
 const snsPublish = config.get<boolean>('cdk.permissions.snsPublish');
 const sesSend = config.get<boolean>('cdk.permissions.sesSend');
 const athenaGlue = config.get<boolean>('cdk.permissions.athenaGlue');
 const athenaWorkGroup = config.get<string>('cdk.permissions.athenaWorkGroup');
+
+if (functionName.includes('${environment}')) {
+    functionName = functionName.replace('${environment}', environment);
+}
+
+if (stackName.includes('${environment}')) {
+    stackName = stackName.replace('${environment}', environment);
+}
 
 export class BuiltinsLambdaStack extends cdk.Stack {
     constructor(scope: cdk.App, id: string, props: cdk.StackProps) {
