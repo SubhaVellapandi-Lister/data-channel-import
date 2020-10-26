@@ -104,6 +104,8 @@ export class BuiltinsLambdaStack extends cdk.Stack {
                 resources: ["arn:aws:iam::*:role/*data-channel*"]
             }));
         }
+
+        new cdk.CfnOutput(this, 'lambda-ARN', { value: builtins.functionArn});
     }
 }
 
