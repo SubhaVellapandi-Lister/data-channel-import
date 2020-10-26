@@ -9,7 +9,7 @@ export interface ISNSParams {
     arn: string;
 }
 
-export default class SNSProcessor extends BaseProcessor {
+export class SNSProcessor extends BaseProcessor {
     public async sns(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
         const inputParams = input.parameters as ISNSParams;
 

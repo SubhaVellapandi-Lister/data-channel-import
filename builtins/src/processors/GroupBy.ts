@@ -24,7 +24,7 @@ export interface IGroupedRow {
     [headerName: string]: any;
 }
 
-export default class GroupBy extends BaseProcessor {
+export class GroupBy extends BaseProcessor {
     private config: IGroupByConfig = { header: '' };
     private latestGroupId: string | undefined;
     private latestGroup: any[] = [];

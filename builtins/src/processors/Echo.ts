@@ -11,7 +11,7 @@ export interface IEchoConfig {
     outputAllRows?: boolean;
 }
 
-export default class Echo extends BaseProcessor {
+export class Echo extends BaseProcessor {
     private dataType = 'string';
     private totalCharacters = 0;
     private rows: { [inputName: string]: any[]} = {};

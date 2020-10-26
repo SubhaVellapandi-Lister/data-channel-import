@@ -1,7 +1,9 @@
 cdk.out
+cdk.context.json
 stack
 src
 *.zip
+*.tgz
 Dockerfile
 cdk.json
 *.png

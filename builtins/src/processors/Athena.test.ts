@@ -7,7 +7,7 @@ import stringify from "csv-stringify";
 
 import 'jest';
 
-import Athena from "./Athena";
+import { Athena } from "./Athena";
 
 describe('Athena', () => {
     test('test athena built-in', async () => {

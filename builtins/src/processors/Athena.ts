@@ -32,7 +32,7 @@ export interface IAthenaConfig {
     };
 }
 
-export default class Athena extends BaseProcessor {
+export class Athena extends BaseProcessor {
     private config: IAthenaConfig = { outputs: {} };
     private dbName: string = '';
     private queryStatistics: { [outputName: string]: object} = {};

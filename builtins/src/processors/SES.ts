@@ -20,14 +20,14 @@ export interface ISESParams {
     };
 }
 
-function validEmail(email: string): boolean {
+export function validEmail(email: string): boolean {
     // tslint:disable-next-line
     const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 
     return re.test(String(email).toLowerCase());
 }
 
-export default class SESProcessor extends BaseProcessor {
+export class SESProcessor extends BaseProcessor {
     private config: ISESParams = {
         to: []
     };

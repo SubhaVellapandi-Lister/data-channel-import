@@ -49,7 +49,7 @@ const LAST_NAMES = [
     'Woods'
 ];
 
-export default class Generate extends BaseProcessor {
+export class Generate extends BaseProcessor {
     public async generate(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
         const config = input.parameters!['generateConfig'] as IGenerateConfig;
 

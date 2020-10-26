@@ -1,9 +1,16 @@
 {
-  "name": "data-channels-builtin-processors",
-  "version": "1.0.0",
+  "name": "@data-channels/builtins",
+  "version": "0.23.4-beta.2",
   "description": "",
-  "main": "index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "registry": "https://hobsons.jfrog.io/hobsons/api/npm/hobsons-platform-team/"
+  },
   "scripts": {
+    "prepublishOnly": "ts-node src/publish/prepublish.ts",
+    "publish:lib": "mv \"$(npm pack | tail -n 1)\" package.tgz && ts-node src/publish/postpack.ts && PUBLIB=true npm publish package.tgz && shx rm -f package.tgz",
+    "prepare": "npm run clean && npm run test && npm run build",
     "prestart": "npm run -s build",
     "start": "node dist/index.js",
     "build": "mkdirp dist && npm run compile",
@@ -15,8 +22,8 @@
     "test": "npm run lint && npm run compile:once && npm run test:cov",
     "test:cov": "jest --coverage --no-cache --runInBand",
     "test:nocov": "jest --no-cache --runInBand",
-    "pack": "npm-pack-zip",
-    "build-and-pack": "shx rm -f data-channels-builtin-processors.zip && npm run build && npm run pack",
+    "pack:zip": "npm-pack-zip && shx mv '@data-channelsbuiltins.zip' data-channels-builtin-processors.zip",
+    "build-and-pack": "shx rm -f data-channels-builtin-processors.zip && npm run build && npm run pack:zip",
     "deploy": "npm run build-and-pack && cdk deploy --region us-east-1",
     "deploy-personal": "export ENVIRONMENT=$(whoami | tr '.' '-') && npm run deploy",
     "deploy-sfdev": "export NODE_CONFIG_ENV=sfdev AWS_PROFILE=sfdev && npm run build-and-pack && cdk deploy --region us-east-1 --toolkit-stack-name ss-cdktoolkit",
@@ -53,6 +60,7 @@
     "@types/lodash": "4.14.117",
     "@types/node": "13.13.5",
     "@types/node-fetch": "2.5.7",
+    "@types/tar": "4.0.3",
     "@types/uuid": "7.0.3",
     "@typescript-eslint/eslint-plugin": "2.34.0",
     "@typescript-eslint/parser": "2.34.0",
@@ -65,12 +73,13 @@
     "mkdirp": "1.0.4",
     "npm-pack-zip": "1.2.7",
     "shx": "0.3.2",
+    "tar": "6.0.5",
     "ts-jest": "26.4.0",
     "ts-node": "8.10.1",
     "typescript": "3.8.3"
   },
   "dependencies": {
-    "@data-channels/dcSDK": "0.23.2",
+    "@data-channels/dcSDK": "0.23.4",
     "config": "3.3.2",
     "csv": "5.3.2",
     "lodash": "4.17.20",
