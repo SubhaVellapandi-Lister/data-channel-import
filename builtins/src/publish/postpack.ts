@@ -1,9 +1,6 @@
-//import fs from ;
 import { rmdirSync } from "fs";
-
 import tar from "tar";
 
-// Extract package made by `yarn pack`.
 tar.extract({
     file: 'package.tgz',
     sync: true
@@ -12,7 +9,6 @@ tar.extract({
 rmdirSync('package/clamav', { recursive: true });
 rmdirSync('package/node_modules', { recursive: true });
 
-// Recreate package archive.
 tar.create(
     {
         gzip: true,
