@@ -21,7 +21,10 @@ export function tagAppStack(appStack: cdk.Stack): void {
     const environment = config.get<string>('cdk.environment');
     const productLine = config.get<string>('cdk.productLine');
     const productComponent = config.get<string>('cdk.productComponent');
-    const permissionBoundaryArn = config.get<string>('cdk.permissionBoundaryArn');
+    const permissionBoundary = config.get<string>('cdk.permissionBoundary');
+
+    const permissionBoundaryArn = permissionBoundary.startsWith('arn') ?
+        permissionBoundary : `arn:aws:iam::${process.env.CDK_DEFAULT_ACCOUNT}:policy/${permissionBoundary}`;
 
     if (permissionBoundaryArn) {
         appStack.node.applyAspect(

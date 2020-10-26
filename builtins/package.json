@@ -18,6 +18,7 @@
     "pack": "npm-pack-zip",
     "build-and-pack": "shx rm -f data-channels-builtin-processors.zip && npm run build && npm run pack",
     "deploy": "npm run build-and-pack && cdk deploy --region us-east-1",
+    "deploy-personal": "export ENVIRONMENT=$(whoami | tr '.' '-') && npm run deploy",
     "deploy-sfdev": "export NODE_CONFIG_ENV=sfdev AWS_PROFILE=sfdev && npm run build-and-pack && cdk deploy --region us-east-1 --toolkit-stack-name ss-cdktoolkit",
     "deploy-sandbox": "export NODE_CONFIG_ENV=sandbox AWS_PROFILE=data-channels-sandbox && npm run deploy",
     "deploy-platsandbox1": "export NODE_CONFIG_ENV=platsandbox1 AWS_PROFILE=plat-sandbox && npm run deploy",

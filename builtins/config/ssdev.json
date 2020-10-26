@@ -2,6 +2,7 @@
 {
     "cdk": {
         "environment": "ssdev",
-        "permissionBoundaryArn": "arn:aws:iam::315912493465:policy/tf-iam-permission-boundary"
+        "functionName": "ss-data-channels-BuiltInProcessor",
+        "stackName": "ss-data-channels-builtins"
     }
 }

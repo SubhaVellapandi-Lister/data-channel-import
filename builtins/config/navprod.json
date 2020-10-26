@@ -3,6 +3,7 @@
     "cdk": {
         "environment": "navprod",
         "functionName": "data-channels-BuiltInProcessor",
-        "stackName": "data-channels-builtin-processor-navprod"
+        "stackName": "data-channels-builtin-processor-navprod",
+        "permissionBoundary": ""
     }
 }
