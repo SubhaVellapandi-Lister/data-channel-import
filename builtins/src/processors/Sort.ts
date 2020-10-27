@@ -16,7 +16,7 @@ export interface ISortColumnConfig {
     descending?: boolean;
 }
 
-export default class Sort extends BaseProcessor {
+export class Sort extends BaseProcessor {
     private dataRowsByInputName: { [inputName: string]: string[][]} = {};
     private headers: string[] = [];
 

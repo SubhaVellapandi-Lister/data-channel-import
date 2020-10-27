@@ -114,7 +114,7 @@ export interface IDiffParameters {
  *       }
  * ```
  */
-export default class Diff extends BaseProcessor {
+export class Diff extends BaseProcessor {
     private headers!: string[];
     private lastJob!: Job;
     private hashers: { [filename: string]: FileHasher } = {};

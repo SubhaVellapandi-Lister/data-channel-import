@@ -42,7 +42,7 @@ export interface IValidateConfig {
     extraLogFile?: string;
 }
 
-export default class Validate extends BaseProcessor {
+export class Validate extends BaseProcessor {
     private logFileHeaders: string[] = [];
     private dataFileHeaders: string[] = [];
 

@@ -6,7 +6,7 @@ import {
     IRowProcessorOutput
 } from "@data-channels/dcSDK";
 
-export default class HelloWorld extends BaseProcessor {
+export class HelloWorld extends BaseProcessor {
     public async hello(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
         return {
             results: {

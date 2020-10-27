@@ -46,7 +46,7 @@ interface IScaniiIdByName {
     [iname: string]: string;
 }
 
-export default class SecurityScan extends BaseProcessor {
+export class SecurityScan extends BaseProcessor {
     private config: IScanConfig = {
         scaniiApiKey: '',
         scanTool: ScanTool.SCANII

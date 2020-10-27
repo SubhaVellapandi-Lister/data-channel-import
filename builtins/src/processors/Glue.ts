@@ -47,7 +47,7 @@ interface IJobRun {
     status?: string;
 }
 
-export default class Glue extends BaseProcessor {
+export class Glue extends BaseProcessor {
     private config: IGlueConfig = { outputs: {} };
     private waitingJobs: IJobRun[] = [];
 

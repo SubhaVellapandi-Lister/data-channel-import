@@ -1,20 +1,22 @@
 import { generateHandler } from "@data-channels/dcSDK";
 
-import Athena from "./processors/Athena";
-import Diff from "./processors/Diff";
-import Echo from "./processors/Echo";
-import Generate from "./processors/Generate";
-import Glue from "./processors/Glue";
-import GroupBy from "./processors/GroupBy";
-import HelloWorld from "./processors/HelloWorld";
-import SecurityScan from "./processors/SecurityScan";
-import SESProcessor from "./processors/SES";
-import SNSProcessor from "./processors/SNS";
-import Sort from "./processors/Sort";
-import ThrowError from "./processors/ThrowError";
-import Translate from "./processors/Translate";
-import Validate from "./processors/Validate";
-import Webhook from './processors/Webhook';
+import {
+    Athena,
+    Diff,
+    Echo,
+    Generate,
+    Glue,
+    GroupBy,
+    HelloWorld,
+    SecurityScan,
+    SESProcessor,
+    SNSProcessor,
+    Sort,
+    ThrowError,
+    Translate,
+    Validate,
+    Webhook
+} from "./processors";
 
 export const builtInHandler = generateHandler({
     echo:  Echo,
@@ -37,3 +39,6 @@ export const builtInHandler = generateHandler({
     glue: Glue,
     webhook: Webhook
 });
+
+export * from "./utils";
+export * from "./processors";

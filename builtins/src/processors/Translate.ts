@@ -62,7 +62,7 @@ export enum RowType {
   HEADER = "HEADER"
 }
 
-export default class Translate extends BaseProcessor {
+export class Translate extends BaseProcessor {
   private originalHeaders: string[] = [];
   private newHeaders: string[] = [];
   private config!: ITranslateConfig;

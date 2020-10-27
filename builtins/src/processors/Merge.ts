@@ -18,7 +18,7 @@ export interface IMergeConfig {
     deleteColName?: string;
 }
 
-export default class Merge extends BaseProcessor {
+export class Merge extends BaseProcessor {
     private dataRowsByInputName: { [inputName: string]: string[][]} = {};
     private headers: string[] = [];
 

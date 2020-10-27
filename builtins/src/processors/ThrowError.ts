@@ -17,7 +17,7 @@ export interface IThrowErrorConfig {
     delaySeconds?: number;
 }
 
-export default class ThrowError extends BaseProcessor {
+export class ThrowError extends BaseProcessor {
     public async throwError(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
         const config = input.parameters as IThrowErrorConfig;
 

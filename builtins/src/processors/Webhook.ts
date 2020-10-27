@@ -6,7 +6,8 @@ import {
 } from "@data-channels/dcSDK";
 import AbortController from 'abort-controller';
 import fetch, { RequestInit } from 'node-fetch';
-export default class Webhook extends BaseProcessor {
+
+export class Webhook extends BaseProcessor {
     private config!: IChannelWebhookConfig;
     private defaultTimeOut: number = 30000;
 

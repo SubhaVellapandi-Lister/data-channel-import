@@ -105,7 +105,7 @@ export class BuiltinsLambdaStack extends cdk.Stack {
             }));
         }
 
-        new cdk.CfnOutput(this, 'lambda-ARN', { value: builtins.functionArn});
+        new cdk.CfnOutput(this, 'lambda-ARN', { value: builtins.functionArn });
     }
 }
 
