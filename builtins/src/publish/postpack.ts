@@ -1,4 +1,5 @@
 import { rmdirSync } from "fs";
+
 import tar from "tar";
 
 tar.extract({

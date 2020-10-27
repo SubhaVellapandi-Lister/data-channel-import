@@ -1,6 +1,6 @@
 {
   "name": "@data-channels/builtins",
-  "version": "0.23.4-beta.2",
+  "version": "0.23.4",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
