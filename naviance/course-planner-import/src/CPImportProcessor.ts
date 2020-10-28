@@ -33,6 +33,10 @@ import {
   runStudentCoursePlanRecalculationJob
 } from "./Utils";
 
+export interface IProgramNameMapping {
+    [name: string]: string;
+}
+
 export class CPImportProcessor extends BaseProcessor {
     /* PoS variables */
     private createdCount = 0;
@@ -488,7 +492,14 @@ export class CPImportProcessor extends BaseProcessor {
         if (this.planBatch.length >= this.batchSize) {
             const batchStartTime = new Date().getTime();
             const [creates, updates, errors, skips] = await PlanImport.batchImportPlan(
-                this.scope, this.planBatch, this.allPrograms, createOnly, this.planBatchDelay);
+                this.scope,
+                this.planBatch,
+                this.allPrograms,
+                createOnly,
+                this.planBatchDelay,
+                input.parameters && input.parameters['programNameMapping'] ?
+                    input.parameters['programNameMapping'] : {}
+            );
             this.createdCount += creates;
             this.updatedCount += updates;
             this.errorCount += errors;
@@ -526,7 +537,14 @@ export class CPImportProcessor extends BaseProcessor {
         if (this.planBatch.length > 0) {
             const createOnly = input.parameters!['createOnly'] === true;
             const [creates, updates, errors, skips] = await PlanImport.batchImportPlan(
-                this.scope, this.planBatch, this.allPrograms, createOnly, this.planBatchDelay);
+                this.scope,
+                this.planBatch,
+                this.allPrograms,
+                createOnly,
+                this.planBatchDelay,
+                input.parameters && input.parameters['programNameMapping'] ?
+                    input.parameters['programNameMapping'] : {}
+            );
             this.createdCount += creates;
             this.updatedCount += updates;
             this.errorCount += errors;

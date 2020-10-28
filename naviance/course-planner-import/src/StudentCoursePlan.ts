@@ -2,8 +2,11 @@ import {
     Namespace, PlanContext, PlannedCourse,
     Program, SlimStudentPlan, StudentPlan
 } from "@academic-planner/apSDK";
+import {IProgramNameMapping} from "./CPImportProcessor";
 
-import { sleep } from "./Utils";
+export async function sleep(milliseconds: number) {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
 
 export enum PlanImportStatus {
     Errored = "Errored",
@@ -18,12 +21,22 @@ export class PlanImport {
         return Program.find(new Namespace(namespace)).all();
     }
 
-    static findProgram(name: string, programs: Program[]): Program | undefined {
-        return programs.filter((p) => p.annotations.getValue('name') === name)[0];
+    static findProgram(
+        name: string,
+        programs: Program[],
+        programNameMapping: IProgramNameMapping
+    ): Program | undefined {
+        let toWhichProgramName = name;
+        if (programNameMapping.hasOwnProperty(name)) {
+           toWhichProgramName = programNameMapping[name];
+        }
+
+        return programs.filter((p) => p.annotations.getValue('name') === toWhichProgramName)[0];
     }
 
     static async batchImportPlan(
-        scope: string, batch: any[], programs: Program[], createOnly: boolean, planBatchDelay: number
+        scope: string, batch: any[], programs: Program[], createOnly: boolean, planBatchDelay: number,
+        programNameMapping: IProgramNameMapping
     ): Promise<[number, number, number, number]> {
         const batchPromises: Promise<PlanImportStatus>[] = [];
 
@@ -54,7 +67,8 @@ export class PlanImport {
             }
             const studentId = planObj.studentId.toString();
             const existingPlans = batchAllExisting.filter((plan) => plan.studentPrincipleId === studentId);
-            batchPromises.push(this.importPlan(scope, planObj, programs, createOnly, existingPlans));
+            batchPromises.push(
+                this.importPlan(scope, planObj, programs, createOnly, existingPlans, programNameMapping));
         }
         const queueSeconds = (new Date().getTime() - queueStartTime) / 1000;
         console.log(`started promises in ${queueSeconds} seconds`);
@@ -89,9 +103,15 @@ export class PlanImport {
     }
 
     static async importPlan(
-        scope: string, planObj: any, programs: Program[], createOnly: boolean, existingForStudent: SlimStudentPlan[]
+        scope: string,
+        planObj: any,
+        programs: Program[],
+        createOnly: boolean,
+        existingForStudent: SlimStudentPlan[],
+        programNameMapping: IProgramNameMapping,
+        printOnly: boolean = false
     ): Promise<PlanImportStatus> {
-        const pos = this.findProgram(planObj.planOfStudy.name, programs);
+        const pos = this.findProgram(planObj.planOfStudy.name, programs, programNameMapping);
         if (!pos) {
             console.log(`Could not find program ${planObj.planOfStudy.name}`);
 
@@ -210,11 +230,13 @@ export class PlanImport {
                 plan.meta = meta;
                 plan.programs = [pos];
                 plan.authorPrincipleId = 'migration';
-                try {
-                    await plan.save();
-                } catch (err) {
-                    await sleep(500);
-                    await plan.save();
+                if (!printOnly) {
+                    try {
+                        await plan.save();
+                    } catch (err) {
+                        await sleep(500);
+                        await plan.save();
+                    }
                 }
                 console.log(`updated ${plan.guid} - migrated from ${migratedId}`);
                 importStatus = PlanImportStatus.Updated;
@@ -232,13 +254,15 @@ export class PlanImport {
                 meta
             );
             let guid = '';
-            try {
-                const saved = await plan.save();
-                guid = saved.guid;
-            } catch (err) {
-                await sleep(500);
-                const saved = await plan.save();
-                guid = saved.guid;
+            if (!printOnly) {
+                try {
+                    const saved = await plan.save();
+                    guid = saved.guid;
+                } catch (err) {
+                    await sleep(500);
+                    const saved = await plan.save();
+                    guid = saved.guid;
+                }
             }
             console.log(`created ${guid} - migrated from ${migratedId}`);
         }
