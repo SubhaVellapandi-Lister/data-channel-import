@@ -294,8 +294,13 @@ export class Diff extends BaseProcessor {
     private findURLForFile(filename: string): string | undefined {
         // check filesIn/filesOut before digging into steps
         for (const file of [...this.lastJob.filesIn, ...this.lastJob.filesOut]) {
-            if (file.name === filename && file.s3?.events?.length === 1 && file.s3.events[0].downloadURL != null) {
-                return file.s3.events[0].downloadURL;
+            if (
+                file.name === filename &&
+                (
+                    file.s3?.downloadURL != null || (file.s3?.events?.[0]?.downloadURL != null)
+                )
+            ) {
+                return file.s3.events?.[0]?.downloadURL ?? file.s3.downloadURL;
             }
         }
 
