@@ -14,12 +14,12 @@ import {
     Sort,
     ThrowError,
     Translate,
-    Validate,
-    Webhook
+    Webhook,
 } from "./processors";
+import { Validate } from "./processors/Validate/Validate";
 
 export const builtInHandler = generateHandler({
-    echo:  Echo,
+    echo: Echo,
     translate: Translate,
     sort: Sort,
     validate: Validate,
@@ -37,7 +37,7 @@ export const builtInHandler = generateHandler({
     generate: Generate,
     dynamicHelloWorld: HelloWorld,
     glue: Glue,
-    webhook: Webhook
+    webhook: Webhook,
 });
 
 export * from "./utils";
