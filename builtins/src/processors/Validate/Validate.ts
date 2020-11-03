@@ -93,28 +93,7 @@ export class Validate extends BaseProcessor {
       }
 
       if (input.index === 1) {
-          if (this.config!.dynamicOutput) {
-              await this.createOutput({
-                  name: `${inputFileName}${this.currentStep}`,
-                  details: {
-                      name: `${inputFileName}${this.currentStep}`,
-                      s3: {
-                          key: `${this.processorUtil.getFilePathFromInputFile(
-                              input
-                          )}${inputFileName}${this.currentStep}.csv`,
-                          bucket: `${this.processorUtil.getBucketDetailsFromInputFile(
-                              input
-                          )}`,
-                      },
-                  },
-              });
-          }
-          if (this.config!.dynamicInput) {
-              await this.createInput({
-                  name: `${inputFileName}${this.currentStep}->${input.name}`,
-                  step: `${this.nextStep}`,
-              });
-          }
+          this.createDynamicInputOutput(inputFileName, input);
           this.dataFileHeaders = [...input.raw];
           // Add columns statusName and infoName to file headers to track validation status
           if (this.config.validateConfig[input.name].includeLogInData) {
@@ -203,18 +182,8 @@ export class Validate extends BaseProcessor {
           }
 
           let hasValidType = columnConfig.validTypes ? false : true;
-          let compareData = "";
-          if (
-              columnConfig.compareField &&
-        columnConfig.compareField.match("current_date")
-          ) {
-              compareData = new Date().toUTCString();
-          } else if (
-              columnConfig.compareField &&
-        input.data[columnConfig.compareField]
-          ) {
-              compareData = input.data[columnConfig.compareField];
-          }
+          const compareData = this.getCompareFieldData(input, columnConfig);
+
           for (const validType of columnConfig.validTypes || []) {
               hasValidType = this.valueIsValidType(
                   validType,
@@ -409,5 +378,62 @@ export class Validate extends BaseProcessor {
       }
 
       return validVal;
+  }
+  /**
+   * This method is used to create dynamic input and output based
+   * on the configs in the parameter
+   * @param inputFileName
+   * @param input
+   */
+  private async createDynamicInputOutput(
+      inputFileName: string,
+      input: IRowProcessorInput
+  ): Promise<void> {
+      if (this.config!.dynamicOutput) {
+          await this.createOutput({
+              name: `${inputFileName}${this.currentStep}`,
+              details: {
+                  name: `${inputFileName}${this.currentStep}`,
+                  s3: {
+                      key: `${this.processorUtil.getFilePathFromInputFile(
+                          input
+                      )}${inputFileName}${this.currentStep}.csv`,
+                      bucket: `${this.processorUtil.getBucketDetailsFromInputFile(
+                          input
+                      )}`,
+                  },
+              },
+          });
+      }
+      if (this.config!.dynamicInput) {
+          await this.createInput({
+              name: `${inputFileName}${this.currentStep}->${input.name}`,
+              step: `${this.nextStep}`,
+          });
+      }
+  }
+  /**
+   * This method used to get the compare field data
+   * @param input
+   * @param columnConfig
+   * @returns compare field column values
+   */
+  private getCompareFieldData(
+      input: IRowProcessorInput,
+      columnConfig: IFileConfig
+  ): string {
+      let compareData = "";
+      if (
+          columnConfig.compareField &&
+      columnConfig.compareField.match("current_date")
+      ) {
+          compareData = new Date().toUTCString();
+      } else if (
+          columnConfig.compareField &&
+      input.data[columnConfig.compareField]
+      ) {
+          compareData = input.data[columnConfig.compareField];
+      }
+      return compareData;
   }
 }
