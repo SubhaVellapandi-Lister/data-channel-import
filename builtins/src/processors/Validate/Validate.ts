@@ -6,7 +6,15 @@ import {
     RowOutputValue,
 } from "@data-channels/dcSDK";
 
-import { ProcessorUtil } from "../ProcessorUtil";
+import {
+    findNextJobStep,
+    findPreviousJobStep,
+    getBucketDetailsFromInputFile,
+    getFileNameFromInputFile,
+    getFilePathFromInputFile,
+    toCamelCase,
+    jobOutFileExtension,
+} from "../ProcessorUtil";
 
 import { DateValidator } from "./DateValidator";
 import { EmailValidator } from "./EmailValidator";
@@ -29,11 +37,12 @@ export class Validate extends BaseProcessor {
   private logFileHeaders: string[] = [];
   private dataFileHeaders: string[] = [];
   private config!: IValidateParameters;
-  private processorUtil: ProcessorUtil = new ProcessorUtil();
   private nextStep: string = "";
   private currentStep: string = "";
   private previousStep: string = "";
   private jobOutFileExtension: string = "";
+  private emailValidator: EmailValidator = new EmailValidator();
+  private dateValidator: DateValidator = new DateValidator();
   /**
    * Method used to call before the processor begins to process the data.
    * @param input IStepBeforeInput
@@ -44,19 +53,12 @@ export class Validate extends BaseProcessor {
           throw new Error("Missing validateConfig in Validate-Builtin");
       }
       this.currentStep = this.job.currentStep ?? "";
-      this.nextStep = this.processorUtil.findNextJobStep(
-          this.job.flow,
-          this.currentStep
-      );
-      this.previousStep = this.processorUtil.findPreviousJobStep(
-          this.job.flow,
-          this.currentStep
-      );
+      this.nextStep = findNextJobStep(this.job.flow, this.currentStep);
+      this.previousStep = findPreviousJobStep(this.job.flow, this.currentStep);
       if (this.previousStep)
           this.jobOutFileExtension =
-        this.processorUtil.toCamelCase(this.previousStep) +
-        this.processorUtil.jobOutFileExtension;
-      this.currentStep = this.processorUtil.toCamelCase(this.currentStep);
+        toCamelCase(this.previousStep) + jobOutFileExtension;
+      this.currentStep = toCamelCase(this.currentStep);
   }
   /**
    * Method to validate the file contents based on configurations defined via parameters
@@ -67,10 +69,7 @@ export class Validate extends BaseProcessor {
   ): Promise<IRowProcessorOutput> {
       let inputFileName = input.name;
       if (this.config!.dynamicOutput) {
-          inputFileName = this.processorUtil.getFileNameFromInputFile(
-              input,
-              this.jobOutFileExtension
-          );
+          inputFileName = getFileNameFromInputFile(input, this.jobOutFileExtension);
       }
       const statusName =
       this.config.validateConfig[input.name].validStatusColumnName ||
@@ -284,11 +283,9 @@ export class Validate extends BaseProcessor {
   ): boolean {
       let hasValidType = false;
       data.toUpperCase();
-      const emailValidator = new EmailValidator();
-      const dateValidator = new DateValidator();
       switch (typeToCheck) {
       case ValidateDataType.Email: {
-          if (emailValidator.validateEmail(data, columnConfig.required!)) {
+          if (this.emailValidator.validateEmail(data, columnConfig.required!)) {
               hasValidType = true;
           }
           break;
@@ -320,14 +317,14 @@ export class Validate extends BaseProcessor {
           }
           if (
               columnConfig.dateTimeFormat !== null &&
-          dateValidator.validateDateFormat(
+          this.dateValidator.validateDateFormat(
               data,
             columnConfig.required!,
             columnConfig.dateTimeFormat!
           )
           ) {
               if (compareData.length > 0 && columnConfig.comparator) {
-                  hasValidType = dateValidator.validateDateComparsion(
+                  hasValidType = this.dateValidator.validateDateComparsion(
                       data,
                       compareData,
                       columnConfig.comparator,
@@ -395,12 +392,10 @@ export class Validate extends BaseProcessor {
               details: {
                   name: `${inputFileName}${this.currentStep}`,
                   s3: {
-                      key: `${this.processorUtil.getFilePathFromInputFile(
-                          input
-                      )}${inputFileName}${this.currentStep}.csv`,
-                      bucket: `${this.processorUtil.getBucketDetailsFromInputFile(
-                          input
-                      )}`,
+                      key: `${getFilePathFromInputFile(input)}${inputFileName}${
+                          this.currentStep
+                      }.csv`,
+                      bucket: `${getBucketDetailsFromInputFile(input)}`,
                   },
               },
           });

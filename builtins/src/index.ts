@@ -12,12 +12,11 @@ import {
     SESProcessor,
     SNSProcessor,
     Sort,
+    Validate,
     ThrowError,
     Translate,
     Webhook,
 } from "./processors";
-import { Validate } from "./processors/Validate/Validate";
-
 export const builtInHandler = generateHandler({
     echo: Echo,
     translate: Translate,

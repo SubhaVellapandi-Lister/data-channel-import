@@ -12,9 +12,9 @@ export class EmailValidator {
         if (!isRequired && !email) return true;
         if (email.length > 256 || !emailRegexToTest.test(email)) return false;
         // Check on the length of the domain part and the account part of an email which regex does not evaluate
-        const [account, address] = email.split("@");
+        const [account, address] = email.split('@');
         if (account.length > 64) return false;
-        const emailDomainParts = address.split(".");
+        const emailDomainParts = address.split('.');
         if (
             emailDomainParts.some((domainPart) => {
                 return domainPart.length > 63;

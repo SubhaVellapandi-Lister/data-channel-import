@@ -15,7 +15,7 @@ export class DateUtil {
     }
 
     public isYYYY_MM_DD_HH_MM_SS(dateTimeString: string): boolean {
-        const dateTime = dateTimeString.split(" ");
+        const dateTime = dateTimeString.split(' ');
         if (dateTime !== null && dateTime.length === 2) {
             return this.isYYYY_MM_DD(dateTime[0]) && this.isHH_MM_SS(dateTime[1]);
         }
@@ -30,7 +30,7 @@ export class DateUtil {
         const year = dateString.substring(0, 4);
         const month = dateString.substring(4, 6);
         const date = dateString.substring(6, 8);
-        return this.isYYYY_MM_DD(year + "-" + month + "-" + date);
+        return this.isYYYY_MM_DD(year + '-' + month + '-' + date);
     }
 
     public isYYYYMM(dateString: string): boolean {
@@ -60,6 +60,6 @@ export class DateUtil {
         const year = dateString.substring(0, 4);
         const month = dateString.substring(4, 6);
         const date = dateString.substring(6, 8);
-        return year + "-" + month + "-" + date;
+        return year + '-' + month + '-' + date;
     }
 }
