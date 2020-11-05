@@ -6,31 +6,19 @@ export function findNextJobStep(flow: string[], currentStep: string): string {
     return flow.slice(flow.indexOf(currentStep) + 1)[0];
 }
 
-export function findPreviousJobStep(
-    flow: string[],
-    currentStep: string
-): string {
+export function findPreviousJobStep(flow: string[], currentStep: string): string {
     return flow.slice(0, flow.indexOf(currentStep)).slice(-1)[0];
 }
-export function getFilePathFromInputFile(
-    inputFile: IRowProcessorInput
-): string {
+export function getFilePathFromInputFile(inputFile: IRowProcessorInput): string {
     return inputFile.fileInfo?.key?.match(new RegExp("(.*/)"))?.[0] ?? "";
 }
-export function getBucketDetailsFromInputFile(
-    inputFile: IRowProcessorInput
-): string {
+export function getBucketDetailsFromInputFile(inputFile: IRowProcessorInput): string {
     return inputFile.fileInfo?.bucket ?? "";
 }
-export function getFileNameFromInputFile(
-    inputFile: IRowProcessorInput,
-    jobOutFileExt: string
-): string {
+export function getFileNameFromInputFile(inputFile: IRowProcessorInput, jobOutFileExt: string): string {
     return (
     inputFile.fileInfo?.key
-      ?.match(
-        new RegExp(`([a-zA-Z0-9_]*${inputFile.name}${jobOutFileExt})\\.csv`)
-      )?.[1]
+      ?.match(new RegExp(`([a-zA-Z0-9_]*${inputFile.name}${jobOutFileExt})\\.csv`))?.[1]
       .replace(`${jobOutFileExt}`, "") ?? inputFile.name
     );
 }
