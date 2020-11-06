@@ -12,14 +12,13 @@ import {
     SESProcessor,
     SNSProcessor,
     Sort,
+    Validate,
     ThrowError,
     Translate,
-    Validate,
-    Webhook
+    Webhook,
 } from "./processors";
-
 export const builtInHandler = generateHandler({
-    echo:  Echo,
+    echo: Echo,
     translate: Translate,
     sort: Sort,
     validate: Validate,
@@ -37,7 +36,7 @@ export const builtInHandler = generateHandler({
     generate: Generate,
     dynamicHelloWorld: HelloWorld,
     glue: Glue,
-    webhook: Webhook
+    webhook: Webhook,
 });
 
 export * from "./utils";
