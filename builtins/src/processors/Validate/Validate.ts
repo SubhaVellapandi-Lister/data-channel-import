@@ -14,6 +14,7 @@ import {
     getFilePathFromInputFile,
     toCamelCase,
     jobOutFileExtension,
+    getKeyValueCaseInsensitive,
 } from "../ProcessorUtil";
 
 import { DateValidator } from "./DateValidator";
@@ -118,7 +119,7 @@ export class Validate extends BaseProcessor {
       let validationStatus = ValidateStatus.Valid;
       // evaluating each object entry for the required status and check for valdiation status by using the configs
       for (const [columnName, columnConfig] of Object.entries(this.config.validateConfig[input.name].columns)) {
-          const data = input.data[columnName];
+          const data = getKeyValueCaseInsensitive(input.data, columnName);
           // eslint-disable-next-line no-undefined
           if (data === undefined) {
               if (columnConfig.required) {

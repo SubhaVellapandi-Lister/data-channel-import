@@ -1,4 +1,4 @@
-import { IRowProcessorInput } from "@data-channels/dcSDK";
+import { IRowData, IRowProcessorInput } from "@data-channels/dcSDK";
 
 export const jobOutFileExtension = ".output";
 
@@ -26,4 +26,11 @@ export function toCamelCase(input: string): string {
     return input.toLowerCase().replace(/(?:(^.)|(\s+.))/g, (match) => {
         return match.charAt(match.length - 1).toUpperCase();
     });
+}
+export function getKeyValueCaseInsensitive(obj: IRowData, prop: string): string | undefined {
+    for (const key in obj) {
+        if (key.toLowerCase() === prop.toLowerCase()) {
+            return obj[key];
+        }
+    }
 }

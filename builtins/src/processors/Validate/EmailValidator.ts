@@ -15,13 +15,8 @@ export class EmailValidator {
         const [account, address] = email.split("@");
         if (account.length > 64) return false;
         const emailDomainParts = address.split(".");
-        if (
-            emailDomainParts.some((domainPart) => {
-                return domainPart.length > 63;
-            })
-        )
-            return false;
-
-        return true;
+        return !emailDomainParts.some((domainPart) => {
+            domainPart.length > 63;
+        });
     }
 }

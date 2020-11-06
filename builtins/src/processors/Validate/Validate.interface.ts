@@ -1,36 +1,36 @@
 // Interface for validate data types
 export enum ValidateDataType {
-  String = 'string',
-  Integer = 'integer',
-  Datetime = 'datetime',
-  Decimal = 'decimal',
-  Boolean = 'boolean',
-  Email = 'email',
+  String = "string",
+  Integer = "integer",
+  Datetime = "datetime",
+  Decimal = "decimal",
+  Boolean = "boolean",
+  Email = "email",
 }
 
 // Interface for validate status
 export enum ValidateStatus {
-  Valid = 'valid',
-  Warning = 'warning',
-  Invalid = 'invalid',
+  Valid = "valid",
+  Warning = "warning",
+  Invalid = "invalid",
 }
 
 // Interface for validate comparator
 export enum ValidateComparator {
-  Greater = 'gt',
-  Lesser = 'lt',
-  GreaterEq = 'gtEq',
-  LesserEq = 'ltEq',
-  Equal = 'eq',
+  Greater = "gt",
+  Lesser = "lt",
+  GreaterEq = "gtEq",
+  LesserEq = "ltEq",
+  Equal = "eq",
 }
 
 // Interface for validate date format
 export enum ValidateDateFormat {
-  YYYY_MM_DD = 'YYYY-MM-DD',
-  YY_MM_DD_HH_MM_SS = 'YYYY-MM-DD HH:MM:SS',
-  HH_MM_AM_PM = 'HH:MM A',
-  YYYYMMDD = 'YYYYMMDD',
-  YYYYMM = 'YYYYMM',
+  YYYY_MM_DD = "YYYY-MM-DD",
+  YY_MM_DD_HH_MM_SS = "YYYY-MM-DD HH:MM:SS",
+  HH_MM_AM_PM = "HH:MM A",
+  YYYYMMDD = "YYYYMMDD",
+  YYYYMM = "YYYYMM",
 }
 // Interface for file level config
 export interface IFileConfig {
