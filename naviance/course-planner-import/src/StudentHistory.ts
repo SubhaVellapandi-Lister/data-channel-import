@@ -240,7 +240,8 @@ export class StudentHistory {
                     {},
                     courses,
                     this.updatePlans,
-                    this.attachContextsIfNeeded
+                    this.attachContextsIfNeeded,
+                    true
                 ));
             } catch (err) {
                 console.log(`Error updating history records for ${studentId}`);
