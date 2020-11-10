@@ -60,20 +60,30 @@ You can provide multiple inputs if desired. Note that by default `echo` will put
 
 Translate column names and row values from one string to another.
 
-|                          |                                                     |
-| ------------------------ | --------------------------------------------------- |
-| **method name**          | translate                                           |
-| **granularity**          | row                                                 |
-| **code**                 | [Translate.ts](src/processors/Translate.ts)         |
-| **input name**           | Any input name you want, e.g. "data"                |
-| **output name**          | Input name plus "Translated", e.g. "dataTranslated" |
-| **config property name** | translateConfig                                     |
+|                          |                                                   |
+| ------------------------ | ------------------------------------------------- |
+| **method name**          | translate                                         |
+| **granularity**          | row                                               |
+| **code**                 | [Translate.ts](src/processors/Translate.ts)       |
+| **input name**           | Any input name you want, e.g. "data"              |
+| **output name**          | Input name plus "Translate", e.g. "dataTranslate" |
+| **config property name** | translateConfig , dynamicOutput, dynamicInput     |
 
-`translateConfig` is required. There are three possible properties under translateConfig
+- `dynamicOutput` - boolean defaults to false, if true, the output files has been generated dynamically based on the input files
 
-- headerMappings - map one header name to another
-- valueMappings - map values in one column from one thing to another
-- indexMappings - map header names based on index of the header in the file, starts at index 1.
+- `dynamicInput` - boolean defaults to false, if true, creates the dynamic input files for next flow / step
+
+- `translateConfig` is required. Properties under translateConfig
+
+  - columns - main config properties under `columns` are column names for keys, with objects as values. Each object supports the following:
+
+    - headerMappings - map one header name to another
+    - valueMappings - map values in one column from one thing to another
+    - indexMappings - map header names based on index of the header in the file, starts at index 1.
+    - saveIndexMappings - boolean defaults to false, if true, the translate processor will automatically update the channel config to save indexMappings to reflect the current order of column mappings. This should only be used when you need to support headerless csv files and the order of the columns is strictly enforced.
+    - headerlessFile - boolean defaults to false, if true, it should output a header row based on indexMappings.
+    - removeEmptyHeaders - boolean defaults to false, if true, then translate config should remove empty header column from in output.
+    - removeUnmappedHeaders - boolean defaults to false, if true, then translate config should not remove unmapped header row based on indexMappings.
 
 Example Config
 
