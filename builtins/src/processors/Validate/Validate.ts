@@ -262,23 +262,7 @@ export class Validate extends BaseProcessor {
           if (columnConfig.dateTimeFormat === null && !isNaN(Date.parse(data))) {
               hasValidType = true;
           }
-          if (
-              columnConfig.dateTimeFormat !== null &&
-          this.dateValidator.validateDateFormat(data, columnConfig.required!, columnConfig.dateTimeFormat!)
-          ) {
-              if (compareData.length > 0 && columnConfig.comparator) {
-                  hasValidType = this.dateValidator.validateDateComparsion(
-                      data,
-                      compareData,
-                      columnConfig.comparator,
-              columnConfig.required!,
-              columnConfig.dateTimeFormat!
-                  );
-
-                  break;
-              }
-              hasValidType = true;
-          }
+          hasValidType = this.validateDateFormat(columnConfig, data, compareData, hasValidType);
           break;
       }
       // eslint-disable-next-line no-fallthrough
@@ -351,5 +335,43 @@ export class Validate extends BaseProcessor {
           compareData = input.data[columnConfig.compareField];
       }
       return compareData;
+  }
+  /**
+   * This method used to validate the date format list for the given data
+   * @param inputData
+   * @param compareData
+   * @param columnConfig
+   * @param hasValidFormat
+   * @returns boolean
+   */
+  private validateDateFormat(
+      columnConfig: IFileConfig,
+      inputData: string,
+      compareData: string,
+      hasValidFormat: boolean
+  ): boolean {
+      for (const dateTimeFormat of columnConfig.dateTimeFormat ?? []) {
+          if (
+              columnConfig.dateTimeFormat !== null &&
+        this.dateValidator.validateDateFormat(inputData, columnConfig.required!, dateTimeFormat)
+          ) {
+              if (compareData.length > 0 && columnConfig.comparator) {
+                  hasValidFormat = this.dateValidator.validateDateComparsion(
+                      inputData,
+                      compareData,
+                      columnConfig.comparator,
+            columnConfig.required!,
+            dateTimeFormat
+                  );
+
+                  break;
+              }
+              hasValidFormat = true;
+          }
+          if (hasValidFormat) {
+              break;
+          }
+      }
+      return hasValidFormat;
   }
 }

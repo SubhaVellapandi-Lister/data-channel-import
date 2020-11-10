@@ -23,7 +23,7 @@ export class DateUtil {
     }
     static isHH_MM_AM_PM(timeString: string): boolean {
     // regex to evaluate date in the format hh:mm am/pm
-        const regEx = /^((1[0-2]|0?[1-9]):([0-5][0-9]) ?([AaPp][Mm]))$/;
+        const regEx = /^((1[0-2]|0?[1-9]):([0-5][0-9])?([AaPp][Mm]))$/;
         return timeString.match(regEx) ? true : false;
     }
     static isYYYYMMDD(dateString: string): boolean {

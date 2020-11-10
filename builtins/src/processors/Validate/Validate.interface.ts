@@ -42,7 +42,7 @@ export interface IFileConfig {
   validWithWarningValues?: any[]; // if value is one of these, it's considered valid, but with a warning
   invalidIfBlank?: boolean; // invalid if the row has a blank value
   warnIfBlank?: boolean; // just a warning if row has a blank value
-  dateTimeFormat?: ValidateDateFormat; // use a valid datetime format to process starfish file columns like yyyy-mm-dd and yyyy-mm-dd hh:mm:ss
+  dateTimeFormat?: ValidateDateFormat[]; // use a valid datetime format to process starfish file columns like yyyy-mm-dd and yyyy-mm-dd hh:mm:ss
   caseInSensitive?: boolean; // set true to use case insensitive approach for performing validation
   compareField?: string; // compare the column with the given column name or current_date
   comparator?: ValidateComparator; // comparator operations
