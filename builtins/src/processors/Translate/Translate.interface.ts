@@ -53,8 +53,8 @@ export interface IFileTranslateConfig {
 }
 
 export enum RowType {
-  ROW = 'ROW',
-  HEADER = 'HEADER',
+  ROW = "ROW",
+  HEADER = "HEADER",
 }
 
 // Interface for channel config parameters.
