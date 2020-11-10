@@ -54,6 +54,7 @@ Student Plan Export Data Dictionary
 * Pathway_Planned_Credits_Used - *(Decimal)* Sum of all planned course credits that were used to meet requirements in PoS
 * Planned_Courses - *(String List)* Names of courses that a student is planning on taking
 * Completed_Courses - *(String List)* Names of courses that a student has completed
+* Credit_Deficiency_Number - *(Decimal)* Number of credit deficiency
 
 
 ## Build ZIP package from docker

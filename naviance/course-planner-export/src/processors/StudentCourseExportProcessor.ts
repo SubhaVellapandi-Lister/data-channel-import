@@ -131,7 +131,8 @@ const auditHeaders = [
     'Pathway_Planned_Credits',
     'Pathway_Planned_Credits_Used',
     'Planned_Courses',
-    'Completed_Courses'
+    'Completed_Courses',
+    'Credit_Deficiency_Number',
 ];
 
 const courseHeaders = [
@@ -451,6 +452,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         let planName =  meta['name'] || '';
         let planStatus = meta['status'] || '';
         let isActive = meta['isActive'] || '';
+        const creditDeficientyNumber = meta['creditDeficiency'];
         for (const ctx of plan.contexts || []) {
             const pContext = ctx as PlanContext;
             if (!pContext.product) {
@@ -487,7 +489,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             Completed_Credits: "0", // need to tweak once we are storing course histories
             Planned_Credits: plannedCreditTotal.toString(),
             Planned_Courses: plan.courses!.map((course) => course.number).join(', '),
-            Course_History: '' // need to tweak once we are storing course histories
+            Course_History: '', // need to tweak once we are storing course histories
+            Credit_Deficiency_Number: creditDeficientyNumber,
         };
 
         const programs = await this.findProgramsForPlan(namespace, scopeAsNamespace, plan.programs || []);
