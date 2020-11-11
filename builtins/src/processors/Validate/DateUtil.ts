@@ -1,3 +1,5 @@
+import { c } from "tar";
+
 export class DateUtil {
     static isYYYY_MM_DD(dateString: string): boolean {
     // regex to evaluate date in the format yyyy-mm--dd
@@ -49,5 +51,18 @@ export class DateUtil {
         const month = dateString.substring(4, 6);
         const date = dateString.substring(6, 8);
         return year + "-" + month + "-" + date;
+    }
+    static convert_HH_MM_To_Date(dateString: string): string {
+        const merdian = dateString.substring(5, 7).toLowerCase();
+        let hours = parseInt(dateString.substring(0, 2));
+        const minutes = parseInt(dateString.substring(3, 5));
+        if (merdian === "pm") {
+            hours = hours + 12;
+        }
+        const currentDate = new Date();
+        currentDate.setHours(hours);
+        currentDate.setMinutes(minutes);
+
+        return currentDate.toString();
     }
 }

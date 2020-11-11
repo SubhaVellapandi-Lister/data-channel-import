@@ -51,10 +51,13 @@ export class DateValidator {
     ): boolean {
         if (!isRequired && !inputDate && !compareDate) return true;
         // if the date format is YYYYMMDD, confirms its a validate date
-        // and convert into the YYYY-MM-DD
+        // and convert n the YYYY-MM-DD
         if (ValidateDateFormat.YYYYMMDD === dateFormat) {
             inputDate = DateUtil.convert_YYYYMMDD_To_YYYY_MM_DD(inputDate);
             compareDate = DateUtil.convert_YYYYMMDD_To_YYYY_MM_DD(compareDate);
+        } else if (ValidateDateFormat.HH_MM_AM_PM === dateFormat) {
+            inputDate = DateUtil.convert_HH_MM_To_Date(inputDate);
+            compareDate = DateUtil.convert_HH_MM_To_Date(compareDate);
         }
         switch (compartor) {
         case ValidateComparator.Equal: {
