@@ -20,6 +20,7 @@ The Data Channels built-ins are free for everyone to contribute to using an "inn
 * Expect configuration to be provided in a self-contained parameter that is the name of the method, plus "Config".  For example `sqlConfig` if your method name is `sql`.
 * Support both row and once granularities where possible.  Default to row, and add a second method called `[method name]Once`.
 * Put meaningful metrics into the output in an `after_[method name]` method
+* DO NOT BREAK BACKWARDS COMPATIBILITY when modifying an existing built-in
 
 ## Deployment
 
