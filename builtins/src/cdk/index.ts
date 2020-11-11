@@ -1,3 +1,5 @@
+import ec2 = require('@aws-cdk/aws-ec2');
+import efs = require('@aws-cdk/aws-efs');
 import iam = require('@aws-cdk/aws-iam');
 import lambda = require('@aws-cdk/aws-lambda');
 import cdk = require('@aws-cdk/core');
@@ -13,6 +15,11 @@ const sesSend = config.get<boolean>('cdk.permissions.sesSend');
 const athenaGlue = config.get<boolean>('cdk.permissions.athenaGlue');
 const athenaWorkGroup = config.get<string>('cdk.permissions.athenaWorkGroup');
 
+const fileSystemId = config.get<string>('cdk.efs.fileSystemId');
+const securityGroupId = config.get<string>('cdk.efs.securityGroupId');
+const vpcId = config.get<string>('cdk.efs.vpcId');
+const mountPath = config.get<string>('cdk.efs.mountPath');
+
 if (functionName.includes('${environment}')) {
     functionName = functionName.replace('${environment}', environment);
 }
@@ -24,6 +31,17 @@ if (stackName.includes('${environment}')) {
 export class BuiltinsLambdaStack extends cdk.Stack {
     constructor(scope: cdk.App, id: string, props: cdk.StackProps) {
         super(scope, id, props);
+        const vpc = ec2.Vpc.fromLookup(this, vpcId, { vpcId });
+        const securityGroup = ec2.SecurityGroup.fromSecurityGroupId(this, 'ss-dc-sg', securityGroupId)
+        const accessPoint = new efs.AccessPoint(this, "ap", {
+            fileSystem: efs.FileSystem.fromFileSystemAttributes(this, 'ss-dc-efs', {
+                fileSystemId: fileSystemId,
+                securityGroup: securityGroup
+            }),
+            createAcl: { ownerGid: "1000", ownerUid: "1000", permissions: "777" },
+            posixUser: { uid: "1000", gid: "1000" },
+            path: mountPath
+        });
 
         const builtins = new lambda.Function(this, 'ss-dc-Builtins', {
             functionName,
@@ -32,8 +50,15 @@ export class BuiltinsLambdaStack extends cdk.Stack {
             code: lambda.Code.asset('./data-channels-builtin-processors.zip'),
             memorySize: 3000,
             timeout: cdk.Duration.seconds(900),
-
+            vpc: vpc,
+            securityGroups: [securityGroup],
+            vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE, onePerAz: true },
+            filesystem: lambda.FileSystem.fromEfsAccessPoint(
+                accessPoint,
+                mountPath
+            ),
             environment: {
+                AWS_EFS_PATH: mountPath,
                 AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
             }
         });
@@ -42,6 +67,17 @@ export class BuiltinsLambdaStack extends cdk.Stack {
             effect: iam.Effect.ALLOW,
             actions: ["ssm:GetParameter", "ssm:GetParameters"],
             resources: ["arn:aws:ssm:*:*:parameter/data-channels*"]
+        }));
+
+        builtins.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: [
+                "elasticfilesystem:ClientMount",
+                "elasticfilesystem:ClientRootAccess",
+                "elasticfilesystem:ClientWrite",
+                "elasticfilesystem:DescribeMountTargets"
+            ],
+            resources: [accessPoint.accessPointArn]
         }));
 
         if (snsPublish) {
