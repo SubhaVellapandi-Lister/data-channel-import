@@ -90,7 +90,7 @@ Translate column names and row values from one string to another.
     - removeUnmappedHeaders - boolean defaults to false, if true, then translate config should not remove unmapped header row based on indexMappings.
 
 - `fileTranslateConfig` is required. Properties under fileTranslateConfig.
-    - [fileName] - Example, if you are processing the users file, then we need to specify the `fileName` as `users`.
+    - [fileName] - Example, if you are processing the sections file, then we need to specify the `fileName` as `sections`.
       - columns - main config properties under `columns` are column names for keys, with objects as values. Each object supports the following:
 
         - headerMappings - map one header name to another
@@ -129,7 +129,7 @@ Example Config using fileTranslateConfig
 ```json
 "parameters": {
   "fileTranslateConfig": {
-    "users":{
+    "sections":{
       "headerMappings": {
         "studentID": "Student_ID"
       },
@@ -145,8 +145,9 @@ Example Config using fileTranslateConfig
         "3": "Student_Name"
       }
     },
-    "inputFileNames
-  }
+    "inputFileNames":["Sections"]
+  },
+  "multipleFileConfig": true
 }
 ```
 
@@ -305,7 +306,8 @@ Example Config using fileValidateConfig
       "discardInvalidRows": true,
       "extraLogFile": "sectionsDataLog"
     }
-  }
+  },
+  "multipleFileConfig": true
 }
 ```
 
