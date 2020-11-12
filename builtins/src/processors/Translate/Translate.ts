@@ -1,3 +1,5 @@
+import { threadId } from "worker_threads";
+
 import {
     BaseProcessor,
     ChannelConfig,
@@ -17,7 +19,7 @@ import {
     toCamelCase,
 } from "../ProcessorUtil";
 
-import { ITranslateParameters, RowType } from "./Translate.interface";
+import { IFileTranslateConfig, ITranslateParameters, RowType } from "./Translate.interface";
 
 /**
  * Translate processor obtains input files, based on config parameters
@@ -28,7 +30,7 @@ import { ITranslateParameters, RowType } from "./Translate.interface";
 export class Translate extends BaseProcessor {
   private originalHeaders: string[] = [];
   private newHeaders: string[] = [];
-  private config!: ITranslateParameters;
+  private config!: ITranslateParameters | IFileTranslateConfig;
   private emptyHeaders = new Set<number>();
   private currentRow: string[] = [];
   private fileToTranslate: string = "";
@@ -39,7 +41,8 @@ export class Translate extends BaseProcessor {
   private jobOutFileExtension: string = "";
   private dynamicInput: boolean = false;
   private dynamicOutput: boolean = false;
-
+  private multipleFileConfig: boolean = false;
+  private updatedConfig!: IFileTranslateConfig;
   /**
    * We can perform our operations before processing a file.
    * We fetch the Input parameters from the channel config
@@ -53,15 +56,21 @@ export class Translate extends BaseProcessor {
       const configParamters = input.parameters as ITranslateParameters;
       this.dynamicInput = configParamters.dynamicInput;
       this.dynamicOutput = configParamters.dynamicOutput;
-      if (!configParamters.translateConfig || configParamters.translateConfig === {}) {
+      this.multipleFileConfig = configParamters.multipleFileConfig;
+      if (this.multipleFileConfig) {
+          if (!configParamters.fileTranslateConfig || configParamters.fileTranslateConfig === {}) {
+              throw new Error("Missing filetr in Translate-Builtin");
+          }
+          if (!configParamters.inputFileNames) {
+              throw new Error("Kindly specify the 'inputFileNames' parameter in the config.");
+          }
+          if (configParamters.inputFileNames.length > 0) {
+              this.inputFileNames = configParamters.inputFileNames;
+          }
+      } else if (!this.multipleFileConfig && !configParamters.translateConfig) {
           throw new Error("Missing translateConfig in Translate-Builtin");
       }
-      if (!configParamters.inputFileNames) {
-          throw new Error("Kindly specify the 'inputFileNames' parameter in the config.");
-      }
-      if (configParamters.inputFileNames.length > 0) {
-          this.inputFileNames = configParamters.inputFileNames;
-      }
+
       this.currentStep = this.job.currentStep ?? "";
       this.nextStep = findNextJobStep(this.job.flow, this.currentStep);
       this.previousStep = findPreviousJobStep(this.job.flow, this.currentStep);
@@ -77,8 +86,12 @@ export class Translate extends BaseProcessor {
    */
   public async translate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
       const { index, raw, name: inputName } = input;
-      this.fileToTranslate =
-      this.inputFileNames.find((fileName: string) => inputName.toLowerCase().includes(fileName)) || "";
+      if (this.multipleFileConfig) {
+          this.fileToTranslate =
+        this.inputFileNames.find((fileName: string) => inputName.toLowerCase().includes(fileName)) || "";
+      } else {
+          this.fileToTranslate = input.name;
+      }
       let inputFileName = input.name;
       if (this.dynamicOutput) {
           inputFileName = getFileNameFromInputFile(input, this.jobOutFileExtension);
@@ -90,7 +103,13 @@ export class Translate extends BaseProcessor {
 
       // index = 1 determines the row header & new file entry
       if (index === 1) {
-          this.config = _.cloneDeep(input.parameters!["translateConfig"]) as ITranslateParameters;
+          if (this.multipleFileConfig) {
+              this.config = _.cloneDeep(input.parameters!["fileTranslateConfig"]) as ITranslateParameters;
+              this.updatedConfig = this.config[this.fileToTranslate] as IFileTranslateConfig;
+          } else {
+              this.config = _.cloneDeep(input.parameters!["translateConfig"]) as IFileTranslateConfig;
+              this.updatedConfig = this.config;
+          }
           if (this.config === null) {
               throw new Error("Missing translateConfig in Translate-Builtin");
           }
@@ -99,17 +118,17 @@ export class Translate extends BaseProcessor {
           this.newHeaders = this.originalHeaders.map((h, i) => this.mappedHeader(h, i + 1));
           if (
           // eslint-disable-next-line no-undefined
-              this.config[this.fileToTranslate].removeEmptyHeaders === undefined ||
-        this.config[this.fileToTranslate].removeEmptyHeaders === true ||
-        this.config[this.fileToTranslate].removeUnmappedHeaders === true
+              this.updatedConfig.removeEmptyHeaders === undefined ||
+        this.updatedConfig.removeEmptyHeaders === true ||
+        this.updatedConfig.removeUnmappedHeaders === true
           ) {
               await this.removeEmptyColumn(RowType.HEADER);
           }
-          if (this.config[this.fileToTranslate].saveIndexMappings) {
+          if (this.updatedConfig.saveIndexMappings) {
               await this.saveIndexMappings();
           }
 
-          if (this.config[this.fileToTranslate].headerlessFile) {
+          if (this.updatedConfig.headerlessFile) {
               await this.checkHeaderRow(inputFileName);
 
               return {
@@ -122,7 +141,7 @@ export class Translate extends BaseProcessor {
               outputs: { [`${inputFileName}${this.currentStep}`]: this.newHeaders },
           };
       }
-      if (!(this.fileToTranslate in this.config)) {
+      if (this.updatedConfig.valueMappings === undefined && this.updatedConfig.valueMappings === null) {
           return {
               index: index,
               outputs: {
@@ -132,24 +151,24 @@ export class Translate extends BaseProcessor {
       }
       if (
       // eslint-disable-next-line no-undefined
-          this.config[this.fileToTranslate].removeEmptyHeaders === undefined ||
-      this.config[this.fileToTranslate].removeEmptyHeaders === true ||
-      this.config[this.fileToTranslate].removeUnmappedHeaders === true
+          this.updatedConfig.removeEmptyHeaders === undefined ||
+      this.updatedConfig.removeEmptyHeaders === true ||
+      this.updatedConfig.removeUnmappedHeaders === true
       ) {
           await this.removeEmptyColumn(RowType.ROW);
       }
-      if (this.config[this.fileToTranslate].valueMappings === null) {
+      if (this.updatedConfig.valueMappings === null) {
           return {
               index: index,
               outputs: { [`${inputFileName}${this.currentStep}`]: this.currentRow },
           };
       }
-      const fileValueMappingConfig = this.config[this.fileToTranslate].valueMappings;
+      const fileValueMappingConfig = this.updatedConfig.valueMappings;
       const newRow: string[] = [];
       for (const [rowIndex, rowValue] of this.currentRow.entries()) {
           const valueMapping =
-        fileValueMappingConfig[this.newHeaders[rowIndex]] ??
-        fileValueMappingConfig[this.originalHeaders[rowIndex]] ??
+        fileValueMappingConfig![this.newHeaders[rowIndex]] ??
+        fileValueMappingConfig![this.originalHeaders[rowIndex]] ??
         [];
           let value = rowValue;
           for (const mappedValue of valueMapping) {
@@ -176,17 +195,16 @@ export class Translate extends BaseProcessor {
    */
   private mappedHeader(original: string, index: number): string {
       if (
-          (this.config[this.fileToTranslate].headerMappings || this.config[this.fileToTranslate].indexMappings) &&
+          (this.updatedConfig.headerMappings || this.updatedConfig.indexMappings) &&
       // eslint-disable-next-line no-undefined
-      (this.config[this.fileToTranslate].removeUnmappedHeaders === undefined ||
-        this.config[this.fileToTranslate].removeUnmappedHeaders === true)
+      (this.updatedConfig.removeUnmappedHeaders === undefined || this.updatedConfig.removeUnmappedHeaders === true)
       ) {
           original = "";
       }
-      if (this.config[this.fileToTranslate].headerMappings) {
-          return this.config[this.fileToTranslate].headerMappings[original] ?? original;
-      } else if (this.config[this.fileToTranslate].indexMappings) {
-          return this.config[this.fileToTranslate].indexMappings[index] ?? original;
+      if (this.updatedConfig.headerMappings) {
+          return this.updatedConfig.headerMappings[original] ?? original;
+      } else if (this.updatedConfig.indexMappings) {
+          return this.updatedConfig.indexMappings[index] ?? original;
       }
 
       return original;
@@ -199,15 +217,15 @@ export class Translate extends BaseProcessor {
    * @param inputFileName string
    */
   private async checkHeaderRow(inputFileName: string): Promise<void> {
-      if (this.config[this.fileToTranslate].indexMappings === null) {
+      if (this.updatedConfig.indexMappings === undefined || null) {
           throw new Error("Headerless files must have indexMappings");
       }
-      if (this.originalHeaders.length !== Object.values(this.config[this.fileToTranslate].indexMappings).length) {
+      if (this.originalHeaders.length !== Object.values(this.updatedConfig.indexMappings).length) {
           throw new Error("Headerless column length does not match mapping. Be sure indexMapping accounts for all columns");
       }
-      const sortedCols = _.sortBy(Object.entries(this.config[this.fileToTranslate].indexMappings), (val) =>
-          Number(val[0])
-      ).map((keyVal) => keyVal[1]);
+      const sortedCols = _.sortBy(Object.entries(this.updatedConfig.indexMappings), (val) => Number(val[0])).map(
+          (keyVal) => keyVal[1]
+      );
 
       // @ts-ignore
       this._outputStreams.writeOutputValues({
@@ -243,21 +261,16 @@ export class Translate extends BaseProcessor {
           );
 
           return;
-      } else if (
-          this.config[this.fileToTranslate].headerMappings === null &&
-      this.config[this.fileToTranslate].indexMappings === null
-      ) {
+      } else if (this.updatedConfig.headerMappings === null && this.updatedConfig.indexMappings === null) {
           return;
       }
 
-      if (this.config[this.fileToTranslate].headerMappings === null) {
+      if (this.updatedConfig.headerMappings === null) {
       // First run with index saving, create headerMapping based on current order
-          this.config[this.fileToTranslate].headerMappings = _.fromPairs(_.zip(this.originalHeaders, this.newHeaders));
+          this.updatedConfig.headerMappings = _.fromPairs(_.zip(this.originalHeaders, this.newHeaders));
       }
 
-      this.config[this.fileToTranslate].indexMappings = _.fromPairs(
-          [...this.newHeaders.entries()].map(([i, val]) => [i + 1, val])
-      );
+      this.updatedConfig.indexMappings = _.fromPairs([...this.newHeaders.entries()].map(([i, val]) => [i + 1, val]));
       currentStep.parameters["translateConfig"] = this.config;
       await channel.update({ steps });
   }

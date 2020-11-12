@@ -1,5 +1,3 @@
-import { c } from "tar";
-
 export class DateUtil {
     static isYYYY_MM_DD(dateString: string): boolean {
     // regex to evaluate date in the format yyyy-mm--dd
@@ -17,7 +15,7 @@ export class DateUtil {
     }
 
     static isYYYY_MM_DD_HH_MM_SS(dateTimeString: string): boolean {
-        const dateTime = dateTimeString.split(" ");
+        const dateTime = dateTimeString.split(' ');
         if (dateTime !== null && dateTime.length === 2) {
             return this.isYYYY_MM_DD(dateTime[0]) && this.isHH_MM_SS(dateTime[1]);
         }
@@ -32,7 +30,7 @@ export class DateUtil {
         const year = dateString.substring(0, 4);
         const month = dateString.substring(4, 6);
         const date = dateString.substring(6, 8);
-        return this.isYYYY_MM_DD(year + "-" + month + "-" + date);
+        return this.isYYYY_MM_DD(year + '-' + month + '-' + date);
     }
 
     static isYYYYMM(dateString: string): boolean {
@@ -50,19 +48,19 @@ export class DateUtil {
         const year = dateString.substring(0, 4);
         const month = dateString.substring(4, 6);
         const date = dateString.substring(6, 8);
-        return year + "-" + month + "-" + date;
+        return year + '-' + month + '-' + date;
     }
+
     static convert_HH_MM_To_Date(dateString: string): string {
         const merdian = dateString.substring(5, 7).toLowerCase();
         let hours = parseInt(dateString.substring(0, 2));
         const minutes = parseInt(dateString.substring(3, 5));
-        if (merdian === "pm") {
+        if (merdian === 'pm') {
             hours = hours + 12;
         }
         const currentDate = new Date();
         currentDate.setHours(hours);
         currentDate.setMinutes(minutes);
-
         return currentDate.toString();
     }
 }

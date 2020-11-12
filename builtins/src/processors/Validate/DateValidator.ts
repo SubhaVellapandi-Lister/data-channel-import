@@ -1,5 +1,5 @@
-import { DateUtil } from "./DateUtil";
-import { ValidateComparator, ValidateDateFormat } from "./Validate.interface";
+import { DateUtil } from './DateUtil';
+import { ValidateComparator, ValidateDateFormat } from './Validate.interface';
 
 export class DateValidator {
     /**
@@ -51,7 +51,7 @@ export class DateValidator {
     ): boolean {
         if (!isRequired && !inputDate && !compareDate) return true;
         // if the date format is YYYYMMDD, confirms its a validate date
-        // and convert n the YYYY-MM-DD
+        // and convert into the YYYY-MM-DD
         if (ValidateDateFormat.YYYYMMDD === dateFormat) {
             inputDate = DateUtil.convert_YYYYMMDD_To_YYYY_MM_DD(inputDate);
             compareDate = DateUtil.convert_YYYYMMDD_To_YYYY_MM_DD(compareDate);

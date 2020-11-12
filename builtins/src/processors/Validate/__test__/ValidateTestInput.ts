@@ -1,4 +1,5 @@
 import { Job, JobStatus } from "@data-channels/dcSDK";
+import { toUpper } from "lodash";
 
 import { Validate } from "../Validate";
 
@@ -20,7 +21,8 @@ export const studentCourseFileInfo = {
 };
 export const validateConfig = {
     parameters: {
-        validateConfig: {
+        multipleFileConfig: true,
+        fileValidateConfig: {
             users: {
                 columns: {
                     integration_id: {
@@ -245,7 +247,8 @@ export const validateConfig = {
 
 export const validateConfigLogExcluded = {
     parameters: {
-        validateConfig: {
+        multipleFileConfig: true,
+        fileValidateConfig: {
             users: {
                 columns: {
                     integration_id: {
@@ -317,7 +320,8 @@ export const validateConfigLogExcluded = {
 
 export const validateConfigWithLogHeaders = {
     parameters: {
-        validateConfig: {
+        multipleFileConfig: true,
+        fileValidateConfig: {
             users: {
                 columns: {
                     integration_id: {
@@ -678,7 +682,8 @@ export const sectionsDataRowWithInvalidDateFormat = {
 
 export const validateConfigWithWarning = {
     parameters: {
-        validateConfig: {
+        multipleFileConfig: true,
+        fileValidateConfig: {
             users: {
                 columns: {
                     integration_id: {

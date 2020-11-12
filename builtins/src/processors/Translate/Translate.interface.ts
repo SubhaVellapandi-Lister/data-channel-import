@@ -59,10 +59,12 @@ export enum RowType {
 
 // Interface for channel config parameters.
 export interface ITranslateParameters {
-  translateConfig: {
+  translateConfig: IFileTranslateConfig;
+  fileTranslateConfig: {
     [fileName: string]: IFileTranslateConfig;
   };
   inputFileNames?: string[];
   dynamicOutput: boolean;
   dynamicInput: boolean;
+  multipleFileConfig: boolean;
 }
