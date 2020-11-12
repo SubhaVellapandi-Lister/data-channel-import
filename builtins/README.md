@@ -67,11 +67,15 @@ Translate column names and row values from one string to another.
 | **code**                 | [Translate.ts](src/processors/Translate.ts)       |
 | **input name**           | Any input name you want, e.g. "data"              |
 | **output name**          | Input name plus "Translate", e.g. "dataTranslate" |
-| **config property name** | translateConfig , dynamicOutput, dynamicInput     |
+| **config property name** | translateConfig , fileTranslateConfig, dynamicOutput, dynamicInput,                   multipleFileConfig, inputFileNames |
 
 - `dynamicOutput` - boolean defaults to false, if true, the output files has been generated dynamically based on the input files
 
 - `dynamicInput` - boolean defaults to false, if true, creates the dynamic input files for next flow / step
+
+- `multipleFileConfig` - boolean, if false, then configuration requires `translateConfig`. If true, then configuration requires `fileTranslateConfig`, it will handle multiple configuration based on file specifications.
+
+- `inputFileNames` - Array of strings that represent the list of files to be processed.
 
 - `translateConfig` is required. Properties under translateConfig
 
@@ -85,7 +89,19 @@ Translate column names and row values from one string to another.
     - removeEmptyHeaders - boolean defaults to false, if true, then translate config should remove empty header column from in output.
     - removeUnmappedHeaders - boolean defaults to false, if true, then translate config should not remove unmapped header row based on indexMappings.
 
-Example Config
+- `fileTranslateConfig` is required. Properties under fileTranslateConfig.
+    - [fileName] - Example, if you are processing the users file, then we need to specify the `fileName` as `users`.
+      - columns - main config properties under `columns` are column names for keys, with objects as values. Each object supports the following:
+
+        - headerMappings - map one header name to another
+        - valueMappings - map values in one column from one thing to another
+        - indexMappings - map header names based on index of the header in the file, starts at index 1.
+        - saveIndexMappings - boolean defaults to false, if true, the translate processor will automatically update the channel config to save indexMappings to reflect the current order of column mappings. This should only be used when you need to support headerless csv files and the order of the columns is strictly enforced.
+        - headerlessFile - boolean defaults to false, if true, it should output a header row based on indexMappings.
+        - removeEmptyHeaders - boolean defaults to false, if true, then translate config should remove empty header column from in output.
+        - removeUnmappedHeaders - boolean defaults to false, if true, then translate config should not remove unmapped header row based on indexMappings.
+
+Example Config using translateConfig
 
 ```json
 "parameters": {
@@ -108,6 +124,32 @@ Example Config
 }
 ```
 
+Example Config using fileTranslateConfig
+
+```json
+"parameters": {
+  "fileTranslateConfig": {
+    "users":{
+      "headerMappings": {
+        "studentID": "Student_ID"
+      },
+      "valueMappings": {
+        "CTE": [
+          {
+            "toValue": "",
+            "fromValue": "N"
+          }
+        ]
+      },
+      "indexMappings": {
+        "3": "Student_Name"
+      }
+    },
+    "inputFileNames
+  }
+}
+```
+
 ### Validate
 
 Validate that column names are correct and rows contain valid values.
@@ -119,11 +161,13 @@ Validate that column names are correct and rows contain valid values.
 | **code**                 | [Validate.ts](src/processors/Validate.ts)       |
 | **input name**           | Any input name you want, e.g. "data"            |
 | **output name**          | Input name plus "Validate", e.g. "dataValidate" |
-| **config property name** | validateConfig , dynamicOutput, dynamicInput    |
+| **config property name** | validateConfig , fileValidateConfig, dynamicOutput, dynamicInput, multipleFileConfig    |
 
 - `dynamicOutput` - boolean defaults to false, if true, the output files has been generated dynamically based on the input files
 
 - `dynamicInput` - boolean defaults to false, if true, creates the dynamic input files for next flow / step
+
+- `multipleFileConfig` - boolean, if false, then configuration requires `validateConfig`. If true, then configuration requires `fileValidateConfig`, it will handle multiple configuration based on file specifications.
 
 - `validateConfig` is required. Properties under validateConfig:
 
@@ -151,9 +195,37 @@ Validate that column names are correct and rows contain valid values.
   - logHeaders - Array of string, define headers in the log file that is generated
   - extraLogFile - file name, use a separate log file, put log columns in the named file defined here
 
+- `fileValidateConfig` is required. Properties under fileValidateConfig:
+
+  - [fileName] - Example, if you are processing the sections file, then we need to specify the `fileName` as `sections`.
+
+    - columns - main config properties under `columns` are column names for keys, with objects as values. Each object supports the following:
+
+      - required - boolean, invalid if column doesn't exist
+      - validTypes - Array of valid data types, see code for all types
+      - validWithWarningTypes - Array of strings that considered valid values but with a warning
+      - validValues - Array of strings that represent valid values
+      - warnIfNotValidValue - boolean, if invalid it represents with a warning
+      - validWithWarningValues - Array of strings that considered valid values but with a warning
+      - invalidIfBlank - boolean, row is invalid if the column has a blank value
+      - warnIfBlank - boolean, if the column has a blank value it represents with a warning
+      - dateTimeFormat - date format, that considered the column has valid format, see code for all date formats [ValidateDateFormat]
+      - caseInSensitive - boolean, if true, validates the values using insensitive approach
+      - compareField - string, compare the given field in the row ( for now its supports only for datetime type. if want to validate
+        with current date , compare field would be given as `current_date`)
+      - comparator - string, comparator operations for the fields to be compare. (for now its supports only for datetime type. see code for all comparsions [ValidateComparator])
+
+    - discardInvalidRows - boolean defaults to false, throw away rows from data file if they are invalid
+    - validStatusColumnName - string default to `Validation_Status`, other hand it will update the given status column name
+    - validInfoColumnName - string default to `Validation_Info`, other hand it will update the given info column name
+    - includeDataInLog - boolean default to flase, if true, include all the data columns in addition to the log columns
+    - includeLogInData - boolean default to flase, if true, instead of separate log file, put log columns in the data file
+    - logHeaders - Array of string, define headers in the log file that is generated
+    - extraLogFile - file name, use a separate log file, put log columns in the named file defined here
+
 See [Validate.ts](src/processors/Validate.ts) code for more many more advanced config options
 
-Example Config
+Example Config using validateConfig
 
 ```json
 "parameters": {
@@ -190,6 +262,49 @@ Example Config
     "includeLogInData": false,
     "discardInvalidRows": true,
     "extraLogFile": "sectionsDataLog"
+  }
+}
+```
+
+Example Config using fileValidateConfig
+
+```json
+"parameters": {
+  "fileValidateConfig": {
+    "sections":{
+      "columns": {
+        "Status": {
+          "required": false,
+          "validValues": [
+            "Y",
+            ""
+          ]
+        },
+        "Credits": {
+          "required": true,
+          "validTypes": [
+            "decimal"
+          ],
+          "invalidIfBlank": true
+        },
+        "Coreq_ID": {
+          "required": false
+        },
+        "birth_dt": {
+          "required": true,
+          "validTypes": ["datetime"],
+          "InvalidIfBlank": false,
+          "dateTimeFormat": "YYYY-MM-DD",
+          "compareField": "current_date",
+          "comparator": "lt",
+        },
+      },
+      "discardInvalidRows": true,
+      "includeDataInLog": true,
+      "includeLogInData": false,
+      "discardInvalidRows": true,
+      "extraLogFile": "sectionsDataLog"
+    }
   }
 }
 ```
