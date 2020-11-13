@@ -1,4 +1,5 @@
 import { Job, JobStatus } from "@data-channels/dcSDK";
+import { toUpper } from "lodash";
 
 import { Validate } from "../Validate";
 
@@ -20,7 +21,8 @@ export const studentCourseFileInfo = {
 };
 export const validateConfig = {
     parameters: {
-        validateConfig: {
+        multipleFileConfig: true,
+        fileValidateConfig: {
             users: {
                 columns: {
                     integration_id: {
@@ -109,7 +111,7 @@ export const validateConfig = {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: "YYYY-MM-DD",
+                        dateTimeFormat: ["YYYY-MM-DD"],
                         compareField: "current_date",
                         comparator: "lt",
                     },
@@ -117,7 +119,7 @@ export const validateConfig = {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: "YYYY-MM-DD",
+                        dateTimeFormat: ["YYYY-MM-DD"],
                         compareField: "start_dt",
                         comparator: "gt",
                     },
@@ -170,7 +172,7 @@ export const validateConfig = {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: "YYYY-MM-DD HH:MM:SS",
+                        dateTimeFormat: ["YYYY-MM-DD HH:MM:SS"],
                     },
                     authoritative_status: {
                         required: false,
@@ -189,7 +191,7 @@ export const validateConfig = {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: "YYYYMMDD",
+                        dateTimeFormat: ["YYYYMMDD"],
                         compareField: "student_course_end_date",
                         comparator: "ltEq",
                     },
@@ -197,7 +199,7 @@ export const validateConfig = {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: "YYYYMMDD",
+                        dateTimeFormat: ["YYYYMMDD"],
                         compareField: "student_course_start_date",
                         comparator: "gtEq",
                     },
@@ -205,19 +207,19 @@ export const validateConfig = {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: "HH:MM A",
+                        dateTimeFormat: ["HH:MM A"],
                     },
                     par_student_start_date: {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: "YYYYMM",
+                        dateTimeFormat: ["YYYYMM"],
                     },
                     par_student_end_date: {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: "YYYYMMDD",
+                        dateTimeFormat: ["YYYYMMDD"],
                         compareField: "par_student_end_date",
                         comparator: "eq",
                     },
@@ -225,7 +227,7 @@ export const validateConfig = {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: "YYYY-MM-DD HH:MM:SS",
+                        dateTimeFormat: ["YYYY-MM-DD HH:MM:SS"],
                     },
                     email: {
                         required: false,
@@ -245,7 +247,8 @@ export const validateConfig = {
 
 export const validateConfigLogExcluded = {
     parameters: {
-        validateConfig: {
+        multipleFileConfig: true,
+        fileValidateConfig: {
             users: {
                 columns: {
                     integration_id: {
@@ -317,7 +320,8 @@ export const validateConfigLogExcluded = {
 
 export const validateConfigWithLogHeaders = {
     parameters: {
-        validateConfig: {
+        multipleFileConfig: true,
+        fileValidateConfig: {
             users: {
                 columns: {
                     integration_id: {
@@ -678,7 +682,8 @@ export const sectionsDataRowWithInvalidDateFormat = {
 
 export const validateConfigWithWarning = {
     parameters: {
-        validateConfig: {
+        multipleFileConfig: true,
+        fileValidateConfig: {
             users: {
                 columns: {
                     integration_id: {

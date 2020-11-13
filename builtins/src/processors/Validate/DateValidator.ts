@@ -1,5 +1,5 @@
-import { DateUtil } from "./DateUtil";
-import { ValidateComparator, ValidateDateFormat } from "./Validate.interface";
+import { DateUtil } from './DateUtil';
+import { ValidateComparator, ValidateDateFormat } from './Validate.interface';
 
 export class DateValidator {
     /**
@@ -55,6 +55,9 @@ export class DateValidator {
         if (ValidateDateFormat.YYYYMMDD === dateFormat) {
             inputDate = DateUtil.convert_YYYYMMDD_To_YYYY_MM_DD(inputDate);
             compareDate = DateUtil.convert_YYYYMMDD_To_YYYY_MM_DD(compareDate);
+        } else if (ValidateDateFormat.HH_MM_AM_PM === dateFormat) {
+            inputDate = DateUtil.convert_HH_MM_To_Date(inputDate);
+            compareDate = DateUtil.convert_HH_MM_To_Date(compareDate);
         }
         switch (compartor) {
         case ValidateComparator.Equal: {

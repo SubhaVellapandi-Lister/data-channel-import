@@ -18,7 +18,7 @@ export function getBucketDetailsFromInputFile(inputFile: IRowProcessorInput): st
 export function getFileNameFromInputFile(inputFile: IRowProcessorInput, jobOutFileExt: string): string {
     return (
     inputFile.fileInfo?.key
-      ?.match(new RegExp(`([a-zA-Z0-9_]*${inputFile.name}${jobOutFileExt})\\.csv`))?.[1]
+      ?.match(new RegExp(`([a-zA-Z0-9_]*${inputFile.name}${jobOutFileExt})\\.(csv|txt)`))?.[1]
       .replace(`${jobOutFileExt}`, "") ?? inputFile.name
     );
 }

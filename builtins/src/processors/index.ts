@@ -11,6 +11,6 @@ export * from "./SES";
 export * from "./SNS";
 export * from "./Sort";
 export * from "./ThrowError";
-export * from "./Translate";
+export * from "./Translate/Translate";
 export * from "./Validate/Validate";
 export * from "./Webhook";

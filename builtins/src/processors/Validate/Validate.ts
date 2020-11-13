@@ -19,7 +19,13 @@ import {
 
 import { DateValidator } from "./DateValidator";
 import { EmailValidator } from "./EmailValidator";
-import { ValidateDataType, ValidateStatus, IValidateParameters, IFileConfig } from "./Validate.interface";
+import {
+    ValidateDataType,
+    ValidateStatus,
+    IValidateParameters,
+    IFileConfig,
+    IFileValidateConfig,
+} from "./Validate.interface";
 
 /**
  * Validate processor obtains input files, based on config parameters
@@ -45,7 +51,11 @@ export class Validate extends BaseProcessor {
    */
   public async before_validate(input: IStepBeforeInput): Promise<void> {
       this.config = input.parameters as IValidateParameters;
-      if (!this.config?.validateConfig || this.config?.validateConfig === {}) {
+      if (this.config.multipleFileConfig) {
+          if (!this.config?.fileValidateConfig || this.config?.fileValidateConfig === {}) {
+              throw new Error("Missing fileValidateConfig in Validate-Builtin");
+          }
+      } else if (!this.config.multipleFileConfig && !this.config?.validateConfig) {
           throw new Error("Missing validateConfig in Validate-Builtin");
       }
       this.currentStep = this.job.currentStep ?? "";
@@ -65,14 +75,19 @@ export class Validate extends BaseProcessor {
       if (this.config!.dynamicOutput) {
           inputFileName = getFileNameFromInputFile(input, this.jobOutFileExtension);
       }
-      const statusName = this.config.validateConfig[input.name].validStatusColumnName || "Validation_Status";
-      const infoName = this.config.validateConfig[input.name].validInfoColumnName || "Validation_Info";
+      let updateConfig: string[] | IFileValidateConfig = this.config.validateConfig;
+
+      if (this.config!.multipleFileConfig) {
+          updateConfig = this.config.fileValidateConfig[input.name] as IFileValidateConfig;
+      }
+      const statusName = updateConfig.validStatusColumnName || "Validation_Status";
+      const infoName = updateConfig.validInfoColumnName || "Validation_Info";
       const dataOutputName = `${inputFileName}${this.currentStep}`;
-      const needExtraLogFile = this.config.validateConfig[input.name].extraLogFile;
-      const needLogHeaders = this.config.validateConfig[input.name].logHeaders;
+      const needExtraLogFile = updateConfig.extraLogFile;
+      const needLogHeaders = updateConfig.logHeaders;
       const logNames: string[] = [];
 
-      if (!this.config.validateConfig[input.name].includeLogInData) {
+      if (!updateConfig.includeLogInData) {
           logNames.push("log");
       }
 
@@ -84,7 +99,7 @@ export class Validate extends BaseProcessor {
           await this.createDynamicInputOutput(inputFileName, input);
           this.dataFileHeaders = [...input.raw];
           // Add columns statusName and infoName to file headers to track validation status
-          if (this.config.validateConfig[input.name].includeLogInData) {
+          if (updateConfig.includeLogInData) {
               this.dataFileHeaders = [...this.dataFileHeaders, statusName, infoName];
           } else if (needLogHeaders) {
               this.logFileHeaders = needLogHeaders;
@@ -97,7 +112,7 @@ export class Validate extends BaseProcessor {
               if (!this.logFileHeaders.includes(infoName)) {
                   this.logFileHeaders.push(infoName);
               }
-          } else if (this.config.validateConfig[input.name].includeDataInLog) {
+          } else if (updateConfig.includeDataInLog) {
               this.logFileHeaders = ["Row", ...this.dataFileHeaders, statusName, infoName];
           } else {
               this.logFileHeaders = ["Row", this.dataFileHeaders[0], statusName, infoName];
@@ -118,7 +133,7 @@ export class Validate extends BaseProcessor {
       const validationErrors: string[] = [];
       let validationStatus = ValidateStatus.Valid;
       // evaluating each object entry for the required status and check for valdiation status by using the configs
-      for (const [columnName, columnConfig] of Object.entries(this.config.validateConfig[input.name].columns)) {
+      for (const [columnName, columnConfig] of Object.entries(updateConfig.columns)) {
           const data = getKeyValueCaseInsensitive(input.data, columnName);
           // eslint-disable-next-line no-undefined
           if (data === undefined) {
@@ -186,10 +201,10 @@ export class Validate extends BaseProcessor {
 
       const outputs: { [name: string]: RowOutputValue } = {};
 
-      if (validationStatus !== ValidateStatus.Invalid || !this.config.validateConfig[input.name].discardInvalidRows) {
+      if (validationStatus !== ValidateStatus.Invalid || !updateConfig.discardInvalidRows) {
       // write data output
           let dataOutputRow = input.raw;
-          if (this.config.validateConfig[input.name].includeLogInData) {
+          if (updateConfig.includeLogInData) {
               dataOutputRow = [...dataOutputRow, validationStatus, validationErrors.join("; ")];
           }
           outputs[dataOutputName] = dataOutputRow;
@@ -262,23 +277,7 @@ export class Validate extends BaseProcessor {
           if (columnConfig.dateTimeFormat === null && !isNaN(Date.parse(data))) {
               hasValidType = true;
           }
-          if (
-              columnConfig.dateTimeFormat !== null &&
-          this.dateValidator.validateDateFormat(data, columnConfig.required!, columnConfig.dateTimeFormat!)
-          ) {
-              if (compareData.length > 0 && columnConfig.comparator) {
-                  hasValidType = this.dateValidator.validateDateComparsion(
-                      data,
-                      compareData,
-                      columnConfig.comparator,
-              columnConfig.required!,
-              columnConfig.dateTimeFormat!
-                  );
-
-                  break;
-              }
-              hasValidType = true;
-          }
+          hasValidType = this.validateDateFormat(columnConfig, data, compareData, hasValidType);
           break;
       }
       // eslint-disable-next-line no-fallthrough
@@ -351,5 +350,43 @@ export class Validate extends BaseProcessor {
           compareData = input.data[columnConfig.compareField];
       }
       return compareData;
+  }
+  /**
+   * This method used to validate the date format list for the given data
+   * @param inputData
+   * @param compareData
+   * @param columnConfig
+   * @param hasValidFormat
+   * @returns boolean
+   */
+  private validateDateFormat(
+      columnConfig: IFileConfig,
+      inputData: string,
+      compareData: string,
+      hasValidFormat: boolean
+  ): boolean {
+      for (const dateTimeFormat of columnConfig.dateTimeFormat ?? []) {
+          if (
+              columnConfig.dateTimeFormat !== null &&
+        this.dateValidator.validateDateFormat(inputData, columnConfig.required!, dateTimeFormat)
+          ) {
+              if (compareData.length > 0 && columnConfig.comparator) {
+                  hasValidFormat = this.dateValidator.validateDateComparsion(
+                      inputData,
+                      compareData,
+                      columnConfig.comparator,
+            columnConfig.required!,
+            dateTimeFormat
+                  );
+
+                  break;
+              }
+              hasValidFormat = true;
+          }
+          if (hasValidFormat) {
+              break;
+          }
+      }
+      return hasValidFormat;
   }
 }

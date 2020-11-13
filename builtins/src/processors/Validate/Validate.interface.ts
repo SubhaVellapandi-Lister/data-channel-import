@@ -42,14 +42,14 @@ export interface IFileConfig {
   validWithWarningValues?: any[]; // if value is one of these, it's considered valid, but with a warning
   invalidIfBlank?: boolean; // invalid if the row has a blank value
   warnIfBlank?: boolean; // just a warning if row has a blank value
-  dateTimeFormat?: ValidateDateFormat; // use a valid datetime format to process starfish file columns like yyyy-mm-dd and yyyy-mm-dd hh:mm:ss
+  dateTimeFormat?: ValidateDateFormat[]; // use a valid datetime format to process starfish file columns like yyyy-mm-dd and yyyy-mm-dd hh:mm:ss
   caseInSensitive?: boolean; // set true to use case insensitive approach for performing validation
   compareField?: string; // compare the column with the given column name or current_date
   comparator?: ValidateComparator; // comparator operations
 }
 
 // Interface for validate configs
-export interface IValidateConfig {
+export interface IFileValidateConfig {
   columns: {
     [name: string]: IFileConfig;
   };
@@ -62,11 +62,34 @@ export interface IValidateConfig {
   extraLogFile?: string; // use a separate log file, put log columns in the named file defined here
 }
 
+export interface IValidateConfig {
+  columns: {
+    [name: string]: {
+      required?: boolean; // invalid if column doesn't exist
+      validTypes?: ValidateDataType[]; // list of valid types, if not one of these it's invalid
+      validWithWarningTypes?: ValidateDataType[]; // if one of these, considered valid, but with a warning
+      validValues?: any[]; // if value is not one of these, it's invalid
+      warnIfNotValidValue?: boolean; // if invalid, it's just a warning, not an error
+      validWithWarningValues?: any[]; // if value is one of these, it's considered valid, but with a warning
+      invalidIfBlank?: boolean; // invalid if the row has a blank value
+      warnIfBlank?: boolean; // just a warning if row has a blank value
+    };
+  };
+  discardInvalidRows?: boolean; // throw away rows from data file if they are invalid
+  validStatusColumnName?: string; // log validation status column name
+  validInfoColumnName?: string; // log informational message column name
+  includeDataInLog?: boolean; // let log include all the data columns in addition to the log columns
+  includeLogInData?: boolean; // instead of separate log file, put log columns in the data file
+  logHeaders?: string[];
+  extraLogFile?: string;
+}
 // Interface for channel config parameters.
 export interface IValidateParameters {
-  validateConfig: {
-    [fileName: string]: IValidateConfig;
+  validateConfig: IFileValidateConfig;
+  fileValidateConfig: {
+    [fileName: string]: IFileValidateConfig;
   };
   dynamicOutput: boolean;
   dynamicInput: boolean;
+  multipleFileConfig: boolean;
 }
