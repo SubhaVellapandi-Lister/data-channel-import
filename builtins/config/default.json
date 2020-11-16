@@ -5,6 +5,12 @@
         "permissionBoundary": "tf-iam-permission-boundary",
         "functionName": "ss-data-channels-BuiltInProcessor-${environment}",
         "stackName": "ss-data-channels-builtins-${environment}",
+        "efs": {
+            "mountPath": "",
+            "securityGroupId": "",
+            "vpcId": "",
+            "fileSystemId" : ""
+        },
         "permissions": {
             "snsPublish": true,
             "sesSend": true,
