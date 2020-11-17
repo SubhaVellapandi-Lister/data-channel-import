@@ -3,6 +3,10 @@
     "cdk": {
         "environment": "platsandbox1",
         "functionName": "ss-data-channels-BuiltInProcessor",
-        "stackName": "ss-data-channels-builtins"
+        "stackName": "ss-data-channels-builtins",
+        "synthesizer": {
+            "legacy": false,
+            "rolePrefix": "ss-"
+        }
     }
 }

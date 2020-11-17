@@ -10,6 +10,9 @@
             "sesSend": true,
             "athenaGlue": true,
             "athenaWorkGroup": "primary"
+        },
+        "synthesizer": {
+            "legacy": true
         }
     }
 }
