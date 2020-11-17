@@ -41,6 +41,7 @@ export class Translate extends BaseProcessor {
   private dynamicOutput: boolean = false;
   private multipleFileConfig: boolean = false;
   private updatedConfig!: IFileTranslateConfig;
+  private dataOutputName: string = "";
   /**
    * We can perform our operations before processing a file.
    * We fetch the Input parameters from the channel config
@@ -98,7 +99,7 @@ export class Translate extends BaseProcessor {
           throw new Error(`Failed to validate translate processor missing input file named ${inputName}.`);
       }
       this.currentRow = raw;
-
+      this.dataOutputName = `${inputFileName}${this.currentStep}d`;
       // index = 1 determines the row header & new file entry
       if (index === 1) {
           if (this.multipleFileConfig) {
@@ -111,7 +112,7 @@ export class Translate extends BaseProcessor {
           if (this.config === null) {
               throw new Error("Missing translateConfig in Translate-Builtin");
           }
-          await this.createDynamicInputOutput(inputFileName, input);
+          await this.createDynamicInputOutput(input);
           this.originalHeaders = this.currentRow;
           this.newHeaders = this.originalHeaders.map((h, i) => this.mappedHeader(h, i + 1));
           if (
@@ -127,18 +128,18 @@ export class Translate extends BaseProcessor {
           }
 
           if (this.updatedConfig.headerlessFile) {
-              await this.checkHeaderRow(inputFileName);
+              await this.checkHeaderRow();
 
               return {
                   index: index,
                   outputs: {
-                      [`${inputFileName}${this.currentStep}d`]: this.currentRow,
+                      [`${this.dataOutputName}`]: this.currentRow,
                   },
               };
           }
           return {
               index: index,
-              outputs: { [`${inputFileName}${this.currentStep}d`]: this.newHeaders },
+              outputs: { [`${this.dataOutputName}`]: this.newHeaders },
           };
       }
       if (
@@ -153,7 +154,7 @@ export class Translate extends BaseProcessor {
       if (this.updatedConfig.valueMappings === null || this.updatedConfig.valueMappings === undefined) {
           return {
               index: index,
-              outputs: { [`${inputFileName}${this.currentStep}d`]: this.currentRow },
+              outputs: { [`${this.dataOutputName}`]: this.currentRow },
           };
       }
       const fileValueMappingConfig = this.updatedConfig.valueMappings;
@@ -175,7 +176,7 @@ export class Translate extends BaseProcessor {
 
       return {
           index: index,
-          outputs: { [`${inputFileName}${this.currentStep}d`]: newRow },
+          outputs: { [`${this.dataOutputName}`]: newRow },
       };
   }
 
@@ -207,9 +208,8 @@ export class Translate extends BaseProcessor {
    * This method will be called only row header of the headerlessFile entry.
    * It will insert the header row using the column indexMappings provided
    * in the translate config.
-   * @param inputFileName string
    */
-  private async checkHeaderRow(inputFileName: string): Promise<void> {
+  private async checkHeaderRow(): Promise<void> {
       if (this.updatedConfig.indexMappings === undefined || null) {
           throw new Error("Headerless files must have indexMappings");
       }
@@ -222,7 +222,7 @@ export class Translate extends BaseProcessor {
 
       // @ts-ignore
       this._outputStreams.writeOutputValues({
-          [`${inputFileName}${this.currentStep}d`]: sortedCols,
+          [`${this.dataOutputName}`]: sortedCols,
       });
   }
 
@@ -299,17 +299,16 @@ export class Translate extends BaseProcessor {
   /**
    * This method is used to create dynamic input and output based
    * on the configs in the parameter
-   * @param inputFileName
    * @param input
    */
-  private async createDynamicInputOutput(inputFileName: string, input: IRowProcessorInput): Promise<void> {
+  private async createDynamicInputOutput(input: IRowProcessorInput): Promise<void> {
       if (this.dynamicOutput) {
           await this.createOutput({
-              name: `${inputFileName}${this.currentStep}d`,
+              name: `${this.dataOutputName}`,
               details: {
-                  name: `${inputFileName}${this.currentStep}d`,
+                  name: `${this.dataOutputName}`,
                   s3: {
-                      key: `${getFilePathFromInputFile(input)}${inputFileName}${this.currentStep}d.csv`,
+                      key: `${getFilePathFromInputFile(input)}${this.dataOutputName}.csv`,
                       bucket: `${getBucketDetailsFromInputFile(input)}`,
                   },
               },
@@ -317,7 +316,7 @@ export class Translate extends BaseProcessor {
       }
       if (this.dynamicInput && this.nextStep.length > 0) {
           await this.createInput({
-              name: `${inputFileName}${this.currentStep}d->${this.fileToTranslate}`,
+              name: `${this.dataOutputName}->${this.fileToTranslate}`,
               step: `${this.nextStep}`,
           });
       }
