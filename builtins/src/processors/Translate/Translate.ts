@@ -1,5 +1,3 @@
-import { threadId } from "worker_threads";
-
 import {
     BaseProcessor,
     ChannelConfig,
@@ -133,20 +131,14 @@ export class Translate extends BaseProcessor {
 
               return {
                   index: index,
-                  outputs: { [`${inputFileName}${this.currentStep}`]: this.currentRow },
+                  outputs: {
+                      [`${inputFileName}${this.currentStep}d`]: this.currentRow,
+                  },
               };
           }
           return {
               index: index,
-              outputs: { [`${inputFileName}${this.currentStep}`]: this.newHeaders },
-          };
-      }
-      if (this.updatedConfig.valueMappings === undefined && this.updatedConfig.valueMappings === null) {
-          return {
-              index: index,
-              outputs: {
-                  [`${inputFileName}${this.currentStep}`]: this.currentRow,
-              },
+              outputs: { [`${inputFileName}${this.currentStep}d`]: this.newHeaders },
           };
       }
       if (
@@ -157,10 +149,11 @@ export class Translate extends BaseProcessor {
       ) {
           await this.removeEmptyColumn(RowType.ROW);
       }
-      if (this.updatedConfig.valueMappings === null) {
+      // eslint-disable-next-line no-undefined
+      if (this.updatedConfig.valueMappings === null || this.updatedConfig.valueMappings === undefined) {
           return {
               index: index,
-              outputs: { [`${inputFileName}${this.currentStep}`]: this.currentRow },
+              outputs: { [`${inputFileName}${this.currentStep}d`]: this.currentRow },
           };
       }
       const fileValueMappingConfig = this.updatedConfig.valueMappings;
@@ -182,7 +175,7 @@ export class Translate extends BaseProcessor {
 
       return {
           index: index,
-          outputs: { [`${inputFileName}${this.currentStep}`]: newRow },
+          outputs: { [`${inputFileName}${this.currentStep}d`]: newRow },
       };
   }
 
@@ -229,7 +222,7 @@ export class Translate extends BaseProcessor {
 
       // @ts-ignore
       this._outputStreams.writeOutputValues({
-          [`${inputFileName}${this.currentStep}`]: sortedCols,
+          [`${inputFileName}${this.currentStep}d`]: sortedCols,
       });
   }
 
@@ -312,11 +305,11 @@ export class Translate extends BaseProcessor {
   private async createDynamicInputOutput(inputFileName: string, input: IRowProcessorInput): Promise<void> {
       if (this.dynamicOutput) {
           await this.createOutput({
-              name: `${inputFileName}${this.currentStep}`,
+              name: `${inputFileName}${this.currentStep}d`,
               details: {
-                  name: `${inputFileName}${this.currentStep}`,
+                  name: `${inputFileName}${this.currentStep}d`,
                   s3: {
-                      key: `${getFilePathFromInputFile(input)}${inputFileName}${this.currentStep}.csv`,
+                      key: `${getFilePathFromInputFile(input)}${inputFileName}${this.currentStep}d.csv`,
                       bucket: `${getBucketDetailsFromInputFile(input)}`,
                   },
               },
@@ -324,7 +317,7 @@ export class Translate extends BaseProcessor {
       }
       if (this.dynamicInput && this.nextStep.length > 0) {
           await this.createInput({
-              name: `${inputFileName}${this.currentStep}->${this.fileToTranslate}`,
+              name: `${inputFileName}${this.currentStep}d->${this.fileToTranslate}`,
               step: `${this.nextStep}`,
           });
       }
