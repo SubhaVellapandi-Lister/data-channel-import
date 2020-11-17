@@ -82,7 +82,7 @@ export class Validate extends BaseProcessor {
       }
       const statusName = updateConfig.validStatusColumnName || "Validation_Status";
       const infoName = updateConfig.validInfoColumnName || "Validation_Info";
-      const dataOutputName = `${inputFileName}${this.currentStep}`;
+      const dataOutputName = `${inputFileName}${this.currentStep}d`;
       const needExtraLogFile = updateConfig.extraLogFile;
       const needLogHeaders = updateConfig.logHeaders;
       const logNames: string[] = [];
@@ -274,8 +274,12 @@ export class Validate extends BaseProcessor {
           break;
       }
       case ValidateDataType.Datetime: {
-          if (columnConfig.dateTimeFormat === null && !isNaN(Date.parse(data))) {
+          if (
+              (columnConfig.dateTimeFormat === undefined || columnConfig.dateTimeFormat === null) &&
+          !isNaN(Date.parse(data))
+          ) {
               hasValidType = true;
+              break;
           }
           hasValidType = this.validateDateFormat(columnConfig, data, compareData, hasValidType);
           break;
@@ -319,11 +323,11 @@ export class Validate extends BaseProcessor {
   private async createDynamicInputOutput(inputFileName: string, input: IRowProcessorInput): Promise<void> {
       if (this.config!.dynamicOutput) {
           await this.createOutput({
-              name: `${inputFileName}${this.currentStep}`,
+              name: `${inputFileName}${this.currentStep}d`,
               details: {
-                  name: `${inputFileName}${this.currentStep}`,
+                  name: `${inputFileName}${this.currentStep}d`,
                   s3: {
-                      key: `${getFilePathFromInputFile(input)}${inputFileName}${this.currentStep}.csv`,
+                      key: `${getFilePathFromInputFile(input)}${inputFileName}${this.currentStep}d.csv`,
                       bucket: `${getBucketDetailsFromInputFile(input)}`,
                   },
               },
@@ -331,7 +335,7 @@ export class Validate extends BaseProcessor {
       }
       if (this.config!.dynamicInput && this.nextStep) {
           await this.createInput({
-              name: `${inputFileName}${this.currentStep}->${input.name}`,
+              name: `${inputFileName}${this.currentStep}d->${input.name}`,
               step: `${this.nextStep}`,
           });
       }

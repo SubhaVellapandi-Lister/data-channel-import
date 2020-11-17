@@ -34,7 +34,7 @@ describe("ValidateProcessor", () => {
         expect(result).toEqual({
             error: true,
             outputs: {
-                usersValidate: [
+                usersValidated: [
                     "Yolanda.Gold",
                     "goldnew",
                     "yolandanew",
@@ -96,7 +96,7 @@ describe("ValidateProcessor", () => {
                     "valid",
                     "",
                 ],
-                usersValidate: [
+                usersValidated: [
                     "Yolanda.Gold",
                     "goldnew",
                     "yolandanew",
@@ -145,7 +145,7 @@ describe("ValidateProcessor", () => {
         expect(result).toEqual({
             error: false,
             outputs: {
-                sectionsValidate: [
+                sectionsValidated: [
                     "UNIV-SRF101-602-202002",
                     "Canvas Course",
                     "UNIV-SRF101-602-202002",
@@ -171,7 +171,7 @@ describe("ValidateProcessor", () => {
         expect(result).toEqual({
             error: false,
             outputs: {
-                enrollmentValidate: [
+                enrollmentValidated: [
                     "UNIV-SRF101-602-202002",
                     "Yolanda.Gold",
                     "INSTRUCTOR",
@@ -196,7 +196,7 @@ describe("ValidateProcessor", () => {
         expect(result).toEqual({
             error: true,
             outputs: {
-                sectionsValidate: [
+                sectionsValidated: [
                     "UNIV-SRF101-602-202002",
                     "Canvas Course",
                     "UNIV-SRF101-602-202002",
@@ -223,7 +223,7 @@ describe("ValidateProcessor", () => {
             error: false,
             outputs: {
                 log: ["2", "Yolanda.Gold", "valid", ""],
-                usersValidate: [
+                usersValidated: [
                     "Yolanda.Gold",
                     "goldnew",
                     "yolandanew",
@@ -256,7 +256,7 @@ describe("ValidateProcessor", () => {
         expect(result).toEqual({
             error: true,
             outputs: {
-                usersValidate: [
+                usersValidated: [
                     "goldnew",
                     "yolandanew",
                     "testusernew@gmail.com",
@@ -280,7 +280,7 @@ describe("ValidateProcessor", () => {
         expect(result).toEqual({
             error: false,
             outputs: {
-                usersValidate: [
+                usersValidated: [
                     "Yolanda.Gold",
                     "goldnew",
                     "yolandanew",
@@ -305,7 +305,7 @@ describe("ValidateProcessor", () => {
         expect(result).toEqual({
             error: false,
             outputs: {
-                usersValidate: [
+                usersValidated: [
                     "ygold",
                     "goldnew",
                     "yolandanew",
@@ -331,7 +331,7 @@ describe("ValidateProcessor", () => {
         expect(result).toEqual({
             error: false,
             outputs: {
-                studentCourseValidate: [
+                studentCourseValidated: [
                     "100001",
                     "UNIV-SRF101-602-202002",
                     "20200810",
@@ -357,7 +357,7 @@ describe("ValidateProcessor", () => {
         expect(result).toEqual({
             error: true,
             outputs: {
-                studentCourseValidate: [
+                studentCourseValidated: [
                     "100001",
                     "UNIV-SRF101-602-202002",
                     "202810",
@@ -384,7 +384,7 @@ describe("ValidateProcessor", () => {
         expect(result).toEqual({
             error: true,
             outputs: {
-                studentCourseValidate: [
+                studentCourseValidated: [
                     "100001",
                     "UNIV-SRF101-602-202002",
                     "20200810",
