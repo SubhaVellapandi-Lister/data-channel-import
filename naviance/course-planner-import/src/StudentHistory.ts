@@ -278,11 +278,18 @@ export class StudentHistory {
         }
 
         if (foundStudent) {
-            record.studentId = foundStudent.id.toString();
-            record.schoolId = foundStudent.highschoolId;
+            if (foundStudent.id) {
+                console.log(`Overwriting studentId from sisId ${record.studentId} to ${foundStudent.id} `);
+                record.studentId = foundStudent.id.toString();
+            }
+            if (foundStudent.highschoolId && !record.schoolId) {
+                record.schoolId = foundStudent.highschoolId;
+                console.log(`Attaching schoolId ${foundStudent.highschoolId} to sisId ${record.studentId}`);
+            }
+            // original is returned as well as maybe attached highschoolId
         } else {
             this.errorCount += 1;
-            console.log(`Student info not found for ${record.studentId}`);
+            console.log(`Student info not found for sisId ${record.studentId}`);
 
             return null;
         }
@@ -307,19 +314,19 @@ export class StudentHistory {
             // process history records
             let records = StudentHistory.parseHistoryRow(input.data);
 
-            const isMigration = input.data['JSON_OBJECT'] !== undefined && records.length === 1;
-
-            if (!isMigration) {
-                // have to lookup naviance student IDs for each record
-                const recordsWithFoundStudents: IHistoryRow[] = [];
-                for (const record of records) {
-                    const resultRec = this.attachStudentInfo(record);
-                    if (resultRec) {
-                        recordsWithFoundStudents.push(resultRec);
-                    }
+            // have to lookup naviance student IDs for each record
+            const recordsWithFoundStudents: IHistoryRow[] = [];
+            for (const record of records) {
+                const resultRec = this.attachStudentInfo(record);
+                if (resultRec) {
+                    recordsWithFoundStudents.push(resultRec);
                 }
-                records = recordsWithFoundStudents;
             }
+            if (records.length > 0) {
+                console.log(`first history record ${JSON.stringify(records[0])}`);
+            }
+
+            records = recordsWithFoundStudents;
 
             for (const record of records) {
                 if (!this.historyStudentId.length) {
