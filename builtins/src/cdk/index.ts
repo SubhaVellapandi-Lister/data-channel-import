@@ -1,3 +1,5 @@
+import ec2 = require('@aws-cdk/aws-ec2');
+import efs = require('@aws-cdk/aws-efs');
 import iam = require('@aws-cdk/aws-iam');
 import lambda = require('@aws-cdk/aws-lambda');
 import cdk = require('@aws-cdk/core');
@@ -13,6 +15,11 @@ const sesSend = config.get<boolean>('cdk.permissions.sesSend');
 const athenaGlue = config.get<boolean>('cdk.permissions.athenaGlue');
 const athenaWorkGroup = config.get<string>('cdk.permissions.athenaWorkGroup');
 
+const fileSystemId = config.get<string>('cdk.efs.fileSystemId');
+const securityGroupId = config.get<string>('cdk.efs.securityGroupId');
+const vpcId = config.get<string>('cdk.efs.vpcId');
+const mountPath = config.get<string>('cdk.efs.mountPath');
+
 if (functionName.includes('${environment}')) {
     functionName = functionName.replace('${environment}', environment);
 }
@@ -25,18 +32,76 @@ export class BuiltinsLambdaStack extends cdk.Stack {
     constructor(scope: cdk.App, id: string, props: cdk.StackProps) {
         super(scope, id, props);
 
-        const builtins = new lambda.Function(this, 'ss-dc-Builtins', {
-            functionName,
-            runtime: lambda.Runtime.NODEJS_12_X,
-            handler: 'dist/index.builtInHandler',
-            code: lambda.Code.asset('./data-channels-builtin-processors.zip'),
-            memorySize: 3000,
-            timeout: cdk.Duration.seconds(900),
+        let vpc!: ec2.IVpc
+        let securityGroup!: ec2.ISecurityGroup
+        let accessPoint!: efs.AccessPoint
+        let fileSystem!: lambda.FileSystem
 
-            environment: {
-                AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
-            }
-        });
+        let efsUsageRole!: iam.PolicyStatement
+
+        if (fileSystemId) {
+            vpc = ec2.Vpc.fromLookup(this, vpcId, { vpcId });
+            securityGroup = ec2.SecurityGroup.fromSecurityGroupId(this, 'ss-dc-sg', securityGroupId)
+            accessPoint = new efs.AccessPoint(this, "ap", {
+                fileSystem: efs.FileSystem.fromFileSystemAttributes(this, 'ss-dc-efs', {
+                    fileSystemId: fileSystemId,
+                    securityGroup: securityGroup
+                }),
+                createAcl: { ownerGid: "1000", ownerUid: "1000", permissions: "777" },
+                posixUser: { uid: "1000", gid: "1000" },
+                path: mountPath
+            });
+
+            fileSystem = lambda.FileSystem.fromEfsAccessPoint(
+                accessPoint,
+                mountPath
+            )
+
+            efsUsageRole = new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    "elasticfilesystem:ClientMount",
+                    "elasticfilesystem:ClientRootAccess",
+                    "elasticfilesystem:ClientWrite",
+                    "elasticfilesystem:DescribeMountTargets"
+                ],
+                resources: [accessPoint.accessPointArn]
+            })
+        }
+
+        let builtins: lambda.Function
+        if (accessPoint && efsUsageRole) {
+            builtins = new lambda.Function(this, 'ss-dc-Builtins', {
+                functionName,
+                runtime: lambda.Runtime.NODEJS_12_X,
+                handler: 'dist/index.builtInHandler',
+                code: lambda.Code.fromAsset('./data-channels-builtin-processors.zip'),
+                memorySize: 3000,
+                timeout: cdk.Duration.seconds(900),
+                vpc: vpc,
+                securityGroups: [securityGroup],
+                vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE, onePerAz: true },
+                filesystem: fileSystem,
+                environment: {
+                    AWS_EFS_PATH: mountPath,
+                    AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
+                }
+            });
+
+            builtins.addToRolePolicy(efsUsageRole);
+        } else {
+            builtins = new lambda.Function(this, 'ss-dc-Builtins', {
+                functionName,
+                runtime: lambda.Runtime.NODEJS_12_X,
+                handler: 'dist/index.builtInHandler',
+                code: lambda.Code.fromAsset('./data-channels-builtin-processors.zip'),
+                memorySize: 3000,
+                timeout: cdk.Duration.seconds(900),
+                environment: {
+                    AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
+                }
+            });
+        }
 
         builtins.addToRolePolicy(new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,

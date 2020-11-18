@@ -3,6 +3,12 @@
     "cdk": {
         "environment": "platsandbox1",
         "functionName": "ss-data-channels-BuiltInProcessor",
-        "stackName": "ss-data-channels-builtins"
+        "stackName": "ss-data-channels-builtins",
+        "efs": {
+            "mountPath": "/mnt/efs",
+            "securityGroupId": "sg-0360472b61e533fe4",
+            "vpcId": "vpc-0b0a8b26f8aedac6f",
+            "fileSystemId" : "fs-d5b86420"
+        }
     }
 }
