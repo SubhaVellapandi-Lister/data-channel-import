@@ -10,7 +10,7 @@ export class PermissionsBoundary implements cdk.IAspect {
   }
 
   public visit(node: cdk.IConstruct): void {
-      if (node instanceof iam.Role) {
+      if (node.node.id === 'Role') {
           const roleResource = node.node.findChild('Resource') as iam.CfnRole;
           roleResource.addPropertyOverride('PermissionsBoundary', this.permissionsBoundaryArn);
       }
@@ -21,13 +21,14 @@ export function tagAppStack(appStack: cdk.Stack): void {
     const environment = config.get<string>('cdk.environment');
     const productLine = config.get<string>('cdk.productLine');
     const productComponent = config.get<string>('cdk.productComponent');
-    const permissionBoundary = config.get<string>('cdk.permissionBoundary');
+    const permissionBoundary = config.get<string>('cdk.permissionBoundaryArn');
 
     if (permissionBoundary) {
         const permissionBoundaryArn = permissionBoundary.startsWith('arn') ?
             permissionBoundary : `arn:aws:iam::${process.env.CDK_DEFAULT_ACCOUNT}:policy/${permissionBoundary}`;
-        appStack.node.applyAspect(
-            new PermissionsBoundary(permissionBoundaryArn));
+        cdk.Aspects.of(appStack).add(new PermissionsBoundary(permissionBoundaryArn));
+       /*     appStack.node.applyAspect(
+            new PermissionsBoundary(permissionBoundaryArn)); */
     }
 
     cdk.Tags.of(appStack).add('ProductLine', `${productLine}`);

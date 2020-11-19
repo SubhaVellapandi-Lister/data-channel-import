@@ -25,12 +25,14 @@ import { BuiltinsLambdaPipelineStack } from './pipeline';
 
 const app = new App();
 
-new BuiltinsLambdaPipelineStack(app, 'ss-data-channels-builtins-pipeline', {
+const pipelineStack = new BuiltinsLambdaPipelineStack(app, 'ss-data-channels-builtins-pipeline', {
     synthesizer,
     env: {
         region: process.env.CDK_DEFAULT_REGION,
         account: process.env.CDK_DEFAULT_ACCOUNT,
     }
 });
+
+tagAppStack(pipelineStack);
 
 app.synth();

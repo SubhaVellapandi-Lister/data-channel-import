@@ -7,6 +7,7 @@
         "synthesizer": {
             "legacy": false,
             "rolePrefix": "ss-"
-        }
+        },
+        "permissionBoundaryArn": "arn:aws:iam::701991169879:policy/tf-iam-permission-boundary"
     }
 }
