@@ -213,6 +213,7 @@ export class SecurityScan extends BaseProcessor {
             const fileUrl = this.job.workspace!.fileUrls![`${inputName}_READ`];
             const params = new URLSearchParams();
             params.append('location', fileUrl);
+            console.log(this.config.scaniiApiKey);
             const resp = await fetch(`${SCANII_URL}/fetch`, {
                 headers: { Authorization: `Basic ${this.config.scaniiApiKey}` },
                 method: 'POST',
@@ -220,7 +221,7 @@ export class SecurityScan extends BaseProcessor {
             });
             if (resp.status < 400) {
                 const body = await resp.json();
-                console.log(`Scanii response body`, body);
+                console.log(`Scanii response`, resp.status, body);
                 results[inputName] = body['id'];
             } else {
                 console.log(`Scanii fetch call failure`, resp.status, resp.statusText);
