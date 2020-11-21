@@ -220,6 +220,7 @@ export class SecurityScan extends BaseProcessor {
             });
             if (resp.status < 400) {
                 const body = await resp.json();
+                console.log(`Scanii response body`, body);
                 results[inputName] = body['id'];
             } else {
                 console.log(`Scanii fetch call failure`, resp.status, resp.statusText);
