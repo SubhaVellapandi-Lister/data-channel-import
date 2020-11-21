@@ -213,7 +213,8 @@ export class SecurityScan extends BaseProcessor {
             const fileUrl = this.job.workspace!.fileUrls![`${inputName}_READ`];
             const params = new URLSearchParams();
             params.append('location', fileUrl);
-            console.log(this.config.scaniiApiKey);
+            console.log(this.job.workspace!.fileUrls);
+            console.log(params)
             const resp = await fetch(`${SCANII_URL}/fetch`, {
                 headers: { Authorization: `Basic ${this.config.scaniiApiKey}` },
                 method: 'POST',
