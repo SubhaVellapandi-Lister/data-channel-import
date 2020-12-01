@@ -1,3 +1,4 @@
+export const pythonScriptAsString = `
 import sys
 from awsglue.transforms import *
 from awsglue.utils import getResolvedOptions
@@ -57,4 +58,4 @@ datasink = glueContext.write_dynamic_frame.from_options(
     format = target_format
 )
 
-job.commit()
+job.commit()`

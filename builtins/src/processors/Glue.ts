@@ -1,4 +1,3 @@
-import { readFileSync } from "fs";
 import { Readable } from "stream";
 
 import {
@@ -14,6 +13,7 @@ import {
 import AWS from "aws-sdk";
 import parse from "csv-parse";
 
+import { pythonScriptAsString } from '../glueetl/glueSparkDefault'
 import { sleep } from "../utils";
 
 export interface IGlueConfig {
@@ -135,10 +135,9 @@ export class Glue extends BaseProcessor {
 
         if (!scriptLocation) {
             const scriptKey = `workspace/glue/scripts/${this.job.guid}-${name}.py`;
-            const scriptAsString = readFileSync('glueetl/glueSparkDefault.py').toString();
 
             console.log(`Creating script at ${scriptKey}`);
-            await s3Writeable(this.job.workspace?.bucket!, scriptKey, Readable.from([scriptAsString]));
+            await s3Writeable(this.job.workspace?.bucket!, scriptKey, Readable.from([pythonScriptAsString]));
             scriptLocation = `s3://${this.job.workspace?.bucket!}/${scriptKey}`;
         }
 
