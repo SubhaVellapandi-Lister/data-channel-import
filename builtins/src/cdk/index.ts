@@ -69,15 +69,19 @@ export class BuiltinsLambdaStack extends cdk.Stack {
             })
         }
 
+        const builtinsProps = {
+            functionName,
+            handler: 'index.builtInHandler',
+            code: new lambda.AssetCode(`${__dirname}/../../lambda/ss-dc-Builtins`),
+            runtime: lambda.Runtime.NODEJS_12_X,
+            memorySize: 3000,
+            timeout: cdk.Duration.seconds(900),
+        };
+
         let builtins: lambda.Function
         if (accessPoint && efsUsageRole) {
             builtins = new lambda.Function(this, 'ss-dc-Builtins', {
-                functionName,
-                runtime: lambda.Runtime.NODEJS_12_X,
-                handler: 'dist/index.builtInHandler',
-                code: lambda.Code.fromAsset('./data-channels-builtin-processors.zip'),
-                memorySize: 3000,
-                timeout: cdk.Duration.seconds(900),
+                ...builtinsProps,
                 vpc: vpc,
                 securityGroups: [securityGroup],
                 vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE, onePerAz: true },
@@ -91,12 +95,7 @@ export class BuiltinsLambdaStack extends cdk.Stack {
             builtins.addToRolePolicy(efsUsageRole);
         } else {
             builtins = new lambda.Function(this, 'ss-dc-Builtins', {
-                functionName,
-                runtime: lambda.Runtime.NODEJS_12_X,
-                handler: 'dist/index.builtInHandler',
-                code: lambda.Code.fromAsset('./data-channels-builtin-processors.zip'),
-                memorySize: 3000,
-                timeout: cdk.Duration.seconds(900),
+                ...builtinsProps,
                 environment: {
                     AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
                 }

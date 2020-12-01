@@ -1,4 +1,5 @@
 import iam = require('@aws-cdk/aws-iam');
+import { Aspects } from '@aws-cdk/core';
 import cdk = require('@aws-cdk/core');
 import config from "config";
 
@@ -26,8 +27,7 @@ export function tagAppStack(appStack: cdk.Stack): void {
     if (permissionBoundary) {
         const permissionBoundaryArn = permissionBoundary.startsWith('arn') ?
             permissionBoundary : `arn:aws:iam::${process.env.CDK_DEFAULT_ACCOUNT}:policy/${permissionBoundary}`;
-        appStack.node.applyAspect(
-            new PermissionsBoundary(permissionBoundaryArn));
+        Aspects.of(appStack).add(new PermissionsBoundary(permissionBoundaryArn))
     }
 
     cdk.Tags.of(appStack).add('ProductLine', `${productLine}`);
