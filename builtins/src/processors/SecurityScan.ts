@@ -1,5 +1,5 @@
 import { execFile } from "child_process";
-import { createWriteStream, mkdirSync, readdirSync } from "fs";
+import { createWriteStream, mkdirSync } from "fs";
 import { Readable } from "stream";
 
 import {
@@ -12,7 +12,7 @@ import {
 import _ from "lodash";
 import fetch from "node-fetch";
 
-import { sleep } from "../utils";
+import { sleep, urlsForInputNames } from "../utils";
 
 export enum ScanTool {
     SCANII = 'scanii',
@@ -37,13 +37,13 @@ export interface IFileScanResult {
 }
 
 export interface IScanResults {
-    [inputName: string]: IFileScanResult;
+    [inputName: string]: IFileScanResult[];
 }
 
 const SCANII_URL = 'https://api.scanii.com/v2.1/files';
 
-interface IScaniiIdByName {
-    [iname: string]: string;
+interface IScaniiIdsByName {
+    [iname: string]: string[];
 }
 
 export class SecurityScan extends BaseProcessor {
@@ -68,9 +68,11 @@ export class SecurityScan extends BaseProcessor {
         let hasSecurityIssues = false;
         let needsToFail: boolean | undefined = false;
         for (const inputName of Object.keys(results)) {
-            hasSecurityIssues = hasSecurityIssues || results[inputName].hasFindings;
-            if (hasSecurityIssues) {
-                needsToFail = needsToFail || this.config.byInput?.[inputName]?.failOnFinding;
+            for (const result of results[inputName]) {
+                hasSecurityIssues = hasSecurityIssues || result.hasFindings;
+                if (hasSecurityIssues) {
+                    needsToFail = needsToFail || this.config.byInput?.[inputName]?.failOnFinding;
+                }
             }
         }
 
@@ -107,12 +109,12 @@ export class SecurityScan extends BaseProcessor {
                 await this.downloadStreamFile(file.readable, '/tmp/testFile');
 
                 const dailyResults = await this.runClamAV();
-                resultsByInput[inputName] = {
+                resultsByInput[inputName] = [{
                     hasFindings: dailyResults.hasFindings,
                     rawResults: {
                         daily: dailyResults.rawResults
                     }
-                };
+                }];
             }
         }
 
@@ -124,9 +126,9 @@ export class SecurityScan extends BaseProcessor {
             for (let i = 0; i < input.inputs[inputName].length; i++) {
                 await this.downloadStreamFile(refreshedReadables[i].readable, '/tmp/testFile');
                 const mainResults = await this.runClamAV();
-                resultsByInput[inputName].hasFindings =
-                    resultsByInput[inputName].hasFindings ?? mainResults.hasFindings;
-                resultsByInput[inputName].rawResults['main'] = mainResults.rawResults;
+                resultsByInput[inputName][0].hasFindings =
+                    resultsByInput[inputName][0].hasFindings ?? mainResults.hasFindings;
+                resultsByInput[inputName][0].rawResults['main'] = mainResults.rawResults;
             }
         }
 
@@ -207,25 +209,28 @@ export class SecurityScan extends BaseProcessor {
         return results;
     }
 
-    public async triggerScaniiScans(inputNames: string[]): Promise<IScaniiIdByName> {
-        const results = {};
-        for (const inputName of inputNames) {
-            const fileUrl = this.job.workspace!.fileUrls![`${inputName}_READ`];
-            const params = new URLSearchParams();
-            params.append('location', fileUrl);
-            console.log(this.job.workspace!.fileUrls);
-            console.log(params)
-            const resp = await fetch(`${SCANII_URL}/fetch`, {
-                headers: { Authorization: `Basic ${this.config.scaniiApiKey}` },
-                method: 'POST',
-                body: params
-            });
-            if (resp.status < 400) {
-                const body = await resp.json();
-                console.log(`Scanii response`, resp.status, body);
-                results[inputName] = body['id'];
-            } else {
-                console.log(`Scanii fetch call failure`, resp.status, resp.statusText);
+    public async triggerScaniiScans(inputNames: string[]): Promise<IScaniiIdsByName> {
+        const results: IScaniiIdsByName = {};
+        const urlsByName = urlsForInputNames(this.job);
+        console.log(`scanning files:`, urlsByName);
+        for (const inputName of Object.keys(urlsByName)) {
+            results[inputName] = [];
+            for (const fileUrl of urlsByName[inputName]) {
+                const params = new URLSearchParams();
+                params.append('location', fileUrl);
+
+                const resp = await fetch(`${SCANII_URL}/fetch`, {
+                    headers: { Authorization: `Basic ${this.config.scaniiApiKey}` },
+                    method: 'POST',
+                    body: params
+                });
+                if (resp.status < 400) {
+                    const body = await resp.json();
+                    console.log(`Scanii response`, resp.status, body);
+                    results[inputName].push(body['id']);
+                } else {
+                    console.log(`Scanii fetch call failure`, resp.status, resp.statusText);
+                }
             }
         }
 
@@ -234,45 +239,50 @@ export class SecurityScan extends BaseProcessor {
         return results;
     }
 
-    public async pollScaniiResults(idByName: IScaniiIdByName): Promise<IScanResults> {
+    public async pollScaniiResults(idsByName: IScaniiIdsByName): Promise<IScanResults> {
         const results: IScanResults = {};
-        for (const inputName of Object.keys(idByName)) {
-            let noResults = true;
-            const startTStamp = new Date().getTime() / 1000;
-            while (noResults) {
-                const curTStamp = new Date().getTime() / 1000;
-                if ((startTStamp + (60 * 5)) < curTStamp) {
-                    // scan shouldn't take more than 5 minutes
-                    noResults = false;
-                }
-                const resp = await fetch(`${SCANII_URL}/${idByName[inputName]}`, {
-                    headers: { Authorization: `Basic ${this.config.scaniiApiKey}` }
-                });
+        for (const inputName of Object.keys(idsByName)) {
+            results[inputName] = [];
+            for (const id of idsByName[inputName]) {
+                let noResults = true;
+                const startTStamp = new Date().getTime() / 1000;
+                while (noResults) {
+                    const curTStamp = new Date().getTime() / 1000;
+                    if ((startTStamp + (60 * 5)) < curTStamp) {
+                        // scan shouldn't take more than 5 minutes
+                        noResults = false;
+                    }
+                    const resp = await fetch(`${SCANII_URL}/${id}`, {
+                        headers: { Authorization: `Basic ${this.config.scaniiApiKey}` }
+                    });
 
-                if (resp.status === 404) {
-                    // object hasn't yet been created by scanii
-                    await sleep(2000);
-                } else if (resp.status >= 400) {
-                    // error occured
-                    console.log(`Scanii file results call failure`, resp.status, resp.statusText);
-                    noResults = false;
-                } else {
-                    // check body to see if finished
-                    const body = await resp.json();
-                    if (body['content_length'] && body['findings']) {
-                        // it's finished
-                        const hasFindings = body['findings']?.length > 0;
-                        if (hasFindings) {
-                            this.findingsStrings = this.findingsStrings.concat(body['findings']);
-                        }
-                        results[inputName] = {
-                            hasFindings,
-                            rawResults: body
-                        };
+                    if (resp.status === 404) {
+                        // object hasn't yet been created by scanii
+                        await sleep(2000);
+                    } else if (resp.status >= 400) {
+                        // error occured
+                        console.log(`Scanii file results call failure`, resp.status, resp.statusText);
                         noResults = false;
                     } else {
-                        // not finished
-                        await sleep(2000);
+                        // check body to see if finished
+                        const body = await resp.json();
+                        if (body['content_length'] && body['findings']) {
+                            // it's finished
+                            const hasFindings = body['findings']?.length > 0;
+                            if (hasFindings) {
+                                this.findingsStrings = this.findingsStrings.concat(body['findings']);
+                            }
+                            results[inputName].push({
+                                hasFindings,
+                                rawResults: body
+                            });
+                            noResults = false;
+                        } else if (body['error']) {
+                            throw new Error(`Scanii Error: ${body['error']}`);
+                        } else {
+                            // not finished
+                            await sleep(2000);
+                        }
                     }
                 }
             }
