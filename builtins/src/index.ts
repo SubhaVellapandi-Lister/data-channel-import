@@ -17,6 +17,7 @@ import {
     Translate,
     Webhook,
 } from "./processors";
+
 export const builtInHandler = generateHandler({
     echo: Echo,
     translate: Translate,

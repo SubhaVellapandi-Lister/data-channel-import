@@ -4,8 +4,8 @@ export async function sleep(milliseconds: number): Promise<unknown> {
     return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-export function urlsForInputNames(job: Job): { [name:string]: string[] } {
-    const urlsByName: { [name:string]: string[] } = {};
+export function urlsForInputNames(job: Job): { [name: string]: string[] } {
+    const urlsByName: { [name: string]: string[] } = {};
 
     for (const fileIn of job.filesIn) {
         urlsByName[fileIn.name] = [];

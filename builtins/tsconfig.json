@@ -1,18 +1,10 @@
 {
-  "include": [
-	"src/**/*"
-  ],
-  "exclude": [
-	"node_modules",
-	"**/*.spec.ts"
-  ],
   "compilerOptions": {
 	"module": "commonjs",
 	"target": "es2017",
 	"outDir": "dist",
 	"rootDir": "src",
 	"moduleResolution": "node",
-	//"allowJs": true,
 	"esModuleInterop": true,
 	"noImplicitAny": true,
 	"noImplicitThis": true,
@@ -23,8 +15,14 @@
 	"declaration": true,
 	"sourceMap": true,
 	"emitDecoratorMetadata": true,
-	"types": ["node", "jest"],
-	"typeRoots": ["node_modules/@types", "src/types"],
+	"typeRoots": ["node_modules/@types"],
 	"skipLibCheck": true
-  }
+  },
+  "include": [
+	"src/**/*"
+  ],
+  "exclude": [
+	"node_modules",
+	"cdk.out"
+  ],
 }
