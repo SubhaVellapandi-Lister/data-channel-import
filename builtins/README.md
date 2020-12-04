@@ -60,22 +60,20 @@ You can provide multiple inputs if desired. Note that by default `echo` will put
 
 Translate column names and row values from one string to another.
 
-|                          |                                                   |
-| ------------------------ | ------------------------------------------------- |
-| **method name**          | translate                                         |
-| **granularity**          | row                                               |
-| **code**                 | [Translate.ts](src/processors/Translate.ts)       |
-| **input name**           | Any input name you want, e.g. "data"              |
-| **output name**          | Input name plus "Translate", e.g. "dataTranslate" |
-| **config property name** | translateConfig , fileTranslateConfig, dynamicOutput, dynamicInput,                   multipleFileConfig, inputFileNames |
+|                          |                                                                                        |
+| ------------------------ | -------------------------------------------------------------------------------------- |
+| **method name**          | translate                                                                              |
+| **granularity**          | row                                                                                    |
+| **code**                 | [Translate.ts](src/processors/Translate.ts)                                            |
+| **input name**           | Any input name you want, e.g. "data"                                                   |
+| **output name**          | Input name plus "Translate", e.g. "dataTranslate"                                      |
+| **config property name** | translateConfig , fileTranslateConfig, dynamicOutput, dynamicInput, multipleFileConfig |
 
 - `dynamicOutput` - boolean defaults to false, if true, the output files has been generated dynamically based on the input files
 
 - `dynamicInput` - boolean defaults to false, if true, creates the dynamic input files for next flow / step
 
 - `multipleFileConfig` - boolean, if false, then configuration requires `translateConfig`. If true, then configuration requires `fileTranslateConfig`, it will handle multiple configuration based on file specifications.
-
-- `inputFileNames` - Array of strings that represent the list of files to be processed.
 
 - `translateConfig` is required. Properties under translateConfig
 
@@ -90,16 +88,18 @@ Translate column names and row values from one string to another.
     - removeUnmappedHeaders - boolean defaults to false, if true, then translate config should not remove unmapped header row based on indexMappings.
 
 - `fileTranslateConfig` is required. Properties under fileTranslateConfig.
-    - [fileName] - Example, if you are processing the sections file, then we need to specify the `fileName` as `sections`.
-      - columns - main config properties under `columns` are column names for keys, with objects as values. Each object supports the following:
 
-        - headerMappings - map one header name to another
-        - valueMappings - map values in one column from one thing to another
-        - indexMappings - map header names based on index of the header in the file, starts at index 1.
-        - saveIndexMappings - boolean defaults to false, if true, the translate processor will automatically update the channel config to save indexMappings to reflect the current order of column mappings. This should only be used when you need to support headerless csv files and the order of the columns is strictly enforced.
-        - headerlessFile - boolean defaults to false, if true, it should output a header row based on indexMappings.
-        - removeEmptyHeaders - boolean defaults to false, if true, then translate config should remove empty header column from in output.
-        - removeUnmappedHeaders - boolean defaults to false, if true, then translate config should not remove unmapped header row based on indexMappings.
+  - [fileName] - Example, if you are processing the sections file, then we need to specify the `fileName` as `sections`.
+
+    - columns - main config properties under `columns` are column names for keys, with objects as values. Each object supports the following:
+
+      - headerMappings - map one header name to another
+      - valueMappings - map values in one column from one thing to another
+      - indexMappings - map header names based on index of the header in the file, starts at index 1.
+      - saveIndexMappings - boolean defaults to false, if true, the translate processor will automatically update the channel config to save indexMappings to reflect the current order of column mappings. This should only be used when you need to support headerless csv files and the order of the columns is strictly enforced.
+      - headerlessFile - boolean defaults to false, if true, it should output a header row based on indexMappings.
+      - removeEmptyHeaders - boolean defaults to false, if true, then translate config should remove empty header column from in output.
+      - removeUnmappedHeaders - boolean defaults to false, if true, then translate config should not remove unmapped header row based on indexMappings.
 
 Example Config using translateConfig
 
@@ -144,8 +144,7 @@ Example Config using fileTranslateConfig
       "indexMappings": {
         "3": "Student_Name"
       }
-    },
-    "inputFileNames":["Sections"]
+    }
   },
   "multipleFileConfig": true
 }
@@ -155,14 +154,14 @@ Example Config using fileTranslateConfig
 
 Validate that column names are correct and rows contain valid values.
 
-|                          |                                                 |
-| ------------------------ | ----------------------------------------------- |
-| **method name**          | validate                                        |
-| **granularity**          | row                                             |
-| **code**                 | [Validate.ts](src/processors/Validate.ts)       |
-| **input name**           | Any input name you want, e.g. "data"            |
-| **output name**          | Input name plus "Validate", e.g. "dataValidate" |
-| **config property name** | validateConfig , fileValidateConfig, dynamicOutput, dynamicInput, multipleFileConfig    |
+|                          |                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------ |
+| **method name**          | validate                                                                             |
+| **granularity**          | row                                                                                  |
+| **code**                 | [Validate.ts](src/processors/Validate.ts)                                            |
+| **input name**           | Any input name you want, e.g. "data"                                                 |
+| **output name**          | Input name plus "Validate", e.g. "dataValidate"                                      |
+| **config property name** | validateConfig , fileValidateConfig, dynamicOutput, dynamicInput, multipleFileConfig |
 
 - `dynamicOutput` - boolean defaults to false, if true, the output files has been generated dynamically based on the input files
 

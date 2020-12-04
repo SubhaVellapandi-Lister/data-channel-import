@@ -32,7 +32,6 @@ export class Translate extends BaseProcessor {
   private emptyHeaders = new Set<number>();
   private currentRow: string[] = [];
   private fileToTranslate: string = "";
-  private inputFileNames: string[] = [];
   private nextStep: string = "";
   private currentStep: string = "";
   private previousStep: string = "";
@@ -60,12 +59,6 @@ export class Translate extends BaseProcessor {
           if (!configParamters.fileTranslateConfig || configParamters.fileTranslateConfig === {}) {
               throw new Error("Missing filetr in Translate-Builtin");
           }
-          if (!configParamters.inputFileNames) {
-              throw new Error("Kindly specify the 'inputFileNames' parameter in the config.");
-          }
-          if (configParamters.inputFileNames.length > 0) {
-              this.inputFileNames = configParamters.inputFileNames;
-          }
       } else if (!this.multipleFileConfig && !configParamters.translateConfig) {
           throw new Error("Missing translateConfig in Translate-Builtin");
       }
@@ -85,25 +78,20 @@ export class Translate extends BaseProcessor {
    */
   public async translate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
       const { index, raw, name: inputName } = input;
-      if (this.multipleFileConfig) {
-          this.fileToTranslate =
-        this.inputFileNames.find((fileName: string) => inputName.toLowerCase().includes(fileName)) || "";
-      } else {
-          this.fileToTranslate = input.name;
-      }
-      let inputFileName = input.name;
+      let inputFileName = inputName;
       if (this.dynamicOutput) {
           inputFileName = getFileNameFromInputFile(input, this.jobOutFileExtension);
-      }
-      if (this.fileToTranslate === "") {
-          throw new Error(`Failed to validate translate processor missing input file named ${inputName}.`);
       }
       this.currentRow = raw;
       this.dataOutputName = `${inputFileName}${this.currentStep}d`;
       // index = 1 determines the row header & new file entry
       if (index === 1) {
+          this.fileToTranslate = inputName;
           if (this.multipleFileConfig) {
               this.config = _.cloneDeep(input.parameters!["fileTranslateConfig"]) as ITranslateParameters;
+              if (this.config[this.fileToTranslate] === undefined) {
+                  throw new Error(`Failed to validate translate processor missing input file named ${this.fileToTranslate}.`);
+              }
               this.updatedConfig = this.config[this.fileToTranslate] as IFileTranslateConfig;
           } else {
               this.config = _.cloneDeep(input.parameters!["translateConfig"]) as IFileTranslateConfig;
@@ -210,7 +198,7 @@ export class Translate extends BaseProcessor {
    * in the translate config.
    */
   private async checkHeaderRow(): Promise<void> {
-      if (this.updatedConfig.indexMappings === undefined || null) {
+      if (this.updatedConfig.indexMappings === undefined || this.updatedConfig.indexMappings === null) {
           throw new Error("Headerless files must have indexMappings");
       }
       if (this.originalHeaders.length !== Object.values(this.updatedConfig.indexMappings).length) {
