@@ -9,6 +9,7 @@ tar.extract({
 
 rmdirSync('package/clamav', { recursive: true });
 rmdirSync('package/node_modules', { recursive: true });
+rmdirSync('package/build', { recursive: true });
 
 tar.create(
     {
