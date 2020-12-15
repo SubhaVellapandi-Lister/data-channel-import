@@ -72,7 +72,7 @@ export class BuiltinsLambdaStack extends cdk.Stack {
         const builtinsProps = {
             functionName,
             handler: 'index.builtInHandler',
-            code: new lambda.AssetCode(`${__dirname}/../../lambda/ss-dc-Builtins`),
+            code: new lambda.AssetCode(`${__dirname}/../../build/ss-dc-Builtins`),
             runtime: lambda.Runtime.NODEJS_12_X,
             memorySize: 3000,
             timeout: cdk.Duration.seconds(900),
