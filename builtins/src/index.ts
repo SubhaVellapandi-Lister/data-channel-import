@@ -44,3 +44,4 @@ export * from "./utils";
 export * from "./processors";
 export * from "./processors/Validate/DateUtil";
 export * from "./processors/Validate/DateValidator";
+export * from "./processors/Validate/Validate.interface";
