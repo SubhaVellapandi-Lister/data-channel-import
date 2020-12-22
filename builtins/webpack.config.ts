@@ -1,5 +1,6 @@
 import { resolve } from 'path';
 
+import CopyWebpackPlugin from 'copy-webpack-plugin';
 import TerserPlugin from 'terser-webpack-plugin';
 import { Configuration, } from 'webpack';
 
@@ -23,7 +24,11 @@ const config: Configuration = {
         extensions: ['.js', '.ts'],
     },
     target: 'node',
-
+    plugins: [
+        new CopyWebpackPlugin({
+            patterns: ['ss-dc-Builtins'].map((fn) => ({ from: 'config', to: `${fn}/config` })),
+        }),
+    ],
     optimization: {
         minimize: true,
         minimizer: [
