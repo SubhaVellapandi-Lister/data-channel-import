@@ -9,6 +9,7 @@ import {
     IFileProcessorOutput,
     s3Readable
 } from "@data-channels/dcSDK";
+import config from "config";
 import _ from "lodash";
 import fetch from "node-fetch";
 
@@ -28,7 +29,7 @@ export interface IScanConfig {
     failOnAnyFinding?: boolean;
     scaniiApiKey?: string;
     scanTool?: ScanTool; // defaults to scanii
-
+    stub?: boolean;
 }
 
 export interface IFileScanResult {
@@ -59,7 +60,24 @@ export class SecurityScan extends BaseProcessor {
         }
 
         let results: IScanResults = {};
-        if (this.config.scanTool === ScanTool.SCANII) {
+        // Populating empty data to prevent scan if stub is set to true
+        const stub: boolean = JSON.parse(config.get<string>('cdk.securityScan.stub')) || this.config.stub || false;
+        if (stub) {
+            for (const fileIn of this.job.filesIn) {
+                if (!results[fileIn.name]) {
+                    results[fileIn.name] = [];
+                }
+
+                const noOfFiles = fileIn.s3?.events?.length ?? 1;
+                for (let i = 0; i < noOfFiles; i++) {
+                    results[fileIn.name].push({
+                        hasFindings: false,
+                        rawResults: {}
+                    });
+                }
+            }
+        }
+        else if (this.config.scanTool === ScanTool.SCANII) {
             results = await this.scaniiScan(input);
         } else {
             results = await this.clamAVScan(input);
@@ -80,7 +98,7 @@ export class SecurityScan extends BaseProcessor {
         this.job.setMetaValue('securityScanIssuesFound', hasSecurityIssues);
         this.job.setMetaValue('securityScanFindings', _.uniq(this.findingsStrings).join(','));
 
-        if (hasSecurityIssues && (needsToFail || this.config.failOnAnyFinding)) {
+        if (hasSecurityIssues && (needsToFail || this.config.failOnAnyFinding) && !stub) {
             await this.job.terminalError('Security-Scan', `Security Issue found with input file`);
         }
 

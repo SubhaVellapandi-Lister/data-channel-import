@@ -16,6 +16,9 @@
             "sesSend": true,
             "athenaGlue": true,
             "athenaWorkGroup": "primary"
+        },
+        "securityScan": {
+            "stub": false
         }
     }
 }
