@@ -46,6 +46,11 @@ export interface IFileConfig {
   caseInSensitive?: boolean; // set true to use case insensitive approach for performing validation
   compareField?: string; // compare the column with the given column name or current_date
   comparator?: ValidateComparator; // comparator operations
+  maxlength?: number; // if value is exceeds the maxlength config, record is invalid
+  range?: {
+    minVal?: number; // if value is less than the minVal config, record is invalid
+    maxVal?: number; // if value is greater than the maxVal config, record is invalid
+  };
 }
 
 // Interface for validate configs
