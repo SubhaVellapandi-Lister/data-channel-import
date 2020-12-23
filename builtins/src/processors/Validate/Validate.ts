@@ -196,6 +196,12 @@ export class Validate extends BaseProcessor {
           if (!hasValidType) {
               validationErrors.push(`Column ${columnName} must be of type ${columnConfig.validTypes!.join(", ")}`);
               validationStatus = ValidateStatus.Invalid;
+          } else {
+              this.rangeValidation(parseFloat(data), columnConfig, columnName, validationErrors, validationStatus);
+              if (columnConfig.maxlength && !(data.length <= columnConfig.maxlength)) {
+                  validationErrors.push(`Column ${columnName} exceeds the maximum length of ${columnConfig.maxlength}`);
+                  validationStatus = ValidateStatus.Invalid;
+              }
           }
       }
 
@@ -232,6 +238,43 @@ export class Validate extends BaseProcessor {
           error: validationStatus === ValidateStatus.Invalid,
           outputs,
       };
+  }
+
+  /**
+   * This method is used to check the range validation
+   * @param data
+   * @param columnConfig
+   * @param columnName
+   * @param validationErrors
+   * @param validationStatus
+   * @returns void
+   */
+  private rangeValidation(
+      data: number,
+      columnConfig: IFileConfig,
+      columnName: string,
+      validationErrors: string[],
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars-experimental
+      validationStatus: string
+  ): void {
+      if ("range" in columnConfig) {
+          const range = columnConfig.range || {};
+          if (Object.keys(range).length === 0) {
+              throw new Error(`column ${columnName} minVal and maxVal config missing in the range validation`);
+          }
+          if (!("minVal" in range) || !("maxVal" in range)) {
+              throw new Error(`column ${columnName} minVal or maxVal config missing in the range validation`);
+          }
+          if (
+              isFinite(data) &&
+        (range.minVal || range.minVal === 0) &&
+        range.maxVal &&
+        !(data >= range.minVal && data <= range.maxVal)
+          ) {
+              validationErrors.push(`Column ${columnName} must be between ${range.minVal} and ${range.maxVal}`);
+              validationStatus = ValidateStatus.Invalid;
+          }
+      }
   }
 
   /**

@@ -1,1 +1,8 @@
-{ "cdk": { "environment": "ENVIRONMENT" } }
+{ 
+    "cdk": { 
+        "environment": "ENVIRONMENT",
+        "securityScan": {
+            "stub": "STUB_SECURITY_SCAN"
+        }
+    }
+}

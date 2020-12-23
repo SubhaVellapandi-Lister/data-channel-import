@@ -20,6 +20,8 @@ const securityGroupId = config.get<string>('cdk.efs.securityGroupId');
 const vpcId = config.get<string>('cdk.efs.vpcId');
 const mountPath = config.get<string>('cdk.efs.mountPath');
 
+const stubSecurityScan = config.get<boolean>('cdk.securityScan.stub');
+
 if (functionName.includes('${environment}')) {
     functionName = functionName.replace('${environment}', environment);
 }
@@ -78,6 +80,15 @@ export class BuiltinsLambdaStack extends cdk.Stack {
             timeout: cdk.Duration.seconds(900),
         };
 
+        const genericEnvironmentVars = {
+            AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1",
+            STUB_SECURITY_SCAN: String(stubSecurityScan)
+        }
+
+        const efsEnvironmentVars = {
+            AWS_EFS_PATH: mountPath,
+        }
+
         let builtins: lambda.Function
         if (accessPoint && efsUsageRole) {
             builtins = new lambda.Function(this, 'ss-dc-Builtins', {
@@ -87,8 +98,8 @@ export class BuiltinsLambdaStack extends cdk.Stack {
                 vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE, onePerAz: true },
                 filesystem: fileSystem,
                 environment: {
-                    AWS_EFS_PATH: mountPath,
-                    AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
+                    ...genericEnvironmentVars,
+                    ...efsEnvironmentVars
                 }
             });
 
@@ -97,7 +108,7 @@ export class BuiltinsLambdaStack extends cdk.Stack {
             builtins = new lambda.Function(this, 'ss-dc-Builtins', {
                 ...builtinsProps,
                 environment: {
-                    AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
+                    ...genericEnvironmentVars
                 }
             });
         }
