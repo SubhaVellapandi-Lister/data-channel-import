@@ -163,8 +163,8 @@ export class StudentHistory {
         const batchPromises: Promise<IStudentRecordSummary>[] = [];
         const updatePlanPromises: Promise<void>[] = [];
 
-        // const flatHistories = _.flatten(batch);
-        // await this.loadCatalogCredits(flatHistories);
+        const flatHistories = _.flatten(batch);
+        await this.loadCatalogCredits(flatHistories);
 
         console.log(`processing batch of ${batch.length} students in parallel`);
 
@@ -249,7 +249,7 @@ export class StudentHistory {
             const plannedCourse = new PlannedCourse({
                 number: historyRow.courseId,
                 unique: historyRow.courseId,
-                credits: historyRow.creditAttempted ?? historyRow.creditEarned ?? 0,
+                credits: this.catalogCredits(historyRow.courseId),
                 gradeLevel: historyRow.gradeLevel
             });
             studentPlan.addCourse(plannedCourse);

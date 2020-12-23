@@ -1,6 +1,6 @@
 import {Annotations, Course, PlanningEngine, RulesRepository} from "@academic-planner/apSDK";
 import {IHistoryRow, StudentHistory} from "./StudentHistory";
-
+jest.setTimeout(10000);
 describe('test student course history', () => {
     test('catalog credits', async () => {
         RulesRepository.init({
@@ -78,12 +78,13 @@ describe('test student course history', () => {
             url: 'http://localhost:8097',
             jwt: ''
         });
-        const studentHistory = new StudentHistory('apCli', 'ns', 1, false, false);
+        const studentHistory = new StudentHistory('apCli', 'naviance.2617970DUS', 1, false, false);
+        await studentHistory.loadCatalogCredits([{courseId: "1003214", studentId: "apCli", gradeLevel: 9 }]);
         const plan = await studentHistory.findActivePlanThatHaveNoCourses('apCli');
         expect(plan?.studentPrincipleId).toEqual("apCli");
         await studentHistory.findAndUpdateActivePlanPlannedCourses(
             "apCli",
-            [{courseId: "100", studentId: "apCli", creditAttempted: 2, gradeLevel: 9 }]);
+            [{courseId: "1003214", studentId: "apCli", creditAttempted: 2, gradeLevel: 9 }]);
     });
 
 });
