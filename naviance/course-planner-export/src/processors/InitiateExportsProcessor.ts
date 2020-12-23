@@ -3,7 +3,8 @@ import {
     IRowProcessorInput,
     IRowProcessorOutput,
     IStepAfterInput,
-    Job
+    Job,
+    Tenant
 } from "@data-channels/dcSDK";
 import fetch from "node-fetch";
 import { getJWT, initServices } from "../Utils";
@@ -41,14 +42,19 @@ export class InitiateExportsProcessor extends BaseProcessor {
         const queueDetails = input.parameters!['queueDetails'];
         const enviro = input.parameters!['enviro'];
         const outputBucket = input.parameters!['outputBucket'];
+        const parameterTenants = input.parameters!['tenants'];
 
-        const hsIds = await this.getScopes(input.parameters!['planningUrl'], sinceDate);
+        if (parameterTenants) {
+            tenantIds = parameterTenants;
+        } else {
+            const hsIds = await this.getScopes(input.parameters!['planningUrl'], sinceDate);
 
-        for (const hsId of hsIds) {
-            if (this.districtByHsId[hsId] && !tenantIds.includes(this.districtByHsId[hsId])) {
-                tenantIds.push(this.districtByHsId[hsId]);
-            } else if (!this.districtByHsId[hsId]) {
-                tenantIds.push(hsId);
+            for (const hsId of hsIds) {
+                if (this.districtByHsId[hsId] && !tenantIds.includes(this.districtByHsId[hsId])) {
+                    tenantIds.push(this.districtByHsId[hsId]);
+                } else if (!this.districtByHsId[hsId]) {
+                    tenantIds.push(hsId);
+                }
             }
         }
 
@@ -60,12 +66,16 @@ export class InitiateExportsProcessor extends BaseProcessor {
         const guidByTenantId: { [key: string]: string } = {};
 
         for (const tenantId of tenantIds) {
+            const tenantPage = Tenant.find({ findCriteria: { name: { operator: 'eq', value: tenantId }}});
+            const tenants = await tenantPage.all();
+
             const job = await Job.newJob({
                 name: `exportStudentCourseReports-auto-initiated-${tenantId}`,
                 channel: {
                     product: 'naviance',
                     name: 'exportStudentCourseReports'
                 },
+                tenant: tenants.length ? tenants[0].reference : undefined,
                 product: 'naviance',
                 queueDetails,
                 filesOut: [
@@ -127,8 +137,12 @@ export class InitiateExportsProcessor extends BaseProcessor {
     private async getScopes(rootUrl: string, cutoffDate?: Date): Promise<string[]> {
         const schoolIds: string[] = [];
         const JWT = await getJWT();
+        let url = rootUrl + '/scopes/?plansOnly=true';
+        if (cutoffDate) {
+            url += `&sinceDate=${cutoffDate.getFullYear()}-${cutoffDate.getMonth() + 1}-${cutoffDate.getDate()}`;
+        }
         const resp = await fetch(
-            rootUrl + '/scopes/', { headers: { Authorization: JWT }});
+            url, { headers: { Authorization: JWT }});
 
         const body = await resp.json();
         if (!cutoffDate) {
