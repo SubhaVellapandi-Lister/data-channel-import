@@ -5,7 +5,7 @@ import {
     IRowProcessorOutput,
     IStepBeforeInput,
 } from "@data-channels/dcSDK";
-import _ from "lodash";
+import _, { identity } from "lodash";
 
 import {
     findNextJobStep,
@@ -116,7 +116,7 @@ export class Translate extends BaseProcessor {
           }
 
           if (this.updatedConfig.headerlessFile) {
-              await this.checkHeaderRow();
+              await this.checkHeaderRow(input.raw, input.name);
 
               return {
                   index: index,
@@ -197,7 +197,7 @@ export class Translate extends BaseProcessor {
    * It will insert the header row using the column indexMappings provided
    * in the translate config.
    */
-  private async checkHeaderRow(): Promise<void> {
+  private async checkHeaderRow(rowData: string[], fileName: string): Promise<void> {
       if (this.updatedConfig.indexMappings === undefined || this.updatedConfig.indexMappings === null) {
           throw new Error("Headerless files must have indexMappings");
       }
@@ -208,6 +208,33 @@ export class Translate extends BaseProcessor {
           (keyVal) => keyVal[1]
       );
 
+      const sortedHeaderValuesToLowerCase = sortedCols.map((header) => header.toLowerCase());
+
+      /**
+     * Used to check two array of string,
+     * based on the 'checkEveryValue' need to check every value or some value
+     * satisfies the condition.
+     * @param checkEveryValue boolean
+     * @param checkFlag boolean
+     */
+      const isHeaderAlreadyExists = (checkEveryValue: boolean, checkFlag: boolean): boolean => {
+          const isHeaderExist = rowData.map((header) => sortedHeaderValuesToLowerCase.includes(header.toLowerCase()));
+          if (checkEveryValue) {
+              return isHeaderExist.every((header) => header === checkFlag);
+          } else {
+              return isHeaderExist.some((header) => header === checkFlag);
+          }
+      };
+
+      if (isHeaderAlreadyExists(true, true)) {
+      // If header exists: No need to write the header.
+          return;
+      } else if (isHeaderAlreadyExists(false, true)) {
+          this.job.terminalError(
+              `${fileName} file`,
+              `Provided header columns in the input parameter doesn't match with the ${fileName} file headers.`
+          );
+      }
       // @ts-ignore
       this._outputStreams.writeOutputValues({
           [`${this.dataOutputName}`]: sortedCols,
