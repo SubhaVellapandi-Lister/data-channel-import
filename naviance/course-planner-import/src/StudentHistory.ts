@@ -1,5 +1,5 @@
 import { ICourseRecord, IStudentRecordSummary } from "@academic-planner/academic-planner-common";
-import { Course, PlanContext } from "@academic-planner/apSDK";
+import {Course, PlanContext, PlannedCourse, StudentPlan} from "@academic-planner/apSDK";
 import { IRowData, IRowProcessorInput } from "@data-channels/dcSDK";
 import _ from "lodash";
 import { CourseImport } from "./Course";
@@ -32,12 +32,12 @@ export class StudentHistory {
     public createdCount = 0;
     public updatedCount = 0;
     public errorCount = 0;
+    public courseById: { [id: string]: Course } = {};
     private studentIdMap: INavianceStudentIDMap = {};
     private processedStudentIdMap: Record<string, string[]> = {};
     private historyStudentId = '';
     private historyForStudent: IHistoryRow[] = [];
     private historyBatch: IHistoryRow[][] = [];
-    private courseById: { [id: string]: Course } = {};
 
     constructor(
         private scope: string, private namespace: string, private batchSize: number,
@@ -156,15 +156,20 @@ export class StudentHistory {
        return hist;
     }
 
+    /**
+     * Each element in batch is an array of records for one student.
+     */
     async processBatch(batch: IHistoryRow[][]) {
         const batchPromises: Promise<IStudentRecordSummary>[] = [];
+        const updatePlanPromises: Promise<void>[] = [];
 
-        // const flatHistories = _.flatten(batch);
-        // await this.loadCatalogCredits(flatHistories);
+        const flatHistories = _.flatten(batch);
+        await this.loadCatalogCredits(flatHistories);
 
         console.log(`processing batch of ${batch.length} students in parallel`);
 
         for (const studentCourses of batch) {
+            // each element in batch is for one student
             const studentId = studentCourses[0].studentId.toString();
             const highschoolId = studentCourses[0].schoolId;
 
@@ -178,59 +183,19 @@ export class StudentHistory {
                 continue;
             }
 
-            function histKey(hist: IHistoryRow): string {
-                return `${hist.courseId}_${hist.gradeLevel}_${hist.term}`;
-            }
-
-            const completeByKey: { [key: string]: IHistoryRow } = {};
-            const incompleteByKey: { [key: string]: IHistoryRow } = {};
-
-            for (const stuCourse of studentCourses) {
-                const key = histKey(stuCourse);
-                if (stuCourse.status && stuCourse.status.toUpperCase() === 'COMPLETED') {
-                    completeByKey[key] = stuCourse;
-                } else {
-                    incompleteByKey[key] = stuCourse;
-                }
-            }
+            const {completeByKey, incompleteByKey, plannedByKey} =
+                this.categorizeCourseHistoryRowsByStatus(studentCourses);
 
             let deDuplicatedCourses = Object.values(completeByKey);
+            // get rid of incomplete when there's same but completed
             deDuplicatedCourses = deDuplicatedCourses
                 .concat(Object.values(incompleteByKey)
-                .filter((hist) => !completeByKey[histKey(hist)]));
+                .filter((hist) => !completeByKey[StudentHistory.courseHistoryRecordKey(hist)]));
 
-            const courseById = this.courseById;
-            function catalogCredits(courseId: string): number {
-                const course = courseById[courseId];
-                if (course) {
-                    return parseFloat(course.annotations.getValue('credits') as string);
-                }
-
-                return 0;
-            }
-
-            /*deDuplicatedCourses = deDuplicatedCourses.filter((hist) =>
-                hist.status !== HistoryStatus.Completed || (hist.creditEarned && hist.creditEarned >= 0)
-            );*/
-
-            const courses: ICourseRecord[] = deDuplicatedCourses.map((rec) => ({
-                number: rec.courseId,
-                unique: rec.courseId,
-                credits: rec.creditEarned === undefined && rec.status === HistoryStatus.Completed
-                    ? catalogCredits(rec.courseId)
-                    : rec.creditEarned || 0,
-                attemptedCredits: rec.creditAttempted,
-                gradeLevel: rec.gradeLevel,
-                termId: rec.term,
-                grade: rec.gradeAwarded || undefined,
-                score: rec.score,
-                status: rec.status,
-                teacherName: rec.teacherName,
-                courseName: rec.courseName,
-                courseSubject: rec.courseSubject
-            })).filter((stuRec) => stuRec.number && stuRec.number.length > 0);
-
-            // console.log(studentId, courses);
+            // turn history rows into course records
+            const courses: ICourseRecord[] = deDuplicatedCourses
+                .map((rec) => (this.createCourseRecord(rec)))
+                .filter((stuRec) => stuRec.number && stuRec.number.length > 0);
 
             try {
                 batchPromises.push(PlanContext.createOrUpdateStudentRecords(
@@ -247,10 +212,19 @@ export class StudentHistory {
                 console.log(`Error updating history records for ${studentId}`);
                 this.errorCount += 1;
             }
+            const plannedFromCourseHistory = Object.values(plannedByKey);
+            if (plannedFromCourseHistory.length > 0) {
+                updatePlanPromises.push(
+                    this.findAndUpdateActivePlanPlannedCourses(studentId, plannedFromCourseHistory));
+
+            }
         }
 
         console.log(`waiting on ${batchPromises.length}`);
         const results = await Promise.all(batchPromises);
+        if (updatePlanPromises.length > 0) {
+            await Promise.all(updatePlanPromises); // atm typescript disallows waiting on different types of promises
+        }
         console.log('finished waiting on promises');
         for (const result of results) {
             if (result.created) {
@@ -262,6 +236,113 @@ export class StudentHistory {
         }
 
         return;
+    }
+    public async findAndUpdateActivePlanPlannedCourses(studentId: string, historyRows: IHistoryRow[]) {
+        const plan = await this.findActivePlanThatHaveNoCourses(studentId);
+        if (plan) {
+            await this.updateActivePlan(plan, historyRows);
+        }
+    }
+
+    public async updateActivePlan(studentPlan: StudentPlan, historyRows: IHistoryRow[]) {
+        for (const historyRow of historyRows) {
+            const plannedCourse = new PlannedCourse({
+                number: historyRow.courseId,
+                unique: historyRow.courseId,
+                credits: this.catalogCredits(historyRow.courseId),
+                gradeLevel: historyRow.gradeLevel
+            });
+            studentPlan.addCourse(plannedCourse);
+        }
+        await studentPlan.save();
+    }
+
+    public async findActivePlanThatHaveNoCourses(
+        studentId: string
+    ): Promise<StudentPlan | null> {
+        const slimPlansPager = StudentPlan.find(this.scope, {
+            findCriteria: {
+                studentPrincipleId: studentId,
+                meta: {
+                    isActive: true,
+                },
+            },
+            expand: "courses"
+        });
+        const slimPlans = await slimPlansPager.page(1);
+        if (slimPlans.length <= 0) {
+            return null;
+        }
+        if (slimPlans.length > 1) {
+            console.log(`More than one active plans for ${this.scope} ${studentId}`);
+
+        }
+
+        const foundSlimPlan = slimPlans[0];
+        if (!foundSlimPlan.courses) {
+            console.log(`.courses not in ${this.scope} ${studentId}`);
+
+            return null;
+        }
+
+        if (foundSlimPlan.courses.length > 0) {
+            return null;
+        }
+
+        return foundSlimPlan.toStudentPlan();
+    }
+
+    public catalogCredits(courseId: string): number {
+        const course = this.courseById[courseId];
+        if (course) {
+            return parseFloat(course.annotations.getValue('credits') as string);
+        }
+
+        return 0;
+    }
+
+    public createCourseRecord(rec: IHistoryRow) {
+        return {
+            number: rec.courseId,
+            unique: rec.courseId,
+            credits: rec.creditEarned === undefined && rec.status === HistoryStatus.Completed
+                ? 0 // preserve the behavior of not using catalog credits in this case
+                : rec.creditEarned || 0,
+            attemptedCredits: rec.creditAttempted,
+            gradeLevel: rec.gradeLevel,
+            termId: rec.term,
+            grade: rec.gradeAwarded || undefined,
+            score: rec.score,
+            status: rec.status,
+            teacherName: rec.teacherName,
+            courseName: rec.courseName,
+            courseSubject: rec.courseSubject
+        };
+    }
+
+    public static courseHistoryRecordKey(hist: IHistoryRow): string {
+        return `${hist.courseId}_${hist.gradeLevel}_${hist.term}`;
+    }
+
+    public categorizeCourseHistoryRowsByStatus(
+        studentCourses: IHistoryRow[]
+    ) {
+        const completeByKey: { [key: string]: IHistoryRow } = {};
+        const incompleteByKey: { [key: string]: IHistoryRow } = {};
+        const plannedByKey: { [key: string]: IHistoryRow } = {};
+
+        for (const stuCourse of studentCourses) {
+            const key = StudentHistory.courseHistoryRecordKey(stuCourse);
+            if (stuCourse.status && stuCourse.status.toUpperCase() === 'COMPLETED') {
+                completeByKey[key] = stuCourse;
+            } else if (stuCourse.status && stuCourse.status.toUpperCase() === 'PLANNED') {
+                plannedByKey[key] = stuCourse;
+            } else {
+                incompleteByKey[key] = stuCourse;
+            }
+        }
+
+        return {completeByKey, incompleteByKey, plannedByKey};
     }
 
     private attachStudentInfo(record: IHistoryRow): IHistoryRow | null {
