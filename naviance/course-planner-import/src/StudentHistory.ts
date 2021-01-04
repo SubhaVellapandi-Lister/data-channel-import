@@ -306,7 +306,7 @@ export class StudentHistory {
             number: rec.courseId,
             unique: rec.courseId,
             credits: rec.creditEarned === undefined && rec.status === HistoryStatus.Completed
-                ? this.catalogCredits(rec.courseId)
+                ? 0 // preserve the behavior of not using catalog credits in this case
                 : rec.creditEarned || 0,
             attemptedCredits: rec.creditAttempted,
             gradeLevel: rec.gradeLevel,
