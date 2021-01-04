@@ -860,7 +860,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
     private parseHsToProcess(params: IExportParameters): string[] {
         const schoolId = params.tenantId;
-        const hsMapping = this.job.steps['findSchools'].output!['hsMapping'] as IHsMap;
+        const hsMapping: IHsMap = this.getFindSchoolsOutput('hsMapping');
+
         let highschoolsToProcess = [schoolId];
         if (hsMapping[schoolId]) {
             highschoolsToProcess = [];
@@ -932,6 +933,15 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         }
     }
 
+    private getFindSchoolsOutput(property: string): any {
+        const output = this.job.steps['findSchools'].output!;
+        if (Array.isArray(output)) {
+            return output[0]['output'][property];
+        }
+
+        return output[property];
+    }
+
     public async after_exportStudentCourses(input: IStepAfterInput): Promise<IStepAfterOutput> {
         const params = input.parameters! as IExportParameters;
 
@@ -943,8 +953,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         this.parallelSchools = params.parallelSchools || 8;
         this.pageSize = params.pageSize || 100;
-        this.districtAssignedIds = this.job.steps['findSchools'].output!['schoolAssignedIDs'] || {};
-        this.schoolNamesById = this.job.steps['findSchools'].output!['schoolNames'] || {};
+        this.districtAssignedIds = this.getFindSchoolsOutput('schoolAssignedIDs') || {};
+        this.schoolNamesById = this.getFindSchoolsOutput('schoolNames') || {};
 
         await this.writeHeaders(parentId, params, input.outputs);
 
