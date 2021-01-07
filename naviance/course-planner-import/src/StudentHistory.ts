@@ -216,6 +216,7 @@ export class StudentHistory {
             if (plannedFromCourseHistory.length > 0) {
                 updatePlanPromises.push(
                     this.findAndUpdateActivePlanPlannedCourses(studentId, plannedFromCourseHistory));
+                console.log(`Update active plan ${studentId} ${JSON.stringify(plannedFromCourseHistory)}`);
 
             }
         }
@@ -335,10 +336,15 @@ export class StudentHistory {
             const key = StudentHistory.courseHistoryRecordKey(stuCourse);
             if (stuCourse.status && stuCourse.status.toUpperCase() === 'COMPLETED') {
                 completeByKey[key] = stuCourse;
+                console.log(`COMPLETED: ${JSON.stringify(stuCourse)}`);
+
             } else if (stuCourse.status && stuCourse.status.toUpperCase() === 'PLANNED') {
                 plannedByKey[key] = stuCourse;
+                console.log(`PLANNED: ${JSON.stringify(stuCourse)}`);
             } else {
                 incompleteByKey[key] = stuCourse;
+                console.log(`OTHERWISE: ${JSON.stringify(stuCourse)}`);
+
             }
         }
 
