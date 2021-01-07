@@ -80,9 +80,10 @@ describe('test student course history', () => {
         });
         const studentHistory = new StudentHistory('apCli', 'naviance.2617970DUS', 1, false, false);
         await studentHistory.loadCatalogCredits([{courseId: "1003214", studentId: "apCli", gradeLevel: 9 }]);
-        const plan = await studentHistory.findActivePlanThatHaveNoCourses('apCli');
+        const plan = await studentHistory.findActivePlanThatHaveNoCourses('apCli', 'apCli');
         expect(plan?.studentPrincipleId).toEqual("apCli");
         await studentHistory.findAndUpdateActivePlanPlannedCourses(
+            "apCli",
             "apCli",
             [{courseId: "1003214", studentId: "apCli", creditAttempted: 2, gradeLevel: 9 }]);
     });
