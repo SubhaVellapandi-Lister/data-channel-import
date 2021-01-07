@@ -228,6 +228,7 @@ export class StudentHistory {
         console.log(`waiting on ${batchPromises.length}`);
         const results = await Promise.all(batchPromises);
         if (updatePlanPromises.length > 0) {
+            console.log(`waiting on ${updatePlanPromises.length} plan update`);
             await Promise.all(updatePlanPromises); // atm typescript disallows waiting on different types of promises
         }
         console.log('finished waiting on promises');
@@ -288,12 +289,14 @@ export class StudentHistory {
 
         const foundSlimPlan = slimPlans[0];
         if (!foundSlimPlan.courses) {
-            console.log(`.courses not in ${scope} ${studentId}`);
+            console.log(`.courses not in ${scope} ${studentId} active plan`);
 
             return null;
         }
 
         if (foundSlimPlan.courses.length > 0) {
+            console.log(`.courses not empty for ${scope} ${studentId} active plan`);
+
             return null;
         }
 
