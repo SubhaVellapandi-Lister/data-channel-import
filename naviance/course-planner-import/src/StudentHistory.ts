@@ -220,7 +220,7 @@ export class StudentHistory {
             const plannedFromCourseHistory = Object.values(plannedByKey);
             if (plannedFromCourseHistory.length > 0) {
                 updatePlanPromises.push(
-                    this.findAndUpdateActivePlanPlannedCourses(studentId, plannedFromCourseHistory));
+                    this.findAndUpdateActivePlanPlannedCourses(studentId, scope, plannedFromCourseHistory));
 
             }
         }
@@ -242,8 +242,8 @@ export class StudentHistory {
 
         return;
     }
-    public async findAndUpdateActivePlanPlannedCourses(studentId: string, historyRows: IHistoryRow[]) {
-        const plan = await this.findActivePlanThatHaveNoCourses(studentId);
+    public async findAndUpdateActivePlanPlannedCourses(studentId: string, scope: string, historyRows: IHistoryRow[]) {
+        const plan = await this.findActivePlanThatHaveNoCourses(studentId, scope);
         if (plan) {
             await this.updateActivePlan(plan, historyRows);
         }
@@ -263,9 +263,10 @@ export class StudentHistory {
     }
 
     public async findActivePlanThatHaveNoCourses(
-        studentId: string
+        studentId: string,
+        scope: string
     ): Promise<StudentPlan | null> {
-        const slimPlansPager = StudentPlan.find(this.scope, {
+        const slimPlansPager = StudentPlan.find(scope, {
             findCriteria: {
                 studentPrincipleId: studentId,
                 meta: {
@@ -276,18 +277,18 @@ export class StudentHistory {
         });
         const slimPlans = await slimPlansPager.page(1);
         if (slimPlans.length <= 0) {
-            console.log(`No active plan for ${this.scope} ${studentId}`);
+            console.log(`No active plan for ${scope} ${studentId}`);
 
             return null;
         }
         if (slimPlans.length > 1) {
-            console.log(`More than one active plans for ${this.scope} ${studentId}`);
+            console.log(`More than one active plans for ${scope} ${studentId}`);
 
         }
 
         const foundSlimPlan = slimPlans[0];
         if (!foundSlimPlan.courses) {
-            console.log(`.courses not in ${this.scope} ${studentId}`);
+            console.log(`.courses not in ${scope} ${studentId}`);
 
             return null;
         }
