@@ -25,6 +25,7 @@ export interface IHistoryRow {
 export enum HistoryStatus {
     Completed = 'Completed',
     Scheduled = 'Scheduled',
+    Planned = 'Planned',
     InProgress = 'In Progress'
 }
 
@@ -143,6 +144,10 @@ export class StudentHistory {
             }
             case 'INPROGRESS': {
                 hist.status = HistoryStatus.InProgress;
+                break;
+            }
+            case 'PLANNED': {
+                hist.status = HistoryStatus.Planned;
                 break;
             }
             case 'SCHEDULED': {
