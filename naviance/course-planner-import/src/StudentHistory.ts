@@ -221,7 +221,6 @@ export class StudentHistory {
             if (plannedFromCourseHistory.length > 0) {
                 updatePlanPromises.push(
                     this.findAndUpdateActivePlanPlannedCourses(studentId, plannedFromCourseHistory));
-                console.log(`Update active plan for ${studentId} ${JSON.stringify(plannedFromCourseHistory)}`);
 
             }
         }
@@ -277,6 +276,8 @@ export class StudentHistory {
         });
         const slimPlans = await slimPlansPager.page(1);
         if (slimPlans.length <= 0) {
+            console.log(`No active plan for ${this.scope} ${studentId}`);
+
             return null;
         }
         if (slimPlans.length > 1) {
