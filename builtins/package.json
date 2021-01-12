@@ -24,7 +24,7 @@
     "test:nocov": "jest --no-cache --runInBand",
     "deploy": "npm run build && cdk deploy \"*\" --region us-east-1",
     "deploy-personal": "export ENVIRONMENT=$(whoami | tr '.' '-') && npm run deploy",
-    "deploy-sfdev": "export NODE_CONFIG_ENV=sfdev AWS_PROFILE=sfdev && npm run deploy --toolkit-stack-name ss-cdktoolkit",
+    "deploy-sfdev": "export NODE_CONFIG_ENV=sfdev AWS_PROFILE=sfdev && npm run deploy",
     "deploy-sandbox": "export NODE_CONFIG_ENV=sandbox AWS_PROFILE=data-channels-sandbox && npm run deploy",
     "deploy-platsandbox1": "export NODE_CONFIG_ENV=platsandbox1 AWS_PROFILE=plat-sandbox && npm run deploy",
     "deploy-ssdev": "export NODE_CONFIG_ENV=ssdev AWS_PROFILE=data-channels-dev && npm run deploy",
