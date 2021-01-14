@@ -8,14 +8,16 @@ import config from "config";
 import { tagAppStack } from "./permBoundary";
 
 let functionName = config.get<string>('cdk.functionName');
-const environment = config.get<string>('cdk.environment');
 let stackName = config.get<string>('cdk.stackName');
+
+const environment = config.get<string>('cdk.environment');
 const snsPublish = config.get<boolean>('cdk.permissions.snsPublish');
 const sesSend = config.get<boolean>('cdk.permissions.sesSend');
 const athenaGlue = config.get<boolean>('cdk.permissions.athenaGlue');
 const athenaWorkGroup = config.get<string>('cdk.permissions.athenaWorkGroup');
 
 const fileSystemId = config.get<string>('cdk.efs.fileSystemId');
+const accessPointId = config.get<string>('cdk.efs.accessPointId');
 const securityGroupId = config.get<string>('cdk.efs.securityGroupId');
 const vpcId = config.get<string>('cdk.efs.vpcId');
 const mountPath = config.get<string>('cdk.efs.mountPath');
@@ -36,24 +38,21 @@ export class BuiltinsLambdaStack extends cdk.Stack {
 
         let vpc!: ec2.IVpc
         let securityGroup!: ec2.ISecurityGroup
-        let accessPoint!: efs.AccessPoint
+        let accessPoint!: efs.IAccessPoint
         let fileSystem!: lambda.FileSystem
 
         let efsUsageRole!: iam.PolicyStatement
 
         if (fileSystemId) {
             vpc = ec2.Vpc.fromLookup(this, vpcId, { vpcId });
-            securityGroup = ec2.SecurityGroup.fromSecurityGroupId(this, 'ss-dc-sg', securityGroupId)
-            accessPoint = new efs.AccessPoint(this, "ap", {
+            securityGroup = ec2.SecurityGroup.fromSecurityGroupId(this, 'ss-dc-sg', securityGroupId);
+            accessPoint = efs.AccessPoint.fromAccessPointAttributes(this, 'ss-dc-ap', {
+                accessPointId: accessPointId,
                 fileSystem: efs.FileSystem.fromFileSystemAttributes(this, 'ss-dc-efs', {
                     fileSystemId: fileSystemId,
                     securityGroup: securityGroup
                 }),
-                createAcl: { ownerGid: "1000", ownerUid: "1000", permissions: "777" },
-                posixUser: { uid: "1000", gid: "1000" },
-                path: mountPath
-            });
-
+            }),
             fileSystem = lambda.FileSystem.fromEfsAccessPoint(
                 accessPoint,
                 mountPath
@@ -91,6 +90,7 @@ export class BuiltinsLambdaStack extends cdk.Stack {
 
         let builtins: lambda.Function
         if (accessPoint && efsUsageRole) {
+            console.log('Deploying lambda with EFS-Config')
             builtins = new lambda.Function(this, 'ss-dc-Builtins', {
                 ...builtinsProps,
                 vpc: vpc,
