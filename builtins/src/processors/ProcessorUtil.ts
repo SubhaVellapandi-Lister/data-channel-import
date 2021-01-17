@@ -3,7 +3,7 @@ import { IRowData, IRowProcessorInput } from "@data-channels/dcSDK";
 export const jobOutFileExtension = "d.output";
 
 export function findNextJobStep(flow: string[], currentStep: string): string {
-    return flow.slice(flow.indexOf(currentStep) + 1)[0];
+    return flow.slice(flow.indexOf(currentStep) + 1)[0] ?? "";
 }
 
 export function findPreviousJobStep(flow: string[], currentStep: string): string {

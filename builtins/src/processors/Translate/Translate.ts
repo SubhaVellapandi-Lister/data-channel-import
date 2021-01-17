@@ -28,7 +28,7 @@ import { IFileTranslateConfig, ITranslateParameters, RowType } from "./Translate
 export class Translate extends BaseProcessor {
   private originalHeaders: string[] = [];
   private newHeaders: string[] = [];
-  private config!: ITranslateParameters | IFileTranslateConfig;
+  private config!: {[fileName: string]: IFileTranslateConfig} | IFileTranslateConfig;
   private emptyHeaders = new Set<number>();
   private currentRow: string[] = [];
   private fileToTranslate: string = "";
@@ -56,8 +56,8 @@ export class Translate extends BaseProcessor {
       this.dynamicOutput = configParamters.dynamicOutput;
       this.multipleFileConfig = configParamters.multipleFileConfig;
       if (this.multipleFileConfig) {
-          if (!configParamters.fileTranslateConfig || configParamters.fileTranslateConfig === {}) {
-              throw new Error("Missing filetr in Translate-Builtin");
+          if (!configParamters.fileTranslateConfig || _.isEmpty(configParamters.fileTranslateConfig)) {
+              throw new Error("Missing fileTranslateConfig in Translate-Builtin");
           }
       } else if (!this.multipleFileConfig && !configParamters.translateConfig) {
           throw new Error("Missing translateConfig in Translate-Builtin");
@@ -88,7 +88,7 @@ export class Translate extends BaseProcessor {
       if (index === 1) {
           this.fileToTranslate = inputName;
           if (this.multipleFileConfig) {
-              this.config = _.cloneDeep(input.parameters!["fileTranslateConfig"]) as ITranslateParameters;
+              this.config = _.cloneDeep(input.parameters!["fileTranslateConfig"]) as {[fileName: string]: IFileTranslateConfig};
               if (this.config[this.fileToTranslate] === undefined) {
                   throw new Error(`Failed to validate translate processor missing input file named ${this.fileToTranslate}.`);
               }
@@ -97,17 +97,15 @@ export class Translate extends BaseProcessor {
               this.config = _.cloneDeep(input.parameters!["translateConfig"]) as IFileTranslateConfig;
               this.updatedConfig = this.config;
           }
-          if (this.config === null) {
+          if (!this.config) {
               throw new Error("Missing translateConfig in Translate-Builtin");
           }
           await this.createDynamicInputOutput(input);
           this.originalHeaders = this.currentRow;
           this.newHeaders = this.originalHeaders.map((h, i) => this.mappedHeader(h, i + 1));
           if (
-          // eslint-disable-next-line no-undefined
-              this.updatedConfig.removeEmptyHeaders === undefined ||
-        this.updatedConfig.removeEmptyHeaders === true ||
-        this.updatedConfig.removeUnmappedHeaders === true
+              this.updatedConfig.removeEmptyHeaders !== false ||
+              this.updatedConfig.removeUnmappedHeaders === true
           ) {
               await this.removeEmptyColumn(RowType.HEADER);
           }
@@ -131,10 +129,8 @@ export class Translate extends BaseProcessor {
           };
       }
       if (
-      // eslint-disable-next-line no-undefined
-          this.updatedConfig.removeEmptyHeaders === undefined ||
-      this.updatedConfig.removeEmptyHeaders === true ||
-      this.updatedConfig.removeUnmappedHeaders === true
+          this.updatedConfig.removeEmptyHeaders !== false ||
+          this.updatedConfig.removeUnmappedHeaders === true
       ) {
           await this.removeEmptyColumn(RowType.ROW);
       }
@@ -169,7 +165,7 @@ export class Translate extends BaseProcessor {
   }
 
   /**
-   * This method will be called only row header of the new file entry.
+   * This method will only be called for header row of the new file entry.
    * Update the header index column using the column index provided
    * in the translate config.
    * @param original string
@@ -248,7 +244,6 @@ export class Translate extends BaseProcessor {
       if (channel === null || channel === undefined) {
       // Something very wrong here
           console.error("Could not get channel config for saveIndexMappings");
-
           return;
       }
       const steps = channel.steps;
@@ -265,9 +260,8 @@ export class Translate extends BaseProcessor {
       ) {
           console.error(
               `Translate step config not found in channel config.
-          Translate step should be defined in parent and child config to support auto-saving`
+        Translate step should be defined in parent and child config to support auto-saving`
           );
-
           return;
       } else if (this.updatedConfig.headerMappings === null && this.updatedConfig.indexMappings === null) {
           return;
