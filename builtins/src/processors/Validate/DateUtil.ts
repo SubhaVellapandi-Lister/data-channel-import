@@ -1,6 +1,6 @@
 export class DateUtil {
     static isYYYY_MM_DD(dateString: string): boolean {
-    // regex to evaluate date in the format yyyy-mm--dd
+        // regex to evaluate date in the format yyyy-mm--dd
         const regEx = /^\d{4}-\d{2}-\d{2}$/;
         if (!dateString.match(regEx)) return false;
         const d = new Date(dateString);
@@ -9,7 +9,7 @@ export class DateUtil {
         return d.toISOString().slice(0, 10) === dateString;
     }
     static isHH_MM_SS(timeString: string): boolean {
-    // regex to evaluate date in the format HH:mm:ss
+        // regex to evaluate date in the format HH:mm:ss
         const regEx = /^(2[0-3]|[01][0-9]):[0-5][0-9]:[0-5][0-9]$/;
         return timeString.match(regEx) ? true : false;
     }
@@ -22,7 +22,7 @@ export class DateUtil {
         return false;
     }
     static isHH_MM_AM_PM(timeString: string): boolean {
-    // regex to evaluate date in the format hh:mm am/pm
+        // regex to evaluate date in the format hh:mm am/pm
         const regEx = /^((1[0-2]|0?[1-9]):([0-5][0-9])?([AaPp][Mm]))$/;
         return timeString.match(regEx) ? true : false;
     }
@@ -34,8 +34,13 @@ export class DateUtil {
     }
 
     static isYYYYMM(dateString: string): boolean {
-    // regex to evaluate date in the format yyyymm
+        // regex to evaluate date in the format yyyymm
         const regEx = /^\d{4}(0[1-9]|1[0-2])$/;
+        return dateString.match(regEx) ? true : false;
+    }
+    static isYYYY(dateString: string): boolean {
+        // regex to evaluate date in the format yyyy
+        const regEx = /^\d{4}$/;
         return dateString.match(regEx) ? true : false;
     }
 

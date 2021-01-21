@@ -31,6 +31,7 @@ export enum ValidateDateFormat {
   HH_MM_AM_PM = "HH:MM A",
   YYYYMMDD = "YYYYMMDD",
   YYYYMM = "YYYYMM",
+  YYYY = "YYYY",
 }
 // Interface for file level config
 export interface IFileConfig {

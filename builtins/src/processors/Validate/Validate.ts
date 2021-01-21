@@ -311,7 +311,7 @@ export class Validate extends BaseProcessor {
           break;
       }
       case ValidateDataType.Decimal: {
-          if (!isNaN(parseFloat(data))) {
+          if ((!data && !columnConfig.invalidIfBlank) || !isNaN(parseFloat(data))) {
               hasValidType = true;
           }
           break;

@@ -27,6 +27,9 @@ export class DateValidator {
         case ValidateDateFormat.YYYYMM: {
             return DateUtil.isYYYYMM(inputDate);
         }
+        case ValidateDateFormat.YYYY: {
+            return DateUtil.isYYYY(inputDate);
+        }
         default: {
             return false;
         }
