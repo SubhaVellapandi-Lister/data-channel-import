@@ -9,7 +9,8 @@
             "mountPath": "",
             "securityGroupId": "",
             "vpcId": "",
-            "fileSystemId" : ""
+            "fileSystemId" : "",
+            "accessPointId": ""
         },
         "permissions": {
             "snsPublish": true,
