@@ -186,6 +186,32 @@ Validate that column names are correct and rows contain valid values.
     - compareField - string, compare the given field in the row ( for now its supports only for datetime type. if want to validate
       with current date , compare field would be given as `current_date`)
     - comparator - string, comparator operations for the fields to be compare. (for now its supports only for datetime type. see code for all comparsions [ValidateComparator])
+    - range - In this object we need to add two fields `minVal` and `maxVal`. In both of these fields we can give either a number or an object for setting limit of the column. If the configuration for a limit is an object then we use the value of the column it depends on for each row and then set a limit using the object. For example, we have a column config for English Score with a range:
+    ```json
+    {
+      "english": {
+        "name": "English",
+        "type": "number",
+        "position": 1,
+        "min": 400,
+        "max": {
+            "3": 435,
+            "4": 438,
+            "5": 442,
+            "6": 448,
+            "7": 450,
+            "8": 452,
+            "9": 456,
+            "10": 456
+        },
+        "optional": true,
+        "dependsOn": "Grade Level"
+      }
+    }
+    ``` 
+    Since, in this example, English depends on "Grade Level", we will use the value of Grade Level column in the current row to decide the max limit of English. Like for example if the value of Grade Level is 9 then the max value of English will be 456.
+
+    -dependsOn - string, This column represent the column which should be used to set range limit. See example in range config for better explanation.
 
   - discardInvalidRows - boolean defaults to false, throw away rows from data file if they are invalid
   - validStatusColumnName - string default to `Validation_Status`, other hand it will update the given status column name
@@ -222,6 +248,8 @@ Validate that column names are correct and rows contain valid values.
     - includeLogInData - boolean default to flase, if true, instead of separate log file, put log columns in the data file
     - logHeaders - Array of string, define headers in the log file that is generated
     - extraLogFile - file name, use a separate log file, put log columns in the named file defined here
+  
+- `jsonSchemaNames` - Array of string, This is a list of parameter groups which should be treated as json schemas for column configuration. System will later add these schemas in column config for column validation.
 
 See [Validate.ts](src/processors/Validate.ts) code for more many more advanced config options
 
@@ -309,6 +337,99 @@ Example Config using fileValidateConfig
   "multipleFileConfig": true
 }
 ```
+
+Example of JSON Schema which can be added in parameter group body to be later used by validate method using `jsonSchemaNames` property:
+```json
+{
+  "studentId": {
+    "name": "Student ID",
+    "type": "string"
+  },
+  "gradeLevel": {
+    "name": "Grade Level",
+    "type": "number",
+    "min": 3,
+    "max": 10
+  },
+  "english": {
+    "name": "English",
+    "type": "number",
+    "min": 400,
+    "max": {
+      "3": 435,
+      "4": 438,
+      "5": 442,
+      "6": 448,
+      "7": 450,
+      "8": 452,
+      "9": 456,
+      "10": 456
+    },
+    "optional": true,
+    "dependsOn": "Grade Level"
+  },
+  "science": {
+    "name": "Science",
+    "type": "number",
+    "min": 400,
+    "max": {
+      "3": 433,
+      "4": 436,
+      "5": 438,
+      "6": 440,
+      "7": 443,
+      "8": 446,
+      "9": 449,
+      "10": 449
+    },
+    "optional": true,
+    "dependsOn": "Grade Level"
+  },
+  "math": {
+    "name": "Mathematics",
+    "type": "number",
+    "min": 400,
+    "max": {
+      "3": 434,
+      "4": 440,
+      "5": 446,
+      "6": 451,
+      "7": 453,
+      "8": 456,
+      "9": 460,
+      "10": 460
+    },
+    "optional": true,
+    "dependsOn": "Grade Level"
+  },
+  "writing": {
+    "name": "Writing",
+    "type": "number",
+    "min": 0,
+    "max": 448,
+    "optional": true
+  }
+}
+```
+
+Example config using schema from parameter group for validation:
+```json
+"parameters": {
+  "jsonSchemaNames": ["some_parameter_group_name_with_schema"],
+  "validateConfig": {
+    "columns": {
+      "Status": {
+        "required": false,
+        "validValues": [
+          "Y",
+          ""
+        ]
+      }
+    }
+  }
+}
+```
+Note: We still need to add parameter group which has schema in `parameterGroupNames` property of the channel/step config for the channel to add the parameter group in the config.
 
 ### Sort
 

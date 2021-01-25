@@ -19,13 +19,16 @@ import {
 
 import { DateValidator } from "./DateValidator";
 import { EmailValidator } from "./EmailValidator";
+import { RangeValidator } from "./RangeValidator";
 import {
     ValidateDataType,
     ValidateStatus,
     IValidateParameters,
     IFileConfig,
     IFileValidateConfig,
+    IFileConfigColumns,
 } from "./Validate.interface";
+import { fieldTypeMap } from "./ValidationConstants";
 
 /**
  * Validate processor obtains input files, based on config parameters
@@ -45,6 +48,8 @@ export class Validate extends BaseProcessor {
   private jobOutFileExtension: string = "";
   private emailValidator: EmailValidator = new EmailValidator();
   private dateValidator: DateValidator = new DateValidator();
+  private rangeValidator: RangeValidator = new RangeValidator();
+  private rangeLimitSetters = new Set<string>();
   /**
    * Method used to call before the processor begins to process the data.
    * @param input IStepBeforeInput
@@ -64,6 +69,15 @@ export class Validate extends BaseProcessor {
       if (this.previousStep) {
           this.jobOutFileExtension = toCamelCase(this.previousStep) + jobOutFileExtension;
       }
+      if (this.config.jsonSchemaNames?.length) {
+          const { columnConfig, rangeLimitSetters } = this.parseValidationSchema();
+          this.config.validateConfig.columns = Object.assign(
+              this.config.validateConfig?.columns ?? {},
+              columnConfig
+          );
+          this.rangeLimitSetters = rangeLimitSetters;
+          this.config.validateConfig.discardInvalidRows = true;
+      }
       this.currentStep = toCamelCase(this.currentStep);
   }
   /**
@@ -72,6 +86,9 @@ export class Validate extends BaseProcessor {
    */
   public async validate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
       let inputFileName = input.name;
+      if (this.config.jsonSchemaNames?.length && input.index > 1) {
+          this.rangeValidator.setRangeLimitLevels(input.data, this.rangeLimitSetters);
+      }
       if (this.config!.dynamicOutput) {
           inputFileName = getFileNameFromInputFile(input, this.jobOutFileExtension);
       }
@@ -197,7 +214,7 @@ export class Validate extends BaseProcessor {
               validationErrors.push(`Column ${columnName} must be of type ${columnConfig.validTypes!.join(", ")}`);
               validationStatus = ValidateStatus.Invalid;
           } else {
-              this.rangeValidation(parseFloat(data), columnConfig, columnName, validationErrors, validationStatus);
+              validationStatus = this.rangeValidator.validateRange(parseFloat(data), columnConfig, columnName, validationErrors, validationStatus);
               if (columnConfig.maxlength && !(data.length <= columnConfig.maxlength)) {
                   validationErrors.push(`Column ${columnName} exceeds the maximum length of ${columnConfig.maxlength}`);
                   validationStatus = ValidateStatus.Invalid;
@@ -240,41 +257,49 @@ export class Validate extends BaseProcessor {
       };
   }
 
-  /**
-   * This method is used to check the range validation
-   * @param data
-   * @param columnConfig
-   * @param columnName
-   * @param validationErrors
-   * @param validationStatus
-   * @returns void
-   */
-  private rangeValidation(
-      data: number,
-      columnConfig: IFileConfig,
-      columnName: string,
-      validationErrors: string[],
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars-experimental
-      validationStatus: string
-  ): void {
-      if ("range" in columnConfig) {
-          const range = columnConfig.range || {};
-          if (Object.keys(range).length === 0) {
-              throw new Error(`column ${columnName} minVal and maxVal config missing in the range validation`);
-          }
-          if (!("minVal" in range) || !("maxVal" in range)) {
-              throw new Error(`column ${columnName} minVal or maxVal config missing in the range validation`);
-          }
-          if (
-              isFinite(data) &&
-        (range.minVal || range.minVal === 0) &&
-        range.maxVal &&
-        !(data >= range.minVal && data <= range.maxVal)
-          ) {
-              validationErrors.push(`Column ${columnName} must be between ${range.minVal} and ${range.maxVal}`);
-              validationStatus = ValidateStatus.Invalid;
+  private parseValidationSchema(): {
+      columnConfig: IFileConfigColumns;
+      rangeLimitSetters: Set<string>;
+      } {
+      const columnConfig: IFileConfigColumns = {},
+          rangeLimitSetters = new Set<string>(this.rangeLimitSetters);
+
+      if (!this.config.jsonSchemaNames?.length) {
+          return {
+              columnConfig,
+              rangeLimitSetters
+          };
+      }
+
+      for (const schemaName of this.config.jsonSchemaNames) {
+          const validationSchema: { [key: string]: any } = this.config[schemaName] ?? {};
+
+          for (const fieldScehma of Object.values(validationSchema)) {
+              const fieldName = fieldScehma.name;
+              columnConfig[fieldName] = {
+                  required: !fieldScehma.optional,
+              };
+
+              if (fieldScehma.dependsOn) {
+                  columnConfig[fieldName].dependsOn = fieldScehma.dependsOn;
+                  rangeLimitSetters.add(fieldScehma.dependsOn);
+              }
+
+              columnConfig[fieldName].validTypes = [fieldTypeMap[fieldScehma.type] ?? fieldScehma.type];
+
+              if (fieldScehma.min || fieldScehma.max) {
+                  columnConfig[fieldName].range = {
+                      minVal: fieldScehma.min ?? 0,
+                      maxVal: fieldScehma.max ?? Number.MAX_SAFE_INTEGER
+                  };
+              }
           }
       }
+
+      return {
+          columnConfig,
+          rangeLimitSetters
+      };
   }
 
   /**
