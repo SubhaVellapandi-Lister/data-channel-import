@@ -24,6 +24,15 @@ export enum ValidateComparator {
   Equal = "eq",
 }
 
+// Interface for validate comparator Message
+export enum ValidateComparatorMessage {
+  gt = "greater than",
+  lt = "lesser than",
+  gtEq = "greater than or equal to",
+  ltEq = "lesser than or equal to",
+  eq = "equal to",
+}
+
 // Interface for validate date format
 export enum ValidateDateFormat {
   YYYY_MM_DD = "YYYY-MM-DD",
