@@ -42,6 +42,28 @@ export enum ValidateDateFormat {
   YYYYMM = "YYYYMM",
   YYYY = "YYYY",
 }
+
+export enum SchemaType {
+	Number = "number",
+	Date = "date",
+}
+
+//These are ranges which dependsOn rangeSetter values to set min max limit for that row
+export interface IRangeLimit {
+	[key: number]: number;
+}
+
+/**
+ * Range Limit setters are the columns which sets the min max range limits of other columns
+ */
+export interface IRangeLevelValues {
+  [columnName: string]: number | undefined;
+}
+
+export interface IFileConfigColumns {
+  [name: string]: IFileConfig;
+}
+
 // Interface for file level config
 export interface IFileConfig {
   required?: boolean; // invalid if column doesn't exist
@@ -61,13 +83,12 @@ export interface IFileConfig {
     minVal?: number; // if value is less than the minVal config, record is invalid
     maxVal?: number; // if value is greater than the maxVal config, record is invalid
   };
+  dependsOn?: string;
 }
 
 // Interface for validate configs
 export interface IFileValidateConfig {
-  columns: {
-    [name: string]: IFileConfig;
-  };
+  columns: IFileConfigColumns;
   discardInvalidRows?: boolean; // throw away rows from data file if they are invalid
   validStatusColumnName?: string; // log validation status column name
   validInfoColumnName?: string; // log informational message column name
@@ -107,4 +128,5 @@ export interface IValidateParameters {
   dynamicOutput: boolean;
   dynamicInput: boolean;
   multipleFileConfig: boolean;
+  jsonSchemaNames?: string[];
 }

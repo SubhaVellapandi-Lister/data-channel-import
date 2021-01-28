@@ -19,6 +19,10 @@ export const studentCourseFileInfo = {
     key: "studentCourse.csv",
     bucket: "sfdev",
 };
+export const testScoreFileInfo = {
+    key: "testScore.csv",
+    bucket: "sfdev",
+};
 export const validateConfig = {
     parameters: {
         multipleFileConfig: true,
@@ -426,6 +430,181 @@ export const validateConfigWithLogHeaders = {
         },
     },
 };
+
+export const validateConfigUsingSchema = {
+    parameters: {
+        dummy_schema: {
+            "studentId": {
+                "name": "Student ID",
+                "type": "string",
+                "position": 0
+            },
+            "testDate": {
+                "name": "Test Date",
+                "type": "date",
+                "position": 10,
+                "optional": true
+            },
+            "legacyScoreId": {
+                "name": "Legacy Score ID",
+                "type": "string",
+                "position": 12,
+                "optional": true
+            },
+            "gradeLevel": {
+                "name": "Grade Level",
+                "type": "number",
+                "min": 3,
+                "max": 10,
+                "position": 11
+            },
+            "english": {
+                "name": "English",
+                "type": "number",
+                "position": 1,
+                "min": 400,
+                "max": {
+                    "3": 435,
+                    "4": 438,
+                    "5": 442,
+                    "6": 448,
+                    "7": 450,
+                    "8": 452,
+                    "9": 456,
+                    "10": 456
+                },
+                "optional": true,
+                "dependsOn": "Grade Level"
+            },
+            "reading": {
+                "name": "Reading",
+                "type": "number",
+                "position": 3,
+                "min": 400,
+                "max": {
+                    "3": 429,
+                    "4": 431,
+                    "5": 434,
+                    "6": 436,
+                    "7": 438,
+                    "8": 440,
+                    "9": 442,
+                    "10": 442
+                },
+                "optional": true,
+                "dependsOn": "Grade Level"
+            },
+            "science": {
+                "name": "Science",
+                "type": "number",
+                "position": 4,
+                "min": 400,
+                "max": {
+                    "3": 433,
+                    "4": 436,
+                    "5": 438,
+                    "6": 440,
+                    "7": 443,
+                    "8": 446,
+                    "9": 449,
+                    "10": 449
+                },
+                "optional": true,
+                "dependsOn": "Grade Level"
+            },
+            "math": {
+                "name": "Mathematics",
+                "type": "number",
+                "position": 2,
+                "min": 400,
+                "max": {
+                    "3": 434,
+                    "4": 440,
+                    "5": 446,
+                    "6": 451,
+                    "7": 453,
+                    "8": 456,
+                    "9": 460,
+                    "10": 460
+                },
+                "optional": true,
+                "dependsOn": "Grade Level"
+            },
+            "writing": {
+                "name": "Writing",
+                "type": "number",
+                "position": 5,
+                "min": 0,
+                "max": 448,
+                "optional": true
+            },
+            "total": {
+                "name": "Composite (total)",
+                "type": "number",
+                "position": 8,
+                "min": 400,
+                "max": {
+                    "3": 433,
+                    "4": 436,
+                    "5": 440,
+                    "6": 444,
+                    "7": 446,
+                    "8": 449,
+                    "9": 452,
+                    "10": 452
+                },
+                "optional": true,
+                "dependsOn": "Grade Level"
+            },
+            "ela": {
+                "name": "English Language Arts",
+                "type": "number",
+                "position": 6,
+                "min": 0,
+                "max": {
+                    "3": 438,
+                    "4": 439,
+                    "5": 442,
+                    "6": 444,
+                    "7": 446,
+                    "8": 447,
+                    "9": 449,
+                    "10": 449
+                },
+                "optional": true,
+                "dependsOn": "Grade Level"
+            },
+            "stem": {
+                "name": "Science, Technology, Engineering and Math",
+                "type": "number",
+                "position": 7,
+                "min": 0,
+                "max": {
+                    "3": 434,
+                    "4": 438,
+                    "5": 442,
+                    "6": 446,
+                    "7": 448,
+                    "8": 451,
+                    "9": 455,
+                    "10": 455
+                },
+                "optional": true,
+                "dependsOn": "Grade Level"
+            },
+            "predictedAct": {
+                "name": "Predicted ACT Score",
+                "type": "string",
+                "position": 9,
+                "optional": true
+            }
+        },
+        validateConfig: {
+            columns: {}
+        },
+        jsonSchemaNames: ["dummy_schema"]
+    }
+}
 
 export const usersHeaderInputRow = {
     index: 1,
@@ -989,4 +1168,197 @@ export function getValidateProcessor(): Validate {
     validateProcessor.createInput = jest.fn().mockReturnValue(``);
 
     return validateProcessor;
+}
+
+export const testScoreHeaderInputRow = {
+    index: 1,
+    name: "test_score",
+    fileInfo: testScoreFileInfo,
+    raw: [
+        "Student ID",
+        "First Name",
+        "Middle Name",
+        "Last Name",
+        "Class Year",
+        "English",
+        "Mathematics",
+        "Reading",
+        "Science",
+        "Writing",
+        "Composite (total)",
+        "Test Date",
+        "Grade Level"
+    ],
+    data: {
+        "Student ID": "Student ID",
+        "First Name": "First Name",
+        "Middle Name": "Middle Name",
+        "Last Name": "Last Name",
+        "Class Year": "Class Year",
+        "English": "English",
+        "Mathematics": "Mathematics",
+        "Reading": "Reading",
+        "Science": "Science",
+        "Writing": "Writing",
+        "Composite (total)": "Composite (total)",
+        "Test Date": "Test Date",
+        "Grade Level": "Grade Level"
+    },
+    ...validateConfigUsingSchema
+}
+
+export const testScoreInvalidDataInputRow = {
+    index: 2,
+    raw: [
+        "12279384",
+        "Doe",
+        "P",
+        "Keating",
+        "2011",
+        "435",
+        "435",
+        "421",
+        "440",
+        "440",
+        "433",
+        "2009-06-01",
+        "3"
+    ],
+    data: {
+        "Student ID": "12279384",
+        "First Name": "Doe",
+        "Middle Name": "P",
+        "Last Name": "Keating",
+        "Class Year": "2011",
+        "English": "435",
+        "Mathematics": "435",
+        "Reading": "421",
+        "Science": "440",
+        "Writing": "440",
+        "Composite": "433",
+        "Test Date": "2009-06-01",
+        "Grade Level": "3"
+    },
+    json: [
+        "12279384",
+        "Doe",
+        "P",
+        "Keating",
+        "2011",
+        "435",
+        "435",
+        "421",
+        "440",
+        "440",
+        "433",
+        "2009-06-01",
+        "3"
+    ],
+    name: "testScore",
+    fileInfo: testScoreFileInfo,
+    ...validateConfigUsingSchema
+}
+
+export const testScoreValidDataInputRow = {
+    index: 2,
+    raw: [
+        "12279384",
+        "Doe",
+        "P",
+        "Keating",
+        "2011",
+        "450",
+        "451",
+        "436",
+        "440",
+        "440",
+        "445",
+        "2009-06-01",
+        "7"
+    ],
+    data: {
+        "Student ID": "12279384",
+        "First Name": "Doe",
+        "Middle Name": "P",
+        "Last Name": "Keating",
+        "Class Year": "2011",
+        "English": "450",
+        "Mathematics": "451",
+        "Reading": "436",
+        "Science": "440",
+        "Writing": "440",
+        "Composite": "445",
+        "Test Date": "2009-06-01",
+        "Grade Level": "7"
+    },
+    json: [
+        "12279384",
+        "Doe",
+        "P",
+        "Keating",
+        "2011",
+        "450",
+        "451",
+        "436",
+        "440",
+        "440",
+        "445",
+        "2009-06-01",
+        "6"
+    ],
+    name: "testScore",
+    fileInfo: testScoreFileInfo,
+    ...validateConfigUsingSchema
+}
+
+export const testScoreInvalidDataInputRow2 = {
+    index: 2,
+    raw: [
+        "12279384",
+        "Doe",
+        "P",
+        "Keating",
+        "2011",
+        "500",
+        "300",
+        "421",
+        "440",
+        "600",
+        "433",
+        "2009-06-01",
+        "10"
+    ],
+    data: {
+        "Student ID": "12279384",
+        "First Name": "Doe",
+        "Middle Name": "P",
+        "Last Name": "Keating",
+        "Class Year": "2011",
+        "English": "500",
+        "Mathematics": "300",
+        "Reading": "421",
+        "Science": "440",
+        "Writing": "600",
+        "Composite": "433",
+        "Test Date": "2009-06-01",
+        "Grade Level": "10"
+    },
+    json: [
+        "12279384",
+        "Doe",
+        "P",
+        "Keating",
+        "2011",
+        "500",
+        "300",
+        "421",
+        "440",
+        "600",
+        "433",
+        "2009-06-01",
+        "10"
+    ],
+    name: "testScore",
+    fileInfo: testScoreFileInfo,
+    ...validateConfigUsingSchema
 }

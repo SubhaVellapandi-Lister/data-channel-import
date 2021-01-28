@@ -3,6 +3,7 @@ import {
     validateConfig,
     validateConfigWithWarning,
     validateConfigLogExcluded,
+    validateConfigUsingSchema,
     usersHeaderInputRow,
     usersDataRowWithInvalidEmail,
     usersDataRowWithValidEmail,
@@ -22,6 +23,10 @@ import {
     studentCourseDataRowWithDatetimeValue,
     studentCourseDataRowWithInvalidDatetimeValue,
     studentCourseDataRowWithInvalidDatetime,
+    testScoreHeaderInputRow,
+    testScoreInvalidDataInputRow,
+    testScoreValidDataInputRow,
+    testScoreInvalidDataInputRow2
 } from "./ValidateTestInput";
 
 describe("ValidateProcessor", () => {
@@ -395,6 +400,113 @@ describe("ValidateProcessor", () => {
                     "2010-02-28 10:70:00",
                     "invalid",
                     "Column birth_date must be of type datetime",
+                ],
+            },
+        });
+    });
+
+    test("Use Validate method to validate headers", async () => {
+        const validateProcessor = getValidateProcessor();
+        await validateProcessor.before_validate(validateConfigUsingSchema);
+        const headers = await validateProcessor.validate(testScoreHeaderInputRow);
+
+        expect(headers).toEqual({
+            outputs: {
+                test_scoreValidated: [
+                    "Student ID",
+                    "First Name",
+                    "Middle Name",
+                    "Last Name",
+                    "Class Year",
+                    "English",
+                    "Mathematics",
+                    "Reading",
+                    "Science",
+                    "Writing",
+                    "Composite (total)",
+                    "Test Date",
+                    "Grade Level",
+                ],
+                log: [
+                    "Row",
+                    "Student ID",
+                    "Validation_Status",
+                    "Validation_Info",
+                ],
+            },
+        });
+    });
+
+    test("Use Validate method to show error on invalid test scores - case Testing for minMax object", async () => {
+        const validateProcessor = getValidateProcessor();
+        await validateProcessor.before_validate(validateConfigUsingSchema);
+        await validateProcessor.validate(testScoreHeaderInputRow);
+
+        const result = await validateProcessor.validate(testScoreInvalidDataInputRow);
+
+        expect(result).toEqual({
+            error: true,
+            outputs: {
+                log: [
+                    "2",
+                    "12279384",
+                    "invalid",
+                    "Value 440 for Science is above the maximum of 433; Value 435 for Mathematics is above the maximum of 434",
+                ],
+            },
+        });
+    });
+
+    test("Use Validate method to show error on invalid test scores - case Testing for minMax by number", async () => {
+        const validateProcessor = getValidateProcessor();
+        await validateProcessor.before_validate(validateConfigUsingSchema);
+        await validateProcessor.validate(testScoreHeaderInputRow);
+
+        const result = await validateProcessor.validate(testScoreInvalidDataInputRow2);
+
+        expect(result).toEqual({
+            error: true,
+            outputs: {
+                log: [
+                    "2",
+                    "12279384",
+                    "invalid",
+                    "Value 500 for English is above the maximum of 456; Value 300 for Mathematics is below the minimum of 400; Value 600 for Writing is above the maximum of 448",
+                ],
+            },
+        });
+    });
+
+    test("Use Validate method to validate test scores", async () => {
+        const validateProcessor = getValidateProcessor();
+        await validateProcessor.before_validate(validateConfigUsingSchema);
+        await validateProcessor.validate(testScoreHeaderInputRow);
+
+        const result = await validateProcessor.validate(testScoreValidDataInputRow);
+
+        expect(result).toEqual({
+            error: false,
+            outputs: {
+                testScoreValidated: [
+                    "12279384",
+                    "Doe",
+                    "P",
+                    "Keating",
+                    "2011",
+                    "450",
+                    "451",
+                    "436",
+                    "440",
+                    "440",
+                    "445",
+                    "2009-06-01",
+                    "7",
+                ],
+                log: [
+                    "2",
+                    "12279384",
+                    "valid",
+                    "",
                 ],
             },
         });
