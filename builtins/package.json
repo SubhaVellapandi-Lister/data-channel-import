@@ -1,6 +1,6 @@
 {
   "name": "@data-channels/builtins",
-  "version": "1.0.2",
+  "version": "1.0.6",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -77,7 +77,7 @@
     "webpack-cli": "4.2.0"
   },
   "dependencies": {
-    "@data-channels/dcSDK": "1.0.4",
+    "@data-channels/dcSDK": "1.0.6",
     "lodash": "4.17.20",
     "node-fetch": "2.6.1"
   },
