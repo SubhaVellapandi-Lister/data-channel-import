@@ -206,7 +206,7 @@ describe("ValidateProcessor", () => {
                     "SRF101",
                     "03",
                     "invalid",
-                    "Column start_dt must be of type datetime",
+                    "Column start_dt must be lesser than the Column current_date and must be of type datetime",
                 ],
             },
         });
@@ -368,7 +368,7 @@ describe("ValidateProcessor", () => {
                     "2020-01-2310:30:00",
                     "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest@test.com",
                     "invalid",
-                    "Column student_course_start_date must be of type datetime; Column student_course_end_date must be of type datetime; Column mob must be of type datetime; Column par_student_start_date must be of type datetime; Column par_student_end_date must be of type datetime; Column birth_date must be of type datetime; Column email must be of type email",
+                    "Column student_course_start_date must be lesser than or equal to the Column student_course_end_date and must be of type datetime; Column student_course_end_date must be greater than or equal to the Column student_course_start_date and must be of type datetime; Column mob must be of type datetime; Column par_student_start_date must be of type datetime; Column par_student_end_date must be equal to the Column par_student_end_date and must be of type datetime; Column birth_date must be of type datetime; Column email must be of type email",
                 ],
             },
         });

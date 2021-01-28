@@ -25,6 +25,7 @@ import {
     IValidateParameters,
     IFileConfig,
     IFileValidateConfig,
+    ValidateComparatorMessage,
 } from "./Validate.interface";
 
 /**
@@ -194,7 +195,13 @@ export class Validate extends BaseProcessor {
           }
 
           if (!hasValidType) {
-              validationErrors.push(`Column ${columnName} must be of type ${columnConfig.validTypes!.join(", ")}`);
+              columnConfig.comparator && columnConfig.compareField
+                  ? validationErrors.push(
+                      `Column ${columnName} must be ${ValidateComparatorMessage[columnConfig.comparator]} the Column ${
+                          columnConfig.compareField
+                      } and must be of type ${columnConfig.validTypes!.join(", ")}`
+                  )
+                  : validationErrors.push(`Column ${columnName} must be of type ${columnConfig.validTypes!.join(", ")}`);
               validationStatus = ValidateStatus.Invalid;
           } else {
               this.rangeValidation(parseFloat(data), columnConfig, columnName, validationErrors, validationStatus);
