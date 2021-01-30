@@ -22,7 +22,7 @@
     "sam-package-prod": "sam package --template-file sam-template-prod.yml --output-template-file sam-packaged-prod.yml --s3-bucket data-channels-processor-deployments-dev",
     "sam-deploy-prod": "sam deploy --template-file ./sam-packaged-prod.yml --stack-name cf-naviance-dc-ap-import-prod --capabilities CAPABILITY_IAM --region us-east-1",
     "deploy-prod": "npm run build && npm run pack && npm run sam-package-prod && npm run sam-deploy-prod && rm course-planner-import.zip",
-    "sam-package-navprod": "sam package --template-file sam-template-prod.yml --output-template-file sam-packaged-navprod.yml --s3-bucket data-channels-processor-deployments-navprod",
+    "sam-package-navprod": "sam package --template-file sam-template-prod.yml --output-template-file sam-packaged-navprod.yml --s3-bucket data-channels-processor-deployments-navprod --region us-east-1",
     "sam-deploy-navprod": "sam deploy --template-file ./sam-packaged-navprod.yml --stack-name cf-naviance-dc-ap-import-prod --capabilities CAPABILITY_IAM --region us-east-1",
     "deploy-navprod": "npm run build && npm run pack && npm run sam-package-navprod && npm run sam-deploy-navprod && rimraf course-planner-import.zip"
   },

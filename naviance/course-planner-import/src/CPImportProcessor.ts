@@ -455,7 +455,7 @@ export class CPImportProcessor extends BaseProcessor {
         console.log('finishing up import histories call');
         await this.historyHandler!.processLeftovers();
 
-        if (this.job.tenant && this.historyHandler) {
+        /* if (this.job.tenant && this.historyHandler) {
           const queueDetails = await findOrCreateQueue(this.job.tenant.name || '');
           const studentIdMap = this.historyHandler.getProcessedStudentIdMap();
           const highschoolIds = Object.keys(studentIdMap);
@@ -470,7 +470,7 @@ export class CPImportProcessor extends BaseProcessor {
             queueDetails,
             { studentIds, highschoolIds },
           );
-        }
+        } */
 
         return { results: {
             createdCount: this.historyHandler!.createdCount,
