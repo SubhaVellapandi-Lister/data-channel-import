@@ -1,6 +1,8 @@
 
 {
     "cdk": {
-        "environment": "dev"
+        "environment": "dev",
+        "permissionBoundary": "tf-dev-platform-permissions-boundary"
+
     }
 }
