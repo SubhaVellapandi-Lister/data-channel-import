@@ -1,6 +1,6 @@
 {
   "name": "@data-channels/builtins",
-  "version": "1.0.7",
+  "version": "1.0.10",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,6 +25,7 @@
     "deploy": "npm run build && cdk deploy \"*\" --region us-east-1",
     "deploy-personal": "export ENVIRONMENT=$(whoami | tr '.' '-') && npm run deploy",
     "deploy-sfdev": "export NODE_CONFIG_ENV=sfdev AWS_PROFILE=sfdev && npm run deploy",
+    "deploy-navdev": "export NODE_CONFIG_ENV=navdev && npm run deploy",
     "deploy-sandbox": "export NODE_CONFIG_ENV=sandbox AWS_PROFILE=data-channels-sandbox && npm run deploy",
     "deploy-platsandbox1": "export NODE_CONFIG_ENV=platsandbox1 AWS_PROFILE=plat-sandbox && npm run deploy",
     "deploy-ssdev": "export NODE_CONFIG_ENV=ssdev AWS_PROFILE=data-channels-dev && npm run deploy",
@@ -77,7 +78,7 @@
     "webpack-cli": "4.2.0"
   },
   "dependencies": {
-    "@data-channels/dcSDK": "1.0.7",
+    "@data-channels/dcSDK": "1.0.10",
     "lodash": "4.17.20",
     "node-fetch": "2.6.1"
   },

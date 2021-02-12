@@ -1,0 +1,7 @@
+
+{
+    "cdk": {
+        "environment": "navdev",
+        "functionName": "ss-data-channels-BuiltInProcessor-navdev"
+    }
+}
