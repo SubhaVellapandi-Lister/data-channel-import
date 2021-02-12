@@ -1,0 +1,7 @@
+
+{
+    "cdk": {
+        "environment": "navarch",
+        "functionName": "ss-data-channels-BuiltInProcessor-navarch"
+    }
+}
