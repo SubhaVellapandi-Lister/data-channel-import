@@ -21,18 +21,18 @@ const testJobConfig = {
     filesIn: [
         {
             s3: { key: "dummy-key/i1.csv", bucket: "dummy-bucket" },
-            name: "i1",
-        },
+            name: "i1"
+        }
     ],
     filesOut: [{ s3: { key: "i1", bucket: "" }, name: "i1" }],
     steps: {
         translate: {
-            finished: false,
+            finished: false
         },
         dummyNextStep: {
             finished: false
         }
-    },
+    }
 };
 
 export const fileTranslateConfigWithHeaderMappings: IFileTranslateConfig = {
@@ -40,7 +40,7 @@ export const fileTranslateConfigWithHeaderMappings: IFileTranslateConfig = {
         "Course_Name": "New_Course_Name",
         "Course_ID": "New_Course_ID"
     }
-}
+};
 
 export const fileTranslateConfigWithIndexMappings: IFileTranslateConfig = {
     indexMappings: {
@@ -62,7 +62,7 @@ export const fileTranslateConfigWithIndexMappings: IFileTranslateConfig = {
         16: "CTE",
         17: "Prereq_Text"
     }
-}
+};
 
 export const fileTranslateConfigWithValueMappings: IFileTranslateConfig = {
     valueMappings: {
@@ -79,7 +79,7 @@ export const fileTranslateConfigWithValueMappings: IFileTranslateConfig = {
             }
         ]
     }
-}
+};
 
 const translateParameters: ITranslateParameters = {
     multipleFileConfig: false,
@@ -102,11 +102,11 @@ const translateParametersWithMultipleFileConfig: ITranslateParameters = {
 
 export const testTranslateConfig: IStepBeforeInput = {
     parameters: translateParameters
-}
+};
 
 export const testTranslateMultipleFileConfig: IStepBeforeInput = {
     parameters: translateParametersWithMultipleFileConfig
-}
+};
 
 export const testChannelConfig = {
     guid: "some-channel-guid",
@@ -139,7 +139,7 @@ export const testChannelConfig = {
     },
     systemFailureRetries: 1,
     inheritOnly: false
-}
+};
 
 export const testInputHeadersRow: IRowProcessorInput = {
     index: 1,

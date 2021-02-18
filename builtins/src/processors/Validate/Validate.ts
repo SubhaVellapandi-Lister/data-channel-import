@@ -3,7 +3,7 @@ import {
     IRowProcessorInput,
     IRowProcessorOutput,
     IStepBeforeInput,
-    RowOutputValue,
+    RowOutputValue
 } from "@data-channels/dcSDK";
 
 import {
@@ -14,7 +14,7 @@ import {
     getFilePathFromInputFile,
     toCamelCase,
     jobOutFileExtension,
-    getKeyValueCaseInsensitive,
+    getKeyValueCaseInsensitive
 } from "../ProcessorUtil";
 
 import { DateValidator } from "./DateValidator";
@@ -27,7 +27,7 @@ import {
     IFileConfig,
     IFileValidateConfig,
     IFileConfigColumns,
-    ValidateComparatorMessage,
+    ValidateComparatorMessage
 } from "./Validate.interface";
 import { fieldTypeMap } from "./ValidationConstants";
 
@@ -137,14 +137,14 @@ export class Validate extends BaseProcessor {
           }
 
           const headerOutputs: { [name: string]: RowOutputValue } = {
-              [dataOutputName]: this.dataFileHeaders,
+              [dataOutputName]: this.dataFileHeaders
           };
 
           for (const logOutputName of logNames) {
               headerOutputs[logOutputName] = this.logFileHeaders;
           }
           return {
-              outputs: headerOutputs,
+              outputs: headerOutputs
           };
       }
 
@@ -243,7 +243,7 @@ export class Validate extends BaseProcessor {
       const logDataByHeader = {
           Row: input.index.toString(),
           [statusName]: validationStatus,
-          [infoName]: validationErrors.join("; "),
+          [infoName]: validationErrors.join("; ")
       };
 
       for (const [columnIndex, columnValue] of input.raw.entries()) {
@@ -260,7 +260,7 @@ export class Validate extends BaseProcessor {
       }
       return {
           error: validationStatus === ValidateStatus.Invalid,
-          outputs,
+          outputs
       };
   }
 
@@ -284,7 +284,7 @@ export class Validate extends BaseProcessor {
           for (const fieldScehma of Object.values(validationSchema)) {
               const fieldName = fieldScehma.name;
               columnConfig[fieldName] = {
-                  required: !fieldScehma.optional,
+                  required: !fieldScehma.optional
               };
 
               if (fieldScehma.dependsOn) {
@@ -403,15 +403,15 @@ export class Validate extends BaseProcessor {
                   name: `${inputFileName}${this.currentStep}d`,
                   s3: {
                       key: `${getFilePathFromInputFile(input)}${inputFileName}${this.currentStep}d.csv`,
-                      bucket: `${getBucketDetailsFromInputFile(input)}`,
-                  },
-              },
+                      bucket: `${getBucketDetailsFromInputFile(input)}`
+                  }
+              }
           });
       }
       if (this.config!.dynamicInput && this.nextStep) {
           await this.createInput({
               name: `${inputFileName}${this.currentStep}d->${input.name}`,
-              step: `${this.nextStep}`,
+              step: `${this.nextStep}`
           });
       }
   }

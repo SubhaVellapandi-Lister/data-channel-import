@@ -2,7 +2,7 @@ import {
     BaseProcessor,
     IFileProcessorInput,
     IFileProcessorOutput,
-    JobStatus,
+    JobStatus
 } from "@data-channels/dcSDK";
 import AWS from "aws-sdk";
 import _ from "lodash";
@@ -56,7 +56,7 @@ export class SESProcessor extends BaseProcessor {
                 channel: this.job.channelReference,
                 steps: this.job.steps
             }, undefined, 2),
-            false,
+            false
         );
 
         return {};

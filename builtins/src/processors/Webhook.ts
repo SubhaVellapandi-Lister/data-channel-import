@@ -36,7 +36,7 @@ export class Webhook extends BaseProcessor {
     }
     private getRequestOptions(): RequestInit {
         const requestOptions: RequestInit = {
-            method: this.config.method,
+            method: this.config.method
         };
 
         if (this.config.body) {

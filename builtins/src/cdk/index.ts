@@ -1,8 +1,9 @@
-import ec2 = require('@aws-cdk/aws-ec2');
-import efs = require('@aws-cdk/aws-efs');
-import iam = require('@aws-cdk/aws-iam');
-import lambda = require('@aws-cdk/aws-lambda');
-import cdk = require('@aws-cdk/core');
+import { IVpc, Vpc, ISecurityGroup, SecurityGroup, SubnetType, SubnetSelection, Subnet } from '@aws-cdk/aws-ec2';
+import { IAccessPoint, AccessPoint, FileSystem as efsFileSystem } from '@aws-cdk/aws-efs';
+import { PolicyStatement, Effect, Role, User, AccountPrincipal, ArnPrincipal, CfnAccessKey } from '@aws-cdk/aws-iam';
+import { Runtime, FileSystem as lambdaFileSystem, LayerVersion, Code } from '@aws-cdk/aws-lambda';
+import { LogLevel, NodejsFunction, NodejsFunctionProps } from '@aws-cdk/aws-lambda-nodejs';
+import { App, Stack, StackProps, CfnOutput, Aws, Duration } from '@aws-cdk/core';
 import config from "config";
 
 import { tagAppStack } from "./permBoundary";
@@ -16,6 +17,7 @@ const sesSend = config.get<boolean>('cdk.permissions.sesSend');
 const athenaGlue = config.get<boolean>('cdk.permissions.athenaGlue');
 const athenaWorkGroup = config.get<string>('cdk.permissions.athenaWorkGroup');
 
+const useEfs = config.get<boolean>('cdk.efs.useEfs');
 const fileSystemId = config.get<string>('cdk.efs.fileSystemId');
 const accessPointId = config.get<string>('cdk.efs.accessPointId');
 const securityGroupId = config.get<string>('cdk.efs.securityGroupId');
@@ -32,34 +34,34 @@ if (stackName.includes('${environment}')) {
     stackName = stackName.replace('${environment}', environment);
 }
 
-export class BuiltinsLambdaStack extends cdk.Stack {
-    constructor(scope: cdk.App, id: string, props: cdk.StackProps) {
+export class BuiltinsLambdaStack extends Stack {
+    constructor(scope: App, id: string, props: StackProps) {
         super(scope, id, props);
 
-        let vpc!: ec2.IVpc
-        let securityGroup!: ec2.ISecurityGroup
-        let accessPoint!: efs.IAccessPoint
-        let fileSystem!: lambda.FileSystem
+        let vpc!: IVpc;
+        let securityGroup!: ISecurityGroup;
+        let accessPoint!: IAccessPoint;
+        let fileSystem!: lambdaFileSystem;
 
-        let efsUsageRole!: iam.PolicyStatement
+        let efsUsageRole!: PolicyStatement;
 
-        if (fileSystemId) {
-            vpc = ec2.Vpc.fromLookup(this, vpcId, { vpcId });
-            securityGroup = ec2.SecurityGroup.fromSecurityGroupId(this, 'ss-dc-sg', securityGroupId);
-            accessPoint = efs.AccessPoint.fromAccessPointAttributes(this, 'ss-dc-ap', {
+        if (useEfs && fileSystemId) {
+            vpc = Vpc.fromLookup(this, vpcId, { vpcId });
+            securityGroup = SecurityGroup.fromSecurityGroupId(this, 'ss-dc-sg', securityGroupId);
+            accessPoint = AccessPoint.fromAccessPointAttributes(this, 'ss-dc-ap', {
                 accessPointId: accessPointId,
-                fileSystem: efs.FileSystem.fromFileSystemAttributes(this, 'ss-dc-efs', {
+                fileSystem: efsFileSystem.fromFileSystemAttributes(this, 'ss-dc-efs', {
                     fileSystemId: fileSystemId,
                     securityGroup: securityGroup
-                }),
+                })
             }),
-            fileSystem = lambda.FileSystem.fromEfsAccessPoint(
+            fileSystem = lambdaFileSystem.fromEfsAccessPoint(
                 accessPoint,
                 mountPath
-            )
+            );
 
-            efsUsageRole = new iam.PolicyStatement({
-                effect: iam.Effect.ALLOW,
+            efsUsageRole = new PolicyStatement({
+                effect: Effect.ALLOW,
                 actions: [
                     "elasticfilesystem:ClientMount",
                     "elasticfilesystem:ClientRootAccess",
@@ -67,35 +69,42 @@ export class BuiltinsLambdaStack extends cdk.Stack {
                     "elasticfilesystem:DescribeMountTargets"
                 ],
                 resources: [accessPoint.accessPointArn]
-            })
+            });
         }
 
-        const builtinsProps = {
+        const builtinsProps: NodejsFunctionProps = {
             functionName,
-            handler: 'index.builtInHandler',
-            code: new lambda.AssetCode(`${__dirname}/../../build/ss-dc-Builtins`),
-            runtime: lambda.Runtime.NODEJS_12_X,
+            handler: 'builtInHandler',
+            runtime: Runtime.NODEJS_12_X,
             memorySize: 3000,
-            timeout: cdk.Duration.seconds(900),
+            timeout: Duration.seconds(300),
+            entry: `${__dirname}/../index.ts`,
+            bundling: {
+                minify: false,
+                sourceMap: true,
+                logLevel: LogLevel.ERROR,
+                externalModules: ['aws-sdk', 'pg-native']
+            },
+            layers: [new LayerVersion(this, 'ss-config-core-layer', { code: Code.fromAsset(`${__dirname}/../../config`) })]
         };
 
         const genericEnvironmentVars = {
             AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1",
             STUB_SECURITY_SCAN: String(stubSecurityScan)
-        }
+        };
 
         const efsEnvironmentVars = {
-            AWS_EFS_PATH: mountPath,
-        }
+            AWS_EFS_PATH: mountPath
+        };
 
-        let builtins: lambda.Function
-        if (accessPoint && efsUsageRole) {
-            console.log('Deploying lambda with EFS-Config')
-            builtins = new lambda.Function(this, 'ss-dc-Builtins', {
+        let builtins: NodejsFunction;
+        if (useEfs) {
+            console.log('Deploying lambda with EFS-Config');
+            builtins = new NodejsFunction(this, 'ss-dc-Builtins', {
                 ...builtinsProps,
                 vpc: vpc,
                 securityGroups: [securityGroup],
-                vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE, onePerAz: true },
+                vpcSubnets: { subnetType: SubnetType.PRIVATE, onePerAz: true },
                 filesystem: fileSystem,
                 environment: {
                     ...genericEnvironmentVars,
@@ -105,7 +114,7 @@ export class BuiltinsLambdaStack extends cdk.Stack {
 
             builtins.addToRolePolicy(efsUsageRole);
         } else {
-            builtins = new lambda.Function(this, 'ss-dc-Builtins', {
+            builtins = new NodejsFunction(this, 'ss-dc-Builtins', {
                 ...builtinsProps,
                 environment: {
                     ...genericEnvironmentVars
@@ -113,31 +122,31 @@ export class BuiltinsLambdaStack extends cdk.Stack {
             });
         }
 
-        builtins.addToRolePolicy(new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
+        builtins.addToRolePolicy(new PolicyStatement({
+            effect: Effect.ALLOW,
             actions: ["ssm:GetParameter", "ssm:GetParameters"],
             resources: ["arn:aws:ssm:*:*:parameter/data-channels*"]
         }));
 
         if (snsPublish) {
-            builtins.addToRolePolicy(new iam.PolicyStatement({
-                effect: iam.Effect.ALLOW,
+            builtins.addToRolePolicy(new PolicyStatement({
+                effect: Effect.ALLOW,
                 actions: ["SNS:Publish"],
                 resources: ["*"]
             }));
         }
 
         if (sesSend) {
-            builtins.addToRolePolicy(new iam.PolicyStatement({
-                effect: iam.Effect.ALLOW,
+            builtins.addToRolePolicy(new PolicyStatement({
+                effect: Effect.ALLOW,
                 actions: ["SES:SendEmail", "SES:SendRawEmail"],
                 resources: ["*"]
             }));
         }
 
         if (athenaGlue) {
-            builtins.addToRolePolicy(new iam.PolicyStatement({
-                effect: iam.Effect.ALLOW,
+            builtins.addToRolePolicy(new PolicyStatement({
+                effect: Effect.ALLOW,
                 actions: [
                     "s3:GetBucketLocation",
                     "s3:ListBucket",
@@ -147,20 +156,20 @@ export class BuiltinsLambdaStack extends cdk.Stack {
                 resources: ["arn:aws:s3:::data-channels-work-*"]
             }));
 
-            builtins.addToRolePolicy(new iam.PolicyStatement({
-                effect: iam.Effect.ALLOW,
+            builtins.addToRolePolicy(new PolicyStatement({
+                effect: Effect.ALLOW,
                 actions: ["s3:*"],
                 resources: ["arn:aws:s3:::data-channels-work-*/workspace/*"]
             }));
 
-            builtins.addToRolePolicy(new iam.PolicyStatement({
-                effect: iam.Effect.ALLOW,
+            builtins.addToRolePolicy(new PolicyStatement({
+                effect: Effect.ALLOW,
                 actions: ["athena:StartQueryExecution", "athena:GetQueryExecution"],
                 resources: [`arn:aws:athena:*:*:workgroup/${athenaWorkGroup}`]
             }));
 
-            builtins.addToRolePolicy(new iam.PolicyStatement({
-                effect: iam.Effect.ALLOW,
+            builtins.addToRolePolicy(new PolicyStatement({
+                effect: Effect.ALLOW,
                 actions: ["glue:*"],
                 resources: [
                     "arn:aws:glue:*:*:catalog",
@@ -173,24 +182,24 @@ export class BuiltinsLambdaStack extends cdk.Stack {
                 ]
             }));
 
-            builtins.addToRolePolicy(new iam.PolicyStatement({
-                effect: iam.Effect.ALLOW,
+            builtins.addToRolePolicy(new PolicyStatement({
+                effect: Effect.ALLOW,
                 actions: ["iam:PassRole"],
                 resources: ["arn:aws:iam::*:role/*data-channel*"]
             }));
         }
 
-        new cdk.CfnOutput(this, 'lambda-ARN', { value: builtins.functionArn });
+        new CfnOutput(this, 'lambda-ARN', { value: builtins.functionArn });
     }
 }
 
-const app = new cdk.App();
+const app = new App();
 
 const coreStack = new BuiltinsLambdaStack(app, 'ss-dc-Builtins-stack', {
     stackName,
     env: {
         region: process.env.CDK_DEFAULT_REGION,
-        account: process.env.CDK_DEFAULT_ACCOUNT,
+        account: process.env.CDK_DEFAULT_ACCOUNT
     }
 });
 

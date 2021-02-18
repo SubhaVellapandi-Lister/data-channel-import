@@ -5,4 +5,4 @@ export const fieldTypeMap: {
 } = {
     [SchemaType.Date]: ValidateDataType.Datetime,
     [SchemaType.Number]: ValidateDataType.Integer
-}
+};

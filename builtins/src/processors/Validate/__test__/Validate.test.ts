@@ -48,9 +48,9 @@ describe("ValidateProcessor", () => {
                     "1",
                     "testusernewgmail.com",
                     "invalid",
-                    "Column email must be of type email; Column secondary_email must be of type email",
-                ],
-            },
+                    "Column email must be of type email; Column secondary_email must be of type email"
+                ]
+            }
         });
     });
 
@@ -73,9 +73,9 @@ describe("ValidateProcessor", () => {
                     "1",
                     "testusernewgmail.com",
                     "invalid",
-                    "Column email must be of type email; Column secondary_email must be of type email",
-                ],
-            },
+                    "Column email must be of type email; Column secondary_email must be of type email"
+                ]
+            }
         });
     });
 
@@ -99,7 +99,7 @@ describe("ValidateProcessor", () => {
                     "1",
                     "testusernew@gmail.com",
                     "valid",
-                    "",
+                    ""
                 ],
                 usersValidated: [
                     "Yolanda.Gold",
@@ -108,9 +108,9 @@ describe("ValidateProcessor", () => {
                     "testusernew@gmail.com",
                     "ygold_test",
                     "1",
-                    "testusernew@gmail.com",
-                ],
-            },
+                    "testusernew@gmail.com"
+                ]
+            }
         });
     });
 
@@ -134,9 +134,9 @@ describe("ValidateProcessor", () => {
                     "12345",
                     "testusernew@gmail.com",
                     "invalid",
-                    "Invalid Value for available_ind",
-                ],
-            },
+                    "Invalid Value for available_ind"
+                ]
+            }
         });
     });
 
@@ -160,9 +160,9 @@ describe("ValidateProcessor", () => {
                     "SRF101",
                     "03",
                     "valid",
-                    "",
-                ],
-            },
+                    ""
+                ]
+            }
         });
     });
 
@@ -185,9 +185,9 @@ describe("ValidateProcessor", () => {
                     "2016-09-20 14:04:05",
                     "01",
                     "valid",
-                    "",
-                ],
-            },
+                    ""
+                ]
+            }
         });
     });
 
@@ -211,9 +211,9 @@ describe("ValidateProcessor", () => {
                     "SRF101",
                     "03",
                     "invalid",
-                    "Column start_dt must be lesser than the Column current_date and must be of type datetime",
-                ],
-            },
+                    "Column start_dt must be lesser than the Column current_date and must be of type datetime"
+                ]
+            }
         });
     });
 
@@ -235,9 +235,9 @@ describe("ValidateProcessor", () => {
                     "testusernew@gmail.com",
                     "ygold_test",
                     "1",
-                    "testusernew@gmail.com",
-                ],
-            },
+                    "testusernew@gmail.com"
+                ]
+            }
         });
     });
 
@@ -245,7 +245,7 @@ describe("ValidateProcessor", () => {
         const validateProcessor = getValidateProcessor();
         try {
             await validateProcessor["before_validate"]({
-                parameters: {},
+                parameters: {}
             });
         } catch (error) {
             expect(error.message).toEqual("Missing validateConfig in Validate-Builtin");
@@ -269,9 +269,9 @@ describe("ValidateProcessor", () => {
                     "1",
                     "testusernew@gmail.com",
                     "invalid",
-                    "Missing required column integration_id",
-                ],
-            },
+                    "Missing required column integration_id"
+                ]
+            }
         });
     });
 
@@ -294,9 +294,9 @@ describe("ValidateProcessor", () => {
                     "12345",
                     "testusernew@gmail.com",
                     "warning",
-                    "Invalid Value for available_ind",
-                ],
-            },
+                    "Invalid Value for available_ind"
+                ]
+            }
         });
     });
 
@@ -320,9 +320,9 @@ describe("ValidateProcessor", () => {
                     "testusernew@gmail.com",
                     "FeMale",
                     "valid",
-                    "",
-                ],
-            },
+                    ""
+                ]
+            }
         });
     });
 
@@ -347,9 +347,9 @@ describe("ValidateProcessor", () => {
                     "2020-01-23 10:30:00",
                     "",
                     "valid",
-                    "",
-                ],
-            },
+                    ""
+                ]
+            }
         });
     });
     test("Validate a error date with YYYYMMDD,YYYYMM,HH:MM AM value defined in the student course file", async () => {
@@ -373,9 +373,9 @@ describe("ValidateProcessor", () => {
                     "2020-01-2310:30:00",
                     "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest@test.com",
                     "invalid",
-                    "Column student_course_start_date must be lesser than or equal to the Column student_course_end_date and must be of type datetime; Column student_course_end_date must be greater than or equal to the Column student_course_start_date and must be of type datetime; Column mob must be of type datetime; Column par_student_start_date must be of type datetime; Column par_student_end_date must be equal to the Column par_student_end_date and must be of type datetime; Column birth_date must be of type datetime; Column email must be of type email",
-                ],
-            },
+                    "Column student_course_start_date must be lesser than or equal to the Column student_course_end_date and must be of type datetime; Column student_course_end_date must be greater than or equal to the Column student_course_start_date and must be of type datetime; Column mob must be of type datetime; Column par_student_start_date must be of type datetime; Column par_student_end_date must be equal to the Column par_student_end_date and must be of type datetime; Column birth_date must be of type datetime; Column email must be of type email"
+                ]
+            }
         });
     });
 
@@ -399,9 +399,9 @@ describe("ValidateProcessor", () => {
                     "20201201",
                     "2010-02-28 10:70:00",
                     "invalid",
-                    "Column birth_date must be of type datetime",
-                ],
-            },
+                    "Column birth_date must be of type datetime"
+                ]
+            }
         });
     });
 
@@ -425,15 +425,15 @@ describe("ValidateProcessor", () => {
                     "Writing",
                     "Composite (total)",
                     "Test Date",
-                    "Grade Level",
+                    "Grade Level"
                 ],
                 log: [
                     "Row",
                     "Student ID",
                     "Validation_Status",
-                    "Validation_Info",
-                ],
-            },
+                    "Validation_Info"
+                ]
+            }
         });
     });
 
@@ -451,9 +451,9 @@ describe("ValidateProcessor", () => {
                     "2",
                     "12279384",
                     "invalid",
-                    "Value 440 for Science is above the maximum of 433; Value 435 for Mathematics is above the maximum of 434",
-                ],
-            },
+                    "Value 440 for Science is above the maximum of 433; Value 435 for Mathematics is above the maximum of 434"
+                ]
+            }
         });
     });
 
@@ -471,9 +471,9 @@ describe("ValidateProcessor", () => {
                     "2",
                     "12279384",
                     "invalid",
-                    "Value 500 for English is above the maximum of 456; Value 300 for Mathematics is below the minimum of 400; Value 600 for Writing is above the maximum of 448",
-                ],
-            },
+                    "Value 500 for English is above the maximum of 456; Value 300 for Mathematics is below the minimum of 400; Value 600 for Writing is above the maximum of 448"
+                ]
+            }
         });
     });
 
@@ -500,15 +500,15 @@ describe("ValidateProcessor", () => {
                     "440",
                     "445",
                     "2009-06-01",
-                    "7",
+                    "7"
                 ],
                 log: [
                     "2",
                     "12279384",
                     "valid",
-                    "",
-                ],
-            },
+                    ""
+                ]
+            }
         });
     });
 });

@@ -5,23 +5,23 @@ import { Validate } from "../Validate";
 
 export const userFileInfo = {
     key: "users.csv",
-    bucket: "sfdev",
+    bucket: "sfdev"
 };
 export const sectionsFileInfo = {
     key: "sections.csv",
-    bucket: "sfdev",
+    bucket: "sfdev"
 };
 export const enrollmentFileInfo = {
     key: "enrollment.csv",
-    bucket: "sfdev",
+    bucket: "sfdev"
 };
 export const studentCourseFileInfo = {
     key: "studentCourse.csv",
-    bucket: "sfdev",
+    bucket: "sfdev"
 };
 export const testScoreFileInfo = {
     key: "testScore.csv",
-    bucket: "sfdev",
+    bucket: "sfdev"
 };
 export const validateConfig = {
     parameters: {
@@ -32,84 +32,84 @@ export const validateConfig = {
                     integration_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     family_name: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     middle_name: {
                         required: false,
                         validTypes: ["string"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     given_name: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     email: {
                         required: true,
                         validTypes: ["email"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     secondary_email: {
                         required: false,
                         validTypes: ["email"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     user_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     gender: {
                         required: false,
                         validTypes: ["string"],
                         invalidIfBlank: false,
                         validValues: ["M", "F", "U", "MALE", "FEMALE", "UNKNOWN"],
-                        caseInSensitive: true,
+                        caseInSensitive: true
                     },
                     available_ind: {
                         required: true,
                         validTypes: ["integer"],
                         invalidIfBlank: true,
-                        validValues: ["1", "0"],
+                        validValues: ["1", "0"]
                     },
                     assign_student_role: {
                         required: false,
                         validTypes: ["integer"],
                         invalidIfBlank: false,
-                        validValues: ["1", "0"],
+                        validValues: ["1", "0"]
                     },
                     allow_login: {
                         required: false,
                         validTypes: ["integer"],
                         invalidIfBlank: false,
-                        validValues: ["1", "0"],
-                    },
+                        validValues: ["1", "0"]
+                    }
                 },
                 includeDataInLog: true,
                 includeLogInData: true,
-                discardInvalidRows: false,
+                discardInvalidRows: false
             },
             sections: {
                 columns: {
                     integration_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     course_section_name: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     course_section_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     start_dt: {
                         required: false,
@@ -117,7 +117,7 @@ export const validateConfig = {
                         invalidIfBlank: false,
                         dateTimeFormat: ["YYYY-MM-DD"],
                         compareField: "current_date",
-                        comparator: "lt",
+                        comparator: "lt"
                     },
                     end_dt: {
                         required: false,
@@ -125,69 +125,69 @@ export const validateConfig = {
                         invalidIfBlank: false,
                         dateTimeFormat: ["YYYY-MM-DD"],
                         compareField: "start_dt",
-                        comparator: "gt",
+                        comparator: "gt"
                     },
                     term_id: {
                         required: false,
                         validTypes: ["string"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     course_integration_id: {
                         required: false,
                         validTypes: ["string"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     course_section_delivery: {
                         required: false,
                         validTypes: ["string"],
                         invalidIfBlank: false,
-                        validvalues: ["01", "02", "03", "99"],
-                    },
+                        validvalues: ["01", "02", "03", "99"]
+                    }
                 },
                 includeDataInLog: true,
                 includeLogInData: true,
-                discardInvalidRows: false,
+                discardInvalidRows: false
             },
             enrollment: {
                 columns: {
                     course_section_integration_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     user_integration_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     user_role: {
                         required: true,
                         validTypes: ["string"],
                         invalidIfBlank: true,
-                        validValues: ["STUDENT", "INSTRUCTOR", "TA"],
+                        validValues: ["STUDENT", "INSTRUCTOR", "TA"]
                     },
                     available_ind: {
                         required: true,
                         validTypes: ["integer"],
                         invalidIfBlank: true,
-                        validValues: ["1", "0"],
+                        validValues: ["1", "0"]
                     },
                     last_access_date: {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: ["YYYY-MM-DD HH:MM:SS"],
+                        dateTimeFormat: ["YYYY-MM-DD HH:MM:SS"]
                     },
                     authoritative_status: {
                         required: false,
                         validTypes: ["integer"],
                         invalidIfBlank: false,
-                        validValues: ["01", "02", "03", "04", "05", "06"],
-                    },
+                        validValues: ["01", "02", "03", "04", "05", "06"]
+                    }
                 },
                 includeDataInLog: true,
                 includeLogInData: true,
-                discardInvalidRows: false,
+                discardInvalidRows: false
             },
             studentCourse: {
                 columns: {
@@ -197,7 +197,7 @@ export const validateConfig = {
                         invalidIfBlank: false,
                         dateTimeFormat: ["YYYYMMDD"],
                         compareField: "student_course_end_date",
-                        comparator: "ltEq",
+                        comparator: "ltEq"
                     },
                     student_course_end_date: {
                         required: false,
@@ -205,19 +205,19 @@ export const validateConfig = {
                         invalidIfBlank: false,
                         dateTimeFormat: ["YYYYMMDD"],
                         compareField: "student_course_start_date",
-                        comparator: "gtEq",
+                        comparator: "gtEq"
                     },
                     mob: {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: ["HH:MM A"],
+                        dateTimeFormat: ["HH:MM A"]
                     },
                     par_student_start_date: {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: ["YYYYMM"],
+                        dateTimeFormat: ["YYYYMM"]
                     },
                     par_student_end_date: {
                         required: false,
@@ -225,28 +225,28 @@ export const validateConfig = {
                         invalidIfBlank: false,
                         dateTimeFormat: ["YYYYMMDD"],
                         compareField: "par_student_end_date",
-                        comparator: "eq",
+                        comparator: "eq"
                     },
                     birth_date: {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: ["YYYY-MM-DD HH:MM:SS"],
+                        dateTimeFormat: ["YYYY-MM-DD HH:MM:SS"]
                     },
                     email: {
                         required: false,
                         validTypes: ["email"],
-                        invalidIfBlank: false,
-                    },
+                        invalidIfBlank: false
+                    }
                 },
                 includeDataInLog: true,
                 includeLogInData: true,
-                discardInvalidRows: false,
-            },
+                discardInvalidRows: false
+            }
         },
         dynamicOutput: true,
-        dynamicInput: true,
-    },
+        dynamicInput: true
+    }
 };
 
 export const validateConfigLogExcluded = {
@@ -258,68 +258,68 @@ export const validateConfigLogExcluded = {
                     integration_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     family_name: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     middle_name: {
                         required: false,
                         validTypes: ["string"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     given_name: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     email: {
                         required: true,
                         validTypes: ["email"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     secondary_email: {
                         required: false,
                         validTypes: ["email"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     user_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     gender: {
                         required: false,
                         validTypes: ["string"],
                         invalidIfBlank: false,
-                        validValues: ["M", "F", "U", "MALE", "FEMALE", "UNKNOWN"],
+                        validValues: ["M", "F", "U", "MALE", "FEMALE", "UNKNOWN"]
                     },
                     available_ind: {
                         required: true,
                         validTypes: ["integer"],
                         invalidIfBlank: true,
-                        validValues: ["1", "0"],
+                        validValues: ["1", "0"]
                     },
                     assign_student_role: {
                         required: false,
                         validTypes: ["integer"],
                         invalidIfBlank: false,
-                        validValues: ["1", "0"],
+                        validValues: ["1", "0"]
                     },
                     allow_login: {
                         required: false,
                         validTypes: ["integer"],
                         invalidIfBlank: false,
-                        validValues: ["1", "0"],
-                    },
+                        validValues: ["1", "0"]
+                    }
                 },
                 includeDataInLog: true,
-                discardInvalidRows: true,
-            },
-        },
-    },
+                discardInvalidRows: true
+            }
+        }
+    }
 };
 
 export const validateConfigWithLogHeaders = {
@@ -331,104 +331,104 @@ export const validateConfigWithLogHeaders = {
                     integration_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     family_name: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     middle_name: {
                         required: false,
                         validTypes: ["string"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     given_name: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     email: {
                         required: true,
                         validTypes: ["email"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     secondary_email: {
                         required: false,
                         validTypes: ["email"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     user_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     gender: {
                         required: false,
                         validTypes: ["string"],
                         invalidIfBlank: false,
-                        validValues: ["M", "F", "U", "MALE", "FEMALE", "UNKNOWN"],
+                        validValues: ["M", "F", "U", "MALE", "FEMALE", "UNKNOWN"]
                     },
                     available_ind: {
                         required: true,
                         validTypes: ["integer"],
                         invalidIfBlank: true,
-                        validValues: ["1", "0"],
+                        validValues: ["1", "0"]
                     },
                     assign_student_role: {
                         required: false,
                         validTypes: ["integer"],
                         invalidIfBlank: false,
-                        validValues: ["1", "0"],
+                        validValues: ["1", "0"]
                     },
                     allow_login: {
                         required: false,
                         validTypes: ["integer"],
                         invalidIfBlank: false,
-                        validValues: ["1", "0"],
-                    },
+                        validValues: ["1", "0"]
+                    }
                 },
                 includeDataInLog: true,
                 includeLogInData: false,
                 logHeaders: ["integration_id"],
-                discardInvalidRows: true,
+                discardInvalidRows: true
             },
             relationships: {
                 columns: {
                     parent_integration_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     parent_role: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     child_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     child_role: {
                         required: true,
                         validTypes: ["string"],
                         invalidIfBlank: true,
-                        validValues: ["STUDENT", "BASIC USER", "INSTRUCTOR", "TA"],
+                        validValues: ["STUDENT", "BASIC USER", "INSTRUCTOR", "TA"]
                     },
                     term_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
-                    },
+                        invalidIfBlank: true
+                    }
                 },
                 includeDataInLog: true,
                 includeLogInData: false,
                 logHeaders: ["logData"],
-                discardInvalidRows: true,
-            },
-        },
-    },
+                discardInvalidRows: true
+            }
+        }
+    }
 };
 
 export const validateConfigUsingSchema = {
@@ -604,7 +604,7 @@ export const validateConfigUsingSchema = {
         },
         jsonSchemaNames: ["dummy_schema"]
     }
-}
+};
 
 export const usersHeaderInputRow = {
     index: 1,
@@ -617,9 +617,9 @@ export const usersHeaderInputRow = {
         email: "email",
         user_id: "user_id",
         available_ind: "available_ind",
-        secondary_email: "secondary_email",
+        secondary_email: "secondary_email"
     },
-    fileInfo: userFileInfo,
+    fileInfo: userFileInfo
 };
 
 export const usersHeaderInputRowWithMissingColumn = {
@@ -633,8 +633,8 @@ export const usersHeaderInputRowWithMissingColumn = {
         email: "email",
         user_id: "user_id",
         available_ind: "available_ind",
-        secondary_email: "secondary_email",
-    },
+        secondary_email: "secondary_email"
+    }
 };
 
 export const usersDataInputRowWithMissingValue = {
@@ -646,11 +646,11 @@ export const usersDataInputRowWithMissingValue = {
         email: "testusernew@gmail.com",
         user_id: "ygold_test",
         available_ind: "1",
-        secondary_email: "testusernew@gmail.com",
+        secondary_email: "testusernew@gmail.com"
     },
     json: ["goldnew", "yolandanew", "testusernew@gmail.com", "ygold_test", "1", "testusernew@gmail.com"],
     name: "users",
-    fileInfo: userFileInfo,
+    fileInfo: userFileInfo
 };
 
 export const usersDataRowWithInvalidEmail = {
@@ -663,11 +663,11 @@ export const usersDataRowWithInvalidEmail = {
         email: "testusernewgmail.com",
         user_id: "ygold_test",
         available_ind: "1",
-        secondary_email: "testusernewgmail.com",
+        secondary_email: "testusernewgmail.com"
     },
     json: ["Yolanda.Gold", "goldnew", "yolandanew", "testusernewgmail.com", "ygold_test", "1", "testusernewgmail.com"],
     name: "users",
-    fileInfo: userFileInfo,
+    fileInfo: userFileInfo
 };
 
 export const usersDataRowWithValidEmail = {
@@ -680,11 +680,11 @@ export const usersDataRowWithValidEmail = {
         email: "testusernew@gmail.com",
         user_id: "ygold_test",
         available_ind: "1",
-        secondary_email: "testusernew@gmail.com",
+        secondary_email: "testusernew@gmail.com"
     },
     json: ["Yolanda.Gold", "goldnew", "yolandanew", "testusernew@gmail.com", "ygold_test", "1", "testusernew@gmail.com"],
     name: "users",
-    fileInfo: userFileInfo,
+    fileInfo: userFileInfo
 };
 
 export const usersDataRowWithInvalidValue = {
@@ -696,7 +696,7 @@ export const usersDataRowWithInvalidValue = {
         "testusernew@gmail.com",
         "ygold_test",
         "12345",
-        "testusernew@gmail.com",
+        "testusernew@gmail.com"
     ],
     data: {
         integration_id: "Yolanda.Gold",
@@ -705,7 +705,7 @@ export const usersDataRowWithInvalidValue = {
         email: "testusernew@gmail.com",
         user_id: "ygold_test",
         available_ind: "12345",
-        secondary_email: "testusernew@gmail.com",
+        secondary_email: "testusernew@gmail.com"
     },
     json: [
         "Yolanda.Gold",
@@ -714,10 +714,10 @@ export const usersDataRowWithInvalidValue = {
         "testusernew@gmail.com",
         "ygold_test",
         "12345",
-        "testusernew@gmail.com",
+        "testusernew@gmail.com"
     ],
     name: "users",
-    fileInfo: userFileInfo,
+    fileInfo: userFileInfo
 };
 
 export const sectionsHeaderInputRowWithDate = {
@@ -732,7 +732,7 @@ export const sectionsHeaderInputRowWithDate = {
         "end_dt",
         "term_id",
         "course_integration_id",
-        "course_section_delivery",
+        "course_section_delivery"
     ],
     data: {
         integration_id: "integration_id",
@@ -742,8 +742,8 @@ export const sectionsHeaderInputRowWithDate = {
         end_dt: "end_dt",
         term_id: "term_id",
         course_integration_id: "course_integration_id",
-        course_section_delivery: "course_section_delivery",
-    },
+        course_section_delivery: "course_section_delivery"
+    }
 };
 
 export const sectionsDataRowWithDatetimeValue = {
@@ -756,7 +756,7 @@ export const sectionsDataRowWithDatetimeValue = {
         "2021-01-10",
         "202002",
         "SRF101",
-        "03",
+        "03"
     ],
     data: {
         integration_id: "UNIV-SRF101-602-202002",
@@ -766,7 +766,7 @@ export const sectionsDataRowWithDatetimeValue = {
         end_dt: "2021-01-10",
         term_id: "202002",
         course_integration_id: "SRF101",
-        course_section_delivery: "03",
+        course_section_delivery: "03"
     },
     json: [
         "UNIV-SRF101-602-202002",
@@ -776,10 +776,10 @@ export const sectionsDataRowWithDatetimeValue = {
         "2021-01-10",
         "202002",
         "SRF101",
-        "03",
+        "03"
     ],
     name: "sections",
-    fileInfo: sectionsFileInfo,
+    fileInfo: sectionsFileInfo
 };
 
 export const enrollmentHeaderInputRowWithDifferentDateFormat = {
@@ -793,7 +793,7 @@ export const enrollmentHeaderInputRowWithDifferentDateFormat = {
         "available_ind",
         "credit_hours",
         "last_access_date",
-        "authoritative_status",
+        "authoritative_status"
     ],
     data: {
         course_section_integration_id: "course_section_integration_id",
@@ -802,8 +802,8 @@ export const enrollmentHeaderInputRowWithDifferentDateFormat = {
         available_ind: "available_ind",
         credit_hours: "credit_hours",
         last_access_date: "last_access_date",
-        authoritative_status: "authoritative_status",
-    },
+        authoritative_status: "authoritative_status"
+    }
 };
 
 export const enrollmentDataRowWithDifferentDateFormatValue = {
@@ -816,11 +816,11 @@ export const enrollmentDataRowWithDifferentDateFormatValue = {
         available_ind: "1",
         credit_hours: "1.5",
         last_access_date: "2016-09-20 14:04:05",
-        authoritative_status: "01",
+        authoritative_status: "01"
     },
     json: ["UNIV-SRF101-602-202002", "Yolanda.Gold", "INSTRUCTOR", "1", "1.5", "2016-09-20 14:04:05", "01"],
     name: "enrollment",
-    fileInfo: enrollmentFileInfo,
+    fileInfo: enrollmentFileInfo
 };
 
 export const sectionsDataRowWithInvalidDateFormat = {
@@ -833,7 +833,7 @@ export const sectionsDataRowWithInvalidDateFormat = {
         "2021-01-10",
         "202002",
         "SRF101",
-        "03",
+        "03"
     ],
     data: {
         integration_id: "UNIV-SRF101-602-202002",
@@ -843,7 +843,7 @@ export const sectionsDataRowWithInvalidDateFormat = {
         end_dt: "2021-01-10",
         term_id: "202002",
         course_integration_id: "SRF101",
-        course_section_delivery: "03",
+        course_section_delivery: "03"
     },
     json: [
         "UNIV-SRF101-602-202002",
@@ -853,10 +853,10 @@ export const sectionsDataRowWithInvalidDateFormat = {
         "2021-01-10",
         "202002",
         "SRF101",
-        "03",
+        "03"
     ],
     name: "sections",
-    fileInfo: sectionsFileInfo,
+    fileInfo: sectionsFileInfo
 };
 
 export const validateConfigWithWarning = {
@@ -868,70 +868,70 @@ export const validateConfigWithWarning = {
                     integration_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     family_name: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     middle_name: {
                         required: false,
                         validTypes: ["string"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     given_name: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     email: {
                         required: true,
                         validTypes: ["email"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     secondary_email: {
                         required: false,
                         validTypes: ["email"],
-                        invalidIfBlank: false,
+                        invalidIfBlank: false
                     },
                     user_id: {
                         required: true,
                         validTypes: ["string"],
-                        invalidIfBlank: true,
+                        invalidIfBlank: true
                     },
                     gender: {
                         required: false,
                         validTypes: ["string"],
                         invalidIfBlank: false,
-                        validValues: ["M", "F", "U", "MALE", "FEMALE", "UNKNOWN"],
+                        validValues: ["M", "F", "U", "MALE", "FEMALE", "UNKNOWN"]
                     },
                     available_ind: {
                         required: true,
                         validTypes: ["integer"],
                         invalidIfBlank: true,
                         validWithWarningValues: ["12345"],
-                        validValues: ["1", "0"],
+                        validValues: ["1", "0"]
                     },
                     assign_student_role: {
                         required: false,
                         validTypes: ["integer"],
                         invalidIfBlank: false,
-                        validValues: ["1", "0"],
+                        validValues: ["1", "0"]
                     },
                     allow_login: {
                         required: false,
                         validTypes: ["integer"],
                         invalidIfBlank: false,
-                        validValues: ["1", "0"],
-                    },
+                        validValues: ["1", "0"]
+                    }
                 },
                 includeDataInLog: true,
                 includeLogInData: true,
-                discardInvalidRows: false,
-            },
-        },
-    },
+                discardInvalidRows: false
+            }
+        }
+    }
 };
 
 export const usersHeaderInputRowForCaseInSensitiveValidation = {
@@ -946,7 +946,7 @@ export const usersHeaderInputRowForCaseInSensitiveValidation = {
         "user_id",
         "available_ind",
         "secondary_email",
-        "gender",
+        "gender"
     ],
     data: {
         integration_id: "integration_id",
@@ -956,8 +956,8 @@ export const usersHeaderInputRowForCaseInSensitiveValidation = {
         user_id: "user_id",
         available_ind: "available_ind",
         secondary_email: "secondary_email",
-        gender: "gender",
-    },
+        gender: "gender"
+    }
 };
 
 export const userDataRowWithCaseInSensitiveValue = {
@@ -970,7 +970,7 @@ export const userDataRowWithCaseInSensitiveValue = {
         "ygold_test",
         "1",
         "testusernew@gmail.com",
-        "FeMale",
+        "FeMale"
     ],
     data: {
         integration_id: "ygold",
@@ -980,7 +980,7 @@ export const userDataRowWithCaseInSensitiveValue = {
         user_id: "ygold_test",
         available_ind: "1",
         secondary_email: "testusernew@gmail.com",
-        gender: "FeMale",
+        gender: "FeMale"
     },
     json: [
         "ygold",
@@ -990,10 +990,10 @@ export const userDataRowWithCaseInSensitiveValue = {
         "ygold_test",
         "1",
         "testusernew@gmail.com",
-        "FeMale",
+        "FeMale"
     ],
     name: "users",
-    fileInfo: userFileInfo,
+    fileInfo: userFileInfo
 };
 
 const jobConfig = {
@@ -1007,20 +1007,20 @@ const jobConfig = {
     statusMsg: "",
     channel: {
         guid: "some-channel-guid-here",
-        name: "some-channel",
+        name: "some-channel"
     },
     filesIn: [
         {
             s3: { key: "ready/manualimports/piiMask/users.csv", bucket: "sfdev" },
-            name: "users",
-        },
+            name: "users"
+        }
     ],
     filesOut: [{ s3: { key: "users", bucket: "" }, name: "users_1" }],
     steps: {
         validate: {
-            finished: false,
-        },
-    },
+            finished: false
+        }
+    }
 };
 
 export const studentCourseHeaderInputRowWithDate = {
@@ -1036,7 +1036,7 @@ export const studentCourseHeaderInputRowWithDate = {
         "par_student_start_date",
         "par_student_end_date",
         "birth_date",
-        "email",
+        "email"
     ],
     data: {
         institution_id: "institution_id",
@@ -1047,8 +1047,8 @@ export const studentCourseHeaderInputRowWithDate = {
         par_student_start_date: "par_student_start_date",
         par_student_end_date: "par_student_end_date",
         birth_date: "birth_date",
-        email: "email",
-    },
+        email: "email"
+    }
 };
 
 export const studentCourseDataRowWithDatetimeValue = {
@@ -1062,7 +1062,7 @@ export const studentCourseDataRowWithDatetimeValue = {
         "202011",
         "20201201",
         "2020-01-23 10:30:00",
-        "",
+        ""
     ],
     data: {
         institution_id: "100001",
@@ -1073,7 +1073,7 @@ export const studentCourseDataRowWithDatetimeValue = {
         par_student_start_date: "202011",
         par_student_end_date: "20201201",
         birth_date: "2020-01-23 10:30:00",
-        email: "",
+        email: ""
     },
     json: [
         "100001",
@@ -1084,10 +1084,10 @@ export const studentCourseDataRowWithDatetimeValue = {
         "202011",
         "20201201",
         "2020-01-23 10:30:00",
-        "",
+        ""
     ],
     name: "studentCourse",
-    fileInfo: studentCourseFileInfo,
+    fileInfo: studentCourseFileInfo
 };
 export const studentCourseDataRowWithInvalidDatetimeValue = {
     index: 2,
@@ -1100,7 +1100,7 @@ export const studentCourseDataRowWithInvalidDatetimeValue = {
         "20211",
         "2020121",
         "2020-01-2310:30:00",
-        "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest@test.com",
+        "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest@test.com"
     ],
     data: {
         institution_id: "100001",
@@ -1111,7 +1111,7 @@ export const studentCourseDataRowWithInvalidDatetimeValue = {
         par_student_start_date: "20211",
         par_student_end_date: "2020121",
         birth_date: "2020-01-2310:30:00",
-        email: "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest@test.com",
+        email: "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest@test.com"
     },
     json: [
         "100001",
@@ -1122,10 +1122,10 @@ export const studentCourseDataRowWithInvalidDatetimeValue = {
         "20211",
         "2020121",
         "2020-01-2310:30:00",
-        "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest@test.com",
+        "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest@test.com"
     ],
     name: "studentCourse",
-    fileInfo: studentCourseFileInfo,
+    fileInfo: studentCourseFileInfo
 };
 export const studentCourseDataRowWithInvalidDatetime = {
     index: 2,
@@ -1137,7 +1137,7 @@ export const studentCourseDataRowWithInvalidDatetime = {
         "10:30AM",
         "202011",
         "20201201",
-        "2010-02-28 10:70:00",
+        "2010-02-28 10:70:00"
     ],
     data: {
         institution_id: "100001",
@@ -1147,7 +1147,7 @@ export const studentCourseDataRowWithInvalidDatetime = {
         mob: "10:30AM",
         par_student_start_date: "202011",
         par_student_end_date: "20201201",
-        birth_date: "2010-02-28 10:70:00",
+        birth_date: "2010-02-28 10:70:00"
     },
     json: [
         "100001",
@@ -1157,10 +1157,10 @@ export const studentCourseDataRowWithInvalidDatetime = {
         "10:30AM",
         "202011",
         "20201201",
-        "2010-02-28 10:70:00",
+        "2010-02-28 10:70:00"
     ],
     name: "studentCourse",
-    fileInfo: studentCourseFileInfo,
+    fileInfo: studentCourseFileInfo
 };
 export function getValidateProcessor(): Validate {
     const validateProcessor = new Validate(Job.fromConfig(jobConfig));
@@ -1205,7 +1205,7 @@ export const testScoreHeaderInputRow = {
         "Grade Level": "Grade Level"
     },
     ...validateConfigUsingSchema
-}
+};
 
 export const testScoreInvalidDataInputRow = {
     index: 2,
@@ -1257,7 +1257,7 @@ export const testScoreInvalidDataInputRow = {
     name: "testScore",
     fileInfo: testScoreFileInfo,
     ...validateConfigUsingSchema
-}
+};
 
 export const testScoreValidDataInputRow = {
     index: 2,
@@ -1309,7 +1309,7 @@ export const testScoreValidDataInputRow = {
     name: "testScore",
     fileInfo: testScoreFileInfo,
     ...validateConfigUsingSchema
-}
+};
 
 export const testScoreInvalidDataInputRow2 = {
     index: 2,
@@ -1361,4 +1361,4 @@ export const testScoreInvalidDataInputRow2 = {
     name: "testScore",
     fileInfo: testScoreFileInfo,
     ...validateConfigUsingSchema
-}
+};

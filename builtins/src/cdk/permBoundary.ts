@@ -27,7 +27,7 @@ export function tagAppStack(appStack: cdk.Stack): void {
     if (permissionBoundary) {
         const permissionBoundaryArn = permissionBoundary.startsWith('arn') ?
             permissionBoundary : `arn:aws:iam::${process.env.CDK_DEFAULT_ACCOUNT}:policy/${permissionBoundary}`;
-        Aspects.of(appStack).add(new PermissionsBoundary(permissionBoundaryArn))
+        Aspects.of(appStack).add(new PermissionsBoundary(permissionBoundaryArn));
     }
 
     cdk.Tags.of(appStack).add('ProductLine', `${productLine}`);

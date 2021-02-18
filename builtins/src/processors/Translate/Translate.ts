@@ -3,7 +3,7 @@ import {
     ChannelConfig,
     IRowProcessorInput,
     IRowProcessorOutput,
-    IStepBeforeInput,
+    IStepBeforeInput
 } from "@data-channels/dcSDK";
 import _, { identity } from "lodash";
 
@@ -14,7 +14,7 @@ import {
     getBucketDetailsFromInputFile,
     getFileNameFromInputFile,
     jobOutFileExtension,
-    toCamelCase,
+    toCamelCase
 } from "../ProcessorUtil";
 
 import { IFileTranslateConfig, ITranslateParameters, RowType } from "./Translate.interface";
@@ -119,13 +119,13 @@ export class Translate extends BaseProcessor {
               return {
                   index: index,
                   outputs: {
-                      [`${this.dataOutputName}`]: this.currentRow,
-                  },
+                      [`${this.dataOutputName}`]: this.currentRow
+                  }
               };
           }
           return {
               index: index,
-              outputs: { [`${this.dataOutputName}`]: this.newHeaders },
+              outputs: { [`${this.dataOutputName}`]: this.newHeaders }
           };
       }
       if (
@@ -138,7 +138,7 @@ export class Translate extends BaseProcessor {
       if (this.updatedConfig.valueMappings === null || this.updatedConfig.valueMappings === undefined) {
           return {
               index: index,
-              outputs: { [`${this.dataOutputName}`]: this.currentRow },
+              outputs: { [`${this.dataOutputName}`]: this.currentRow }
           };
       }
       const fileValueMappingConfig = this.updatedConfig.valueMappings;
@@ -160,7 +160,7 @@ export class Translate extends BaseProcessor {
 
       return {
           index: index,
-          outputs: { [`${this.dataOutputName}`]: newRow },
+          outputs: { [`${this.dataOutputName}`]: newRow }
       };
   }
 
@@ -174,22 +174,22 @@ export class Translate extends BaseProcessor {
   private mappedHeader(original: string, index: number): string {
       if (this.updatedConfig.indexMappings && this.updatedConfig.headerMappings) {
           if (this.updatedConfig.indexMappings && this.updatedConfig.headerlessFile) {
-              return this.updatedConfig.removeUnmappedHeaders ? this.updatedConfig.indexMappings[index] ?? '' : this.updatedConfig.indexMappings[index] ?? original
+              return this.updatedConfig.removeUnmappedHeaders ? this.updatedConfig.indexMappings[index] ?? '' : this.updatedConfig.indexMappings[index] ?? original;
           } else {
-              return this.updatedConfig.removeUnmappedHeaders ? this.updatedConfig.headerMappings[original] ?? '' : this.updatedConfig.headerMappings[original] ?? original
+              return this.updatedConfig.removeUnmappedHeaders ? this.updatedConfig.headerMappings[original] ?? '' : this.updatedConfig.headerMappings[original] ?? original;
           }
       } else {
           if (this.updatedConfig.headerMappings) {
               if (this.updatedConfig.removeUnmappedHeaders == true) {
                   return this.updatedConfig.headerMappings[original] ?? '';
               } else {
-                  return this.updatedConfig.headerMappings[original] ?? original
+                  return this.updatedConfig.headerMappings[original] ?? original;
               }
           } else if (this.updatedConfig.indexMappings) {
               if (this.updatedConfig.removeUnmappedHeaders == true) {
                   return this.updatedConfig.indexMappings[index] ?? '';
               } else {
-                  return this.updatedConfig.indexMappings[index] ?? original
+                  return this.updatedConfig.indexMappings[index] ?? original;
               }
           } else {
               return original;
@@ -242,7 +242,7 @@ export class Translate extends BaseProcessor {
       }
       // @ts-ignore
       this._outputStreams.writeOutputValues({
-          [`${this.dataOutputName}`]: sortedCols,
+          [`${this.dataOutputName}`]: sortedCols
       });
   }
 
@@ -327,15 +327,15 @@ export class Translate extends BaseProcessor {
                   name: `${this.dataOutputName}`,
                   s3: {
                       key: `${getFilePathFromInputFile(input)}${this.dataOutputName}.csv`,
-                      bucket: `${getBucketDetailsFromInputFile(input)}`,
-                  },
-              },
+                      bucket: `${getBucketDetailsFromInputFile(input)}`
+                  }
+              }
           });
       }
       if (this.dynamicInput && this.nextStep.length > 0) {
           await this.createInput({
               name: `${this.dataOutputName}->${this.fileToTranslate}`,
-              step: `${this.nextStep}`,
+              step: `${this.nextStep}`
           });
       }
   }

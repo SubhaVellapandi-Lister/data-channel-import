@@ -13,9 +13,9 @@
     "prepare": "npm run clean && npm run test && npm run build",
     "prestart": "npm run -s build",
     "start": "node dist/index.js",
-    "lint": "eslint . --ext .ts --fix",
+    "lint": "eslint . --ext .ts --fix --max-warnings=0",
     "clean": "rimraf dist build cdk.out coverage data-channels-builtin-processors.zip",
-    "build": "webpack && npm run compile",
+    "build": "npm run compile",
     "compile": "tsc",
     "compile:once": "tsc --noEmit",
     "compile:watch": "tsc --watch --noEmit",
@@ -59,9 +59,10 @@
     "@typescript-eslint/eslint-plugin": "2.34.0",
     "@typescript-eslint/parser": "2.34.0",
     "copy-webpack-plugin": "7.0.0",
-    "@aws-cdk/aws-lambda": "1.83.0",
-    "@aws-cdk/core": "1.83.0",
-    "aws-cdk": "1.83.0",
+    "@aws-cdk/aws-lambda-nodejs": "1.89.0",
+    "@aws-cdk/aws-lambda": "1.89.0",
+    "@aws-cdk/core": "1.89.0",
+    "aws-cdk": "1.89.0",
     "aws-sdk": "2.758.0",
     "aws-sdk-mock": "5.1.0",
     "config": "3.3.2",
@@ -70,16 +71,15 @@
     "husky": "4.3.0",
     "jest": "26.4.2",
     "tar": "6.0.5",
-    "terser-webpack-plugin": "5.0.3",
     "ts-jest": "26.4.0",
     "ts-loader": "8.0.11",
     "ts-node": "8.10.1",
     "typescript": "3.8.3",
-    "webpack": "5.9.0",
-    "webpack-cli": "4.2.0"
+    "esbuild": "0.8.46",
+    "lint-staged": "10.5.4"
   },
   "dependencies": {
-    "@data-channels/dcSDK": "1.0.11-DCHAN-282.1",
+    "@data-channels/dcSDK": "1.0.12",
     "lodash": "4.17.20",
     "node-fetch": "2.6.1"
   },
@@ -89,7 +89,8 @@
       "!<rootDir>/node_modules/",
       "!src/**/__*__/*.ts",
       "!src/types/*.d.ts",
-      "!src/index.ts"
+      "!src/index.ts",
+      "!src/publish/*.ts"
     ],
     "moduleFileExtensions": [
       "ts",
@@ -128,7 +129,10 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "npm run lint && npm run test"
+      "pre-commit": "lint-staged"
     }
+  },
+  "lint-staged": {
+    "*.{ts}": "npm run lint"
   }
 }

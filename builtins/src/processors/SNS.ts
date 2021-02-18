@@ -1,7 +1,7 @@
 import {
     BaseProcessor,
     IFileProcessorInput,
-    IFileProcessorOutput,
+    IFileProcessorOutput
 } from "@data-channels/dcSDK";
 import AWS from "aws-sdk";
 
