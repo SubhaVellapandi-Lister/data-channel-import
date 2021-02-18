@@ -85,7 +85,7 @@ Translate column names and row values from one string to another.
     - saveIndexMappings - boolean defaults to false, if true, the translate processor will automatically update the channel config to save indexMappings to reflect the current order of column mappings. This should only be used when you need to support headerless csv files and the order of the columns is strictly enforced.
     - headerlessFile - boolean defaults to false, if true, it should output a header row based on indexMappings.
     - removeEmptyHeaders - boolean defaults to false, if true, then translate config should remove empty header column from in output.
-    - removeUnmappedHeaders - boolean defaults to false, if true, then translate config should not remove unmapped header row based on indexMappings.
+    - removeUnmappedHeaders - boolean defaults to false, if true, then translate config should remove unmapped header row based on indexMappings.
 
 - `fileTranslateConfig` is required. Properties under fileTranslateConfig.
 

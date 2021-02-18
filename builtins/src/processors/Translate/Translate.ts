@@ -104,7 +104,7 @@ export class Translate extends BaseProcessor {
           this.originalHeaders = this.currentRow;
           this.newHeaders = this.originalHeaders.map((h, i) => this.mappedHeader(h, i + 1));
           if (
-              this.updatedConfig.removeEmptyHeaders !== false ||
+              this.updatedConfig.removeEmptyHeaders == true ||
               this.updatedConfig.removeUnmappedHeaders === true
           ) {
               await this.removeEmptyColumn(RowType.HEADER);
@@ -129,7 +129,7 @@ export class Translate extends BaseProcessor {
           };
       }
       if (
-          this.updatedConfig.removeEmptyHeaders !== false ||
+          this.updatedConfig.removeEmptyHeaders == true ||
           this.updatedConfig.removeUnmappedHeaders === true
       ) {
           await this.removeEmptyColumn(RowType.ROW);
@@ -172,20 +172,29 @@ export class Translate extends BaseProcessor {
    * @param index number
    */
   private mappedHeader(original: string, index: number): string {
-      if (
-          (this.updatedConfig.headerMappings || this.updatedConfig.indexMappings) &&
-      // eslint-disable-next-line no-undefined
-      (this.updatedConfig.removeUnmappedHeaders === undefined || this.updatedConfig.removeUnmappedHeaders === true)
-      ) {
-          original = "";
+      if (this.updatedConfig.indexMappings && this.updatedConfig.headerMappings) {
+          if (this.updatedConfig.indexMappings && this.updatedConfig.headerlessFile) {
+              return this.updatedConfig.removeUnmappedHeaders ? this.updatedConfig.indexMappings[index] ?? '' : this.updatedConfig.indexMappings[index] ?? original
+          } else {
+              return this.updatedConfig.removeUnmappedHeaders ? this.updatedConfig.headerMappings[original] ?? '' : this.updatedConfig.headerMappings[original] ?? original
+          }
+      } else {
+          if (this.updatedConfig.headerMappings) {
+              if (this.updatedConfig.removeUnmappedHeaders == true) {
+                  return this.updatedConfig.headerMappings[original] ?? '';
+              } else {
+                  return this.updatedConfig.headerMappings[original] ?? original
+              }
+          } else if (this.updatedConfig.indexMappings) {
+              if (this.updatedConfig.removeUnmappedHeaders == true) {
+                  return this.updatedConfig.indexMappings[index] ?? '';
+              } else {
+                  return this.updatedConfig.indexMappings[index] ?? original
+              }
+          } else {
+              return original;
+          }
       }
-      if (this.updatedConfig.headerMappings) {
-          return this.updatedConfig.headerMappings[original] ?? original;
-      } else if (this.updatedConfig.indexMappings) {
-          return this.updatedConfig.indexMappings[index] ?? original;
-      }
-
-      return original;
   }
 
   /**

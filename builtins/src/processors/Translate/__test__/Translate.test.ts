@@ -1,9 +1,11 @@
 import { ChannelConfig, IRowProcessorInput, IStepBeforeInput, JobStatus, OutputStreams } from "@data-channels/dcSDK";
+import { Cloud9 } from "aws-sdk";
 import "jest";
-import _ from "lodash";
+import _, { head } from "lodash";
 
 import {
     fileTranslateConfigWithHeaderMappings,
+    fileTranslateConfigWithIndexMappings,
     fileTranslateConfigWithValueMappings,
     getTranslateProcessor,
     testChannelConfig,
@@ -176,8 +178,8 @@ describe("TranslateProcessor", () => {
         await translateProcessor.before_translate(testTranslateConfig);
 
         const headersRow = _.cloneDeep(testInputHeadersRow) as IRowProcessorInput;
+        headersRow.parameters!["translateConfig"] = fileTranslateConfigWithHeaderMappings;
         headersRow.parameters!["translateConfig"]["headerlessFile"] = true;
-        headersRow.parameters!["translateConfig"]["indexMappings"] = undefined;
 
         await expect(() => translateProcessor.translate(headersRow))
             .rejects
@@ -196,7 +198,6 @@ describe("TranslateProcessor", () => {
             .rejects
             .toThrowError('Headerless column length does not match mapping. Be sure indexMapping accounts for all columns');
     });
-
     test("translate with headerlessFile option set to true and some invalid headers", async () => {
         const translateProcessor = getTranslateProcessor();
         await translateProcessor.before_translate(testTranslateConfig);
@@ -219,6 +220,7 @@ describe("TranslateProcessor", () => {
 
         translateConfig.parameters!["translateConfig"] = fileTranslateConfigWithHeaderMappings;
         headersRow.parameters!["translateConfig"] = fileTranslateConfigWithHeaderMappings;
+        translateConfig.parameters!["translateConfig"]["headerlessFile"] = false;
 
         await translateProcessor.before_translate(translateConfig);
         const headersOutput = await translateProcessor.translate(headersRow);
@@ -231,6 +233,98 @@ describe("TranslateProcessor", () => {
                 i1Translated: expectedHeaders
             }
         });
+    });
+
+    test('translate headerMappings in translateConfig with removeUnammpedHeaders set to true', async () => {
+        const translateProcessor = getTranslateProcessor();
+
+        const translateConfig = _.cloneDeep(testTranslateConfig) as IStepBeforeInput;
+        const headersRow = _.cloneDeep(testInputHeadersRow) as IRowProcessorInput;
+
+        translateConfig.parameters!["translateConfig"] = fileTranslateConfigWithHeaderMappings;
+        headersRow.parameters!["translateConfig"] = fileTranslateConfigWithHeaderMappings;
+        headersRow.parameters!["translateConfig"]["removeUnmappedHeaders"] = true;
+
+        await translateProcessor.before_translate(translateConfig);
+        const headersOutput = await translateProcessor.translate(headersRow);
+
+        const expectedHeaders = headersRow.raw.map(column => fileTranslateConfigWithHeaderMappings.headerMappings![column] ?? column);
+
+        expect(headersOutput).toEqual({
+            index: 1,
+            outputs: {
+                i1Translated: expectedHeaders
+            }
+        });
+    });
+
+    test("translate indexMappings in translateConfig with removeUnmappedHeaders set to true", async () => {
+        const translateProcessor = getTranslateProcessor();
+
+        const translateConfig = _.cloneDeep(testTranslateConfig) as IStepBeforeInput;
+        const headersRow = _.cloneDeep(testInputHeadersRow) as IRowProcessorInput;
+
+        translateConfig.parameters!["translateConfig"] = fileTranslateConfigWithIndexMappings;
+        headersRow.parameters!["translateConfig"] = fileTranslateConfigWithIndexMappings;
+        headersRow.parameters!["translateConfig"]["removeUnmappedHeaders"] = true;
+
+        await translateProcessor.before_translate(translateConfig);
+        const headersOutput = await translateProcessor.translate(headersRow);
+
+        const expectedHeaders = headersRow.raw.map(column => fileTranslateConfigWithIndexMappings.indexMappings![column] ?? column);
+
+        expect(headersOutput).toEqual({
+            index: 1,
+            outputs: {
+                i1Translated: expectedHeaders
+            }
+        });
+    })
+
+    test("translate with headerMappings and indexMappings in translateConfig without headerlessFile set to true", async () => {
+        const translateProcessor = getTranslateProcessor();
+
+        const translateConfig = _.cloneDeep(testTranslateConfig) as IStepBeforeInput;
+        const headersRow = _.cloneDeep(testInputHeadersRow) as IRowProcessorInput;
+        headersRow.parameters!["translateConfig"]["headerMappings"] = fileTranslateConfigWithHeaderMappings.headerMappings;
+        translateConfig.parameters!["translateConfig"] = fileTranslateConfigWithHeaderMappings;
+        translateConfig.parameters!["translateConfig"]["indexMappings"] = fileTranslateConfigWithIndexMappings;
+
+        await translateProcessor.before_translate(translateConfig);
+        const headersOutput = await translateProcessor.translate(headersRow);
+
+        const expectedHeaders = headersRow.raw.map(column => fileTranslateConfigWithHeaderMappings.headerMappings![column] ?? column);
+
+        expect(headersOutput).toEqual({
+            index:1,
+            outputs: {
+                i1Translated: expectedHeaders
+            }
+        })
+    })
+
+    test("translate with headerMappings and indexMappings in translateConfig with headerlessFile set to true", async () => {
+        const translateProcessor = getTranslateProcessor();
+
+        const translateConfig = _.cloneDeep(testTranslateConfig) as IStepBeforeInput;
+        const headersRow = _.cloneDeep(testInputHeadersRow) as IRowProcessorInput;
+        headersRow.parameters!["translateConfig"]["headerMappings"] = fileTranslateConfigWithHeaderMappings.headerMappings;
+        headersRow.parameters!["translateConfig"]["indexMappings"] = fileTranslateConfigWithIndexMappings.indexMappings;
+        headersRow.parameters!["translateConfig"]["headerlessFile"] = true;
+        translateConfig.parameters!["translateConfig"] = fileTranslateConfigWithHeaderMappings;
+        translateConfig.parameters!["translateConfig"]["indexMappings"] = fileTranslateConfigWithIndexMappings;
+
+        await translateProcessor.before_translate(translateConfig);
+        const headersOutput = await translateProcessor.translate(headersRow);
+
+        const expectedHeaders = headersRow.raw.map(column => fileTranslateConfigWithIndexMappings.indexMappings![column] ?? column);
+
+        expect(headersOutput).toEqual({
+            index:1,
+            outputs: {
+                i1Translated: expectedHeaders
+            }
+        })
     });
 
     test("translate with valueMappings in translateConfig", async () => {
