@@ -89,7 +89,7 @@ export class RangeValidator {
   }
 
   //Min Max ranges are only supported for Numbers for now
-  public setRangeLimitLevels(rowData: IRowData, rangeLimitSetters: Set<string>) {
+  public setRangeLimitLevels(rowData: IRowData, rangeLimitSetters: Set<string>): void {
       for (const rangeSetter of rangeLimitSetters) {
           const limitLevel = parseInt(rowData[rangeSetter]);
           this.rangeLevelValues[rangeSetter] = isNaN(limitLevel) ? undefined : limitLevel;

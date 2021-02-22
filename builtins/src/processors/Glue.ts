@@ -13,7 +13,7 @@ import {
 import AWS from "aws-sdk";
 import parse from "csv-parse";
 
-import { pythonScriptAsString } from '../glueetl/glueSparkDefault'
+import { pythonScriptAsString } from '../glueetl/glueSparkDefault';
 import { sleep } from "../utils";
 
 export interface IGlueConfig {

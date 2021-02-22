@@ -197,7 +197,7 @@ export class Diff extends BaseProcessor {
                     [`${input.name}Added`]: input.raw,
                     [`${input.name}Modified`]: input.raw,
                     [`${input.name}Deleted`]: input.raw,
-                    [`${input.name}Unmodified`]: input.raw,
+                    [`${input.name}Unmodified`]: input.raw
                 }
             };
         }
@@ -205,7 +205,7 @@ export class Diff extends BaseProcessor {
         if (this.lastJob == null || !(input.name in this.hashers)) {
             return {
                 outputs: {
-                    [`${input.name}Added`]: input.raw,
+                    [`${input.name}Added`]: input.raw
                 }
             };
         }
@@ -220,19 +220,19 @@ export class Diff extends BaseProcessor {
         case FileHashResult.Modified:
             return {
                 outputs: {
-                    [`${input.name}Modified`]: rowOut,
+                    [`${input.name}Modified`]: rowOut
                 }
             };
         case FileHashResult.NotPresent:
             return {
                 outputs: {
-                    [`${input.name}Added`]: rowOut,
+                    [`${input.name}Added`]: rowOut
                 }
             };
         case FileHashResult.Unmodified:
             return {
                 outputs: {
-                    [`${input.name}Unmodified`]: rowOut,
+                    [`${input.name}Unmodified`]: rowOut
                 }
             };
         }

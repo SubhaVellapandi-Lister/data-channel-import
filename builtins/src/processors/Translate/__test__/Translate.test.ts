@@ -20,7 +20,7 @@ import {
 describe("TranslateProcessor", () => {
     beforeAll(() => {
         jest.spyOn(ChannelConfig.prototype, 'update').mockImplementation(async () => true);
-        jest.spyOn(OutputStreams.prototype, 'writeOutputValues').mockImplementation(() => { return });
+        jest.spyOn(OutputStreams.prototype, 'writeOutputValues').mockImplementation(() => { return; });
         ChannelConfig.getConfig = jest.fn().mockReturnValue(ChannelConfig.fromIChannelConfig(testChannelConfig));
     });
 
@@ -207,7 +207,7 @@ describe("TranslateProcessor", () => {
         headersRow.raw = headersRow.raw.map((header, index) => index % 2 === 0 ? header : header+"_INVALID");
         headersRow.parameters!["translateConfig"]["headerlessFile"] = true;
 
-        await translateProcessor.translate(headersRow)
+        await translateProcessor.translate(headersRow);
 
         expect(translateProcessor.job.status).toEqual(JobStatus.Failed);
     });
@@ -279,7 +279,7 @@ describe("TranslateProcessor", () => {
                 i1Translated: expectedHeaders
             }
         });
-    })
+    });
 
     test("translate with headerMappings and indexMappings in translateConfig without headerlessFile set to true", async () => {
         const translateProcessor = getTranslateProcessor();
@@ -300,8 +300,8 @@ describe("TranslateProcessor", () => {
             outputs: {
                 i1Translated: expectedHeaders
             }
-        })
-    })
+        });
+    });
 
     test("translate with headerMappings and indexMappings in translateConfig with headerlessFile set to true", async () => {
         const translateProcessor = getTranslateProcessor();
@@ -324,7 +324,7 @@ describe("TranslateProcessor", () => {
             outputs: {
                 i1Translated: expectedHeaders
             }
-        })
+        });
     });
 
     test("translate with valueMappings in translateConfig", async () => {
