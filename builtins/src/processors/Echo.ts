@@ -9,6 +9,7 @@ import {
 
 export interface IEchoConfig {
     outputAllRows?: boolean;
+    pauseAfter?: boolean;
 }
 
 export class Echo extends BaseProcessor {
@@ -42,6 +43,11 @@ export class Echo extends BaseProcessor {
 
     public async after_echo(input: IStepAfterInput): Promise<IStepAfterOutput> {
         const rowsLabel = this.config.outputAllRows ? 'rows' : 'firstAndLastRows';
+
+        if (this.config.pauseAfter) {
+            console.log('Pausing job after this step as requested in config');
+            this.pauseAfterStep();
+        }
 
         return {
             results: {

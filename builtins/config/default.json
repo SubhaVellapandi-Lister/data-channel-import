@@ -10,7 +10,8 @@
             "securityGroupId": "",
             "vpcId": "",
             "fileSystemId" : "",
-            "accessPointId": ""
+            "accessPointId": "",
+            "useEfs": false
         },
         "permissions": {
             "snsPublish": true,
