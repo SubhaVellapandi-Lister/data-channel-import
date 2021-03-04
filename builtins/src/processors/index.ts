@@ -13,4 +13,5 @@ export * from "./Sort";
 export * from "./ThrowError";
 export * from "./Translate/Translate";
 export * from "./Validate/Validate";
+export * from "./Delete/Delete";
 export * from "./Webhook";
