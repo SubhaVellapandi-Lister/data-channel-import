@@ -29,6 +29,10 @@ export enum HistoryStatus {
     InProgress = 'In Progress'
 }
 
+export enum ImportSettingsOptions {
+    OVERRIDE = 'overrideData',
+}
+
 export class StudentHistory {
     public createdCount = 0;
     public updatedCount = 0;
@@ -41,8 +45,12 @@ export class StudentHistory {
     private historyBatch: IHistoryRow[][] = [];
 
     constructor(
-        private scope: string, private namespace: string, private batchSize: number,
-        private updatePlans: boolean, private attachContextsIfNeeded: boolean
+        private scope: string,
+        private namespace: string,
+        private batchSize: number,
+        private updatePlans: boolean,
+        private attachContextsIfNeeded: boolean,
+        private importSettings: Record<ImportSettingsOptions, any> = {overrideData: false}
     ) {}
 
     static parseCsvRow(rowData: IRowData): IHistoryRow {
@@ -173,6 +181,9 @@ export class StudentHistory {
 
         console.log(`processing batch of ${batch.length} students in parallel`);
 
+        // TODO: Remove this log as is for testing only
+        console.log(`processing batch importSettings =  ${JSON.stringify(this.importSettings)}`);
+
         for (const studentCourses of batch) {
             // each element in batch is for one student
             const studentId = studentCourses[0].studentId.toString();
@@ -211,7 +222,8 @@ export class StudentHistory {
                     courses,
                     this.updatePlans,
                     this.attachContextsIfNeeded,
-                    true
+                    // if data is intended to be overridden, records are updated per grade
+                    !this.importSettings?.overrideData ?? false
                 ));
             } catch (err) {
                 console.log(`Error updating history records for ${studentId}`);
