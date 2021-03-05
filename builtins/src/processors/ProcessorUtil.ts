@@ -36,16 +36,16 @@ export function getKeyValueCaseInsensitive(obj: IRowData, prop: string): string 
 }
 export interface IFileLogMetrics {
     [fileName: string]: {
-        totalDataCount: number;
-        invalidCount: number;
-        warningCount: number;
-        validCount: number;
-        recordIdentifier: {
-            critical: {};
-            warning: {};
-        };
+      totalDataCount: number;
+      invalidCount: number;
+      warningCount: number;
+      validCount: number;
+      recordIdentifier: {
+        critical: {};
+        warning: {};
+      };
     };
-}
+  }
 
 export function checkExistingMetaIfEmpty(jobMetaData: Job): boolean {
     const metaData: IMeta | undefined = jobMetaData?.meta;

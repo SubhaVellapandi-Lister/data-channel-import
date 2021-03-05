@@ -2,6 +2,7 @@ import {
     BaseProcessor,
     IRowProcessorInput,
     IRowProcessorOutput,
+    IStepAfterOutput,
     IStepBeforeInput,
     RowOutputValue
 } from "@data-channels/dcSDK";
@@ -14,7 +15,9 @@ import {
     getFilePathFromInputFile,
     toCamelCase,
     jobOutFileExtension,
-    getKeyValueCaseInsensitive
+    getKeyValueCaseInsensitive,
+    IFileLogMetrics,
+    checkExistingMetaIfEmpty
 } from "../ProcessorUtil";
 
 import { DateValidator } from "./DateValidator";
@@ -51,6 +54,14 @@ export class Validate extends BaseProcessor {
   private dateValidator: DateValidator = new DateValidator();
   private rangeValidator: RangeValidator = new RangeValidator();
   private rangeLimitSetters = new Set<string>();
+  private errorLogMetrics: IFileLogMetrics = {};
+  private logDataValue: any;
+  private logDetails = { processor: { validate: {} } };
+  private invalidcountValue: number = 0;
+  private warningCountValue: number = 0;
+  private validCountValue: number = 0;
+  private totalDataCount: number = 0;
+  private existingMetaData = { processors: {} };
   /**
    * Method used to call before the processor begins to process the data.
    * @param input IStepBeforeInput
@@ -114,6 +125,19 @@ export class Validate extends BaseProcessor {
       }
 
       if (input.index === 1) {
+          if (this.config.writeErrorDataToJobMeta) {
+              this.invalidcountValue = this.warningCountValue = this.totalDataCount = this.validCountValue = 0;
+              this.errorLogMetrics[inputFileName] = {
+                  totalDataCount: 0,
+                  invalidCount: 0,
+                  warningCount: 0,
+                  validCount: 0,
+                  recordIdentifier: {
+                      critical: {},
+                      warning: {}
+                  }
+              };
+          }
           await this.createDynamicInputOutput(inputFileName, input);
           this.dataFileHeaders = [...input.raw];
           // Add columns statusName and infoName to file headers to track validation status
@@ -258,6 +282,11 @@ export class Validate extends BaseProcessor {
       for (const logOutputName of logNames) {
           outputs[logOutputName] = logOutputRow;
       }
+
+      if (this.config.writeErrorDataToJobMeta) {
+          this.setJobMetData(outputs, this.logFileHeaders, inputFileName);
+      }
+
       return {
           error: validationStatus === ValidateStatus.Invalid,
           outputs
@@ -467,5 +496,72 @@ export class Validate extends BaseProcessor {
           }
       }
       return hasValidFormat;
+  }
+
+  /**
+   * This method capture the critical and warning details into job's meta
+   * @param outputs
+   */
+  private setJobMetData(
+      outputs: { [name: string]: RowOutputValue },
+      headerData: string[],
+      inputFileName: string
+  ): void {
+      const result: any = {};
+      const objectValue = inputFileName + 'DataLog';
+      this.logDataValue = outputs.log ? outputs.log : outputs[objectValue];
+
+      for (const i in headerData) {
+          result[headerData[i]] = this.logDataValue[i];
+      }
+
+      this.totalDataCount++;
+      this.errorLogMetrics[
+          inputFileName
+      ].totalDataCount = this.totalDataCount;
+      switch (result.Validation_Status) {
+      case 'invalid':
+          ++this.invalidcountValue;
+          this.errorLogMetrics[
+              inputFileName
+          ].invalidCount = this.invalidcountValue;
+          this.errorLogMetrics[inputFileName].recordIdentifier.critical[
+              result.Row
+          ] = result.Validation_Info;
+          break;
+      case 'warning':
+          ++this.warningCountValue;
+          this.errorLogMetrics[
+              inputFileName
+          ].warningCount = this.warningCountValue;
+          this.errorLogMetrics[inputFileName].recordIdentifier.warning[
+              result.Row
+          ] = result.Validation_Info;
+          break;
+      case 'valid':
+          ++this.validCountValue;
+          this.errorLogMetrics[
+              inputFileName
+          ].validCount = this.validCountValue;
+          break;
+      }
+  }
+
+  public async after_validate(): Promise<IStepAfterOutput> {
+      if (this.config.writeErrorDataToJobMeta) {
+          this.logDetails.processor.validate = this.errorLogMetrics;
+          const checkUpdateStatus = checkExistingMetaIfEmpty(this.job);
+          if (checkUpdateStatus) {
+              this.job.setMetaValue('processors', this.logDetails.processor);
+          } else {
+              this.existingMetaData.processors[
+                  'validate'
+              ] = this.logDetails.processor;
+              this.job.setMetaValue('processors', this.existingMetaData.processors);
+          }
+      }
+      return {
+          results: {}
+      };
   }
 }
