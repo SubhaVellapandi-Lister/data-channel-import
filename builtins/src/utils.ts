@@ -32,3 +32,21 @@ export function urlsForInputNames(job: Job): { [name: string]: string[] } {
 
     return urlsByName;
 }
+
+export function parseDate(dateString: string): Date | null {
+    let date: Date = new Date();
+    switch (dateString.toLowerCase()) {
+    case "today":
+        break;
+    case "yesterday":
+        date.setDate(date.getDate() - 1);
+        break;
+    case "tomorrow":
+        date.setDate(date.getDate() + 1);
+        break;
+    default:
+        date = new Date(dateString);
+        break;
+    }
+    return date.toJSON() !== null ? date : null;
+}

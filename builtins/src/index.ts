@@ -15,7 +15,8 @@ import {
     Validate,
     ThrowError,
     Translate,
-    Webhook
+    Webhook,
+    Delete
 } from "./processors";
 
 export const builtInHandler = generateHandler({
@@ -37,7 +38,8 @@ export const builtInHandler = generateHandler({
     generate: Generate,
     dynamicHelloWorld: HelloWorld,
     glue: Glue,
-    webhook: Webhook
+    webhook: Webhook,
+    delete: Delete
 });
 
 export * from "./utils";
