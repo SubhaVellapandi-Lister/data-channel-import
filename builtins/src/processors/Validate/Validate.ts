@@ -14,9 +14,7 @@ import {
     getFilePathFromInputFile,
     toCamelCase,
     jobOutFileExtension,
-    getKeyValueCaseInsensitive,
-    checkExistingMetaIfEmpty,
-    IFileLogMetrics
+    getKeyValueCaseInsensitive
 } from "../ProcessorUtil";
 
 import { DateValidator } from "./DateValidator";
@@ -53,16 +51,6 @@ export class Validate extends BaseProcessor {
     private dateValidator: DateValidator = new DateValidator();
     private rangeValidator: RangeValidator = new RangeValidator();
     private rangeLimitSetters = new Set<string>();
-    private errorLogMetrics: IFileLogMetrics = {};
-    private logDataValue: any;
-    private logDetails = { processor: { validate: {} } };
-    private inputFileName: string = '';
-    private invalidcountValue: number = 0;
-    private warningCountValue: number = 0;
-    private validCountValue: number = 0;
-    private totalDataCount: number = 0;
-    private existingMetaData = { processors: {} };
-
     /**
      * Method used to call before the processor begins to process the data.
      * @param input IStepBeforeInput
@@ -98,12 +86,12 @@ export class Validate extends BaseProcessor {
      * @param input
      */
     public async validate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
-        this.inputFileName = input.name;
+        let inputFileName = input.name;
         if (this.config.jsonSchemaNames?.length && input.index > 1) {
             this.rangeValidator.setRangeLimitLevels(input.data, this.rangeLimitSetters);
         }
         if (this.config!.dynamicOutput) {
-            this.inputFileName = getFileNameFromInputFile(input, this.jobOutFileExtension);
+            inputFileName = getFileNameFromInputFile(input, this.jobOutFileExtension);
         }
         let updateConfig: string[] | IFileValidateConfig = this.config.validateConfig;
 
@@ -112,7 +100,7 @@ export class Validate extends BaseProcessor {
         }
         const statusName = updateConfig.validStatusColumnName || "Validation_Status";
         const infoName = updateConfig.validInfoColumnName || "Validation_Info";
-        const dataOutputName = `${this.inputFileName}${this.currentStep}d`;
+        const dataOutputName = `${inputFileName}${this.currentStep}d`;
         const needExtraLogFile = updateConfig.extraLogFile;
         const needLogHeaders = updateConfig.logHeaders;
         const logNames: string[] = [];
@@ -126,22 +114,7 @@ export class Validate extends BaseProcessor {
         }
 
         if (input.index === 1) {
-
-            if (this.config.writeErrorDataToJobMeta) {
-                this.invalidcountValue = this.warningCountValue = this.totalDataCount = this.validCountValue = 0;
-                this.errorLogMetrics[this.inputFileName] = {
-                    totalDataCount: 0,
-                    invalidCount: 0,
-                    warningCount: 0,
-                    validCount: 0,
-                    recordIdentifier: {
-                        critical: {},
-                        warning: {},
-                    },
-                };
-            }
-
-            await this.createDynamicInputOutput(this.inputFileName, input);
+            await this.createDynamicInputOutput(inputFileName, input);
             this.dataFileHeaders = [...input.raw];
             // Add columns statusName and infoName to file headers to track validation status
             if (updateConfig.includeLogInData) {
@@ -284,50 +257,10 @@ export class Validate extends BaseProcessor {
         for (const logOutputName of logNames) {
             outputs[logOutputName] = logOutputRow;
         }
-
-        if (this.config.writeErrorDataToJobMeta) {
-            this.setJobMetData(outputs, this.logFileHeaders);
-        }
-
         return {
             error: validationStatus === ValidateStatus.Invalid,
             outputs
         };
-    }
-
-    /**
- * This method capture the critical and warning details into job's meta
- * @param outputs 
- * @param headerData
- */
-    private setJobMetData(outputs: { [name: string]: RowOutputValue }, headerData: string[]) {
-        let result: any = {};
-        const objectValue = this.inputFileName + 'DataLog';
-        this.logDataValue = outputs.log ? outputs.log : outputs[objectValue];
-
-        for (let i in headerData) {
-            result[headerData[i]] = this.logDataValue[i];
-        }
-
-        this.totalDataCount++;
-        this.errorLogMetrics[this.inputFileName].totalDataCount = this.totalDataCount;
-        switch (result.Validation_Status) {
-            case 'invalid':
-                ++this.invalidcountValue;
-                this.errorLogMetrics[this.inputFileName].invalidCount = this.invalidcountValue;
-                this.errorLogMetrics[this.inputFileName].recordIdentifier.critical[result.Row] = result.Validation_Info;
-                break;
-            case 'warning':
-                ++this.warningCountValue;
-                this.errorLogMetrics[this.inputFileName].warningCount = this.warningCountValue;
-                this.errorLogMetrics[this.inputFileName].recordIdentifier.warning[result.Row] = result.Validation_Info;
-                break;
-            case 'valid':
-                ++this.validCountValue;
-                this.errorLogMetrics[this.inputFileName].validCount = this.validCountValue;
-                break;
-        }
-
     }
 
     private parseValidationSchema(): {
@@ -533,21 +466,5 @@ export class Validate extends BaseProcessor {
             }
         }
         return hasValidFormat;
-    }
-
-    public async after_validate() {
-        if (this.config.writeErrorDataToJobMeta) {
-            this.logDetails.processor.validate = this.errorLogMetrics;
-            const checkUpdateStatus = checkExistingMetaIfEmpty(this.job);
-            if (checkUpdateStatus) {
-                this.job.setMetaValue('processors', this.logDetails.processor);
-            } else {
-                this.existingMetaData.processors['validate'] = this.logDetails.processor;
-                this.job.setMetaValue('processors', this.existingMetaData.processors);
-            }
-        }
-        return {
-            results: {},
-        };
     }
 }
