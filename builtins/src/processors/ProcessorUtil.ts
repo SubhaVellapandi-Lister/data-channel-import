@@ -47,8 +47,7 @@ export interface IFileLogMetrics {
     };
 }
 
-export function checkExistingMetaIfEmpty(jobMetaData: Job) {
+export function checkExistingMetaIfEmpty(jobMetaData: Job): boolean {
     const metaData: IMeta | undefined = jobMetaData?.meta;
     return !metaData ? true : false;
 }
-

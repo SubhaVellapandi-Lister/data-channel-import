@@ -266,7 +266,7 @@ export class Validate extends BaseProcessor {
     private parseValidationSchema(): {
         columnConfig: IFileConfigColumns;
         rangeLimitSetters: Set<string>;
-    } {
+        } {
         const columnConfig: IFileConfigColumns = {},
             rangeLimitSetters = new Set<string>(this.rangeLimitSetters);
 
@@ -323,45 +323,45 @@ export class Validate extends BaseProcessor {
         let hasValidType = false;
         const data = inputData.toUpperCase();
         switch (typeToCheck) {
-            case ValidateDataType.Email: {
-                if (this.emailValidator.validateEmail(data, columnConfig.required!)) {
-                    hasValidType = true;
-                }
-                break;
-            }
-            case ValidateDataType.Boolean: {
-                if (["TRUE", "FALSE", "1", "0"].includes(data)) {
-                    hasValidType = true;
-                }
-                break;
-            }
-            case ValidateDataType.Integer: {
-                if ((!data && !columnConfig.invalidIfBlank) || (!data.includes(".") && !isNaN(parseInt(data)))) {
-                    hasValidType = true;
-                }
-                break;
-            }
-            case ValidateDataType.Decimal: {
-                if ((!data && !columnConfig.invalidIfBlank) || !isNaN(parseFloat(data))) {
-                    hasValidType = true;
-                }
-                break;
-            }
-            case ValidateDataType.Datetime: {
-                if (
-                    (columnConfig.dateTimeFormat === undefined || columnConfig.dateTimeFormat === null) &&
-                    !isNaN(Date.parse(data))
-                ) {
-                    hasValidType = true;
-                    break;
-                }
-                hasValidType = this.validateDateFormat(columnConfig, data, compareData, hasValidType);
-                break;
-            }
-            // eslint-disable-next-line no-fallthrough
-            case ValidateDataType.String: {
+        case ValidateDataType.Email: {
+            if (this.emailValidator.validateEmail(data, columnConfig.required!)) {
                 hasValidType = true;
             }
+            break;
+        }
+        case ValidateDataType.Boolean: {
+            if (["TRUE", "FALSE", "1", "0"].includes(data)) {
+                hasValidType = true;
+            }
+            break;
+        }
+        case ValidateDataType.Integer: {
+            if ((!data && !columnConfig.invalidIfBlank) || (!data.includes(".") && !isNaN(parseInt(data)))) {
+                hasValidType = true;
+            }
+            break;
+        }
+        case ValidateDataType.Decimal: {
+            if ((!data && !columnConfig.invalidIfBlank) || !isNaN(parseFloat(data))) {
+                hasValidType = true;
+            }
+            break;
+        }
+        case ValidateDataType.Datetime: {
+            if (
+                (columnConfig.dateTimeFormat === undefined || columnConfig.dateTimeFormat === null) &&
+                    !isNaN(Date.parse(data))
+            ) {
+                hasValidType = true;
+                break;
+            }
+            hasValidType = this.validateDateFormat(columnConfig, data, compareData, hasValidType);
+            break;
+        }
+        // eslint-disable-next-line no-fallthrough
+        case ValidateDataType.String: {
+            hasValidType = true;
+        }
         }
 
         return hasValidType;
