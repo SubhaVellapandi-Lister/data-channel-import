@@ -121,7 +121,7 @@ describe('test student course history', () => {
                 page: jest.fn().mockResolvedValue([])
             } as any);
 
-            // if data is intended to be overridden, records are updated per grade
+            // if all grades data is not intended to be overridden, records are updated per grade
             const expectedUpdatePerGrade = importSettings === undefined || importSettings.overrideData === undefined
                 ? true
                 : !importSettings.overrideData;

@@ -222,7 +222,7 @@ export class StudentHistory {
                     courses,
                     this.updatePlans,
                     this.attachContextsIfNeeded,
-                    // if data is intended to be overridden, records are updated per grade
+                    // if all grades data is not intended to be overridden, records are updated per grade
                     !this.importSettings?.overrideData ?? false
                 ));
             } catch (err) {
