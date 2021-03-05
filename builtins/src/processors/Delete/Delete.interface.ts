@@ -7,6 +7,7 @@ export interface IJobDeleteCriteria {
 export interface IJobDeleteConfig {
     criteria?: IJobDeleteCriteria;
     hardDelete?: boolean;
+    forceDelete?: boolean;
 }
 
 export interface IDeleteConfig {

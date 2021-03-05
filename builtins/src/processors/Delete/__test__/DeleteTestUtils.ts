@@ -1,4 +1,4 @@
-import { ConfigType, JobStatus, jobWithInlineChannel } from '@data-channels/dcSDK';
+import { ConfigType, IFileProcessorInput, JobStatus, jobWithInlineChannel } from '@data-channels/dcSDK';
 import _ from 'lodash';
 
 import { Delete } from '../Delete';
@@ -6,13 +6,39 @@ import { IDeleteConfig } from '../Delete.interface';
 
 export const testDeleteConfig: IDeleteConfig = {
     jobs: {
-        hardDelete: false,
         criteria: {
             expiryDate: {
                 operator: "=",
                 value: "today"
             }
         }
+    }
+};
+
+export const testEmptyJobsDeleteConfig: IDeleteConfig = {
+    jobs: {
+        criteria: {}
+    }
+};
+
+export const testDeleteInputWithUndefinedParameters: IFileProcessorInput = {
+    inputs: {},
+    outputs: {}
+};
+
+export const testDeleteInputWithEmptyJobDeleteCriteria: IFileProcessorInput = {
+    inputs: {},
+    outputs: {},
+    parameters: {
+        deleteConfig: _.cloneDeep(testEmptyJobsDeleteConfig)
+    }
+};
+
+export const testDeleteInput: IFileProcessorInput = {
+    inputs: {},
+    outputs: {},
+    parameters: {
+        deleteConfig: _.cloneDeep(testDeleteConfig)
     }
 };
 
@@ -55,7 +81,7 @@ export const testChannelConfig = {
             method: "delete",
             processor: "some-processor-name",
             parameters: {
-                deleteConfig: testDeleteConfig
+                deleteConfig: _.cloneDeep(testDeleteConfig)
             },
             granularity: "once"
         }
