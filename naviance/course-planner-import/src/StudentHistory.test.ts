@@ -1,4 +1,5 @@
-import {Annotations, Course, PlanningEngine, RulesRepository} from "@academic-planner/apSDK";
+import {Annotations, Course, PlanContext, PlanningEngine, RulesRepository, StudentPlan} from "@academic-planner/apSDK";
+import {CourseImport} from "./Course";
 import {IHistoryRow, StudentHistory} from "./StudentHistory";
 jest.setTimeout(10000);
 describe('test student course history', () => {
@@ -88,4 +89,74 @@ describe('test student course history', () => {
             [{courseId: "1003214", studentId: "apCli", creditAttempted: 2, gradeLevel: 9 }]);
     });
 
+    describe('processBatch',  () => {
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        PlanningEngine.getInstance = jest.fn().mockReturnValue({
+            getProduct: jest.fn(),
+            createOrUpdateStudentRecords: jest.fn()}
+            );
+
+        test.each`
+        importSettings               | intent
+        ${undefined}                 | ${'upgraded per grade if import settings is not provided'}
+        ${{overrideData: false}}     | ${'upgraded per grade if data is not intended to be overridden'}
+        ${{overrideData: undefined}} | ${'upgraded per grade if importSettings.overrideData is not provided'}
+        ${{overrideData: true}}      | ${'not upgraded per grade if data is intended to be overridden'}
+        `('createOrUpdateStudentRecords are $intent', async ({importSettings}) => {
+            const createOrUpdateStudentRecordsMock = jest.spyOn(PlanContext, 'createOrUpdateStudentRecords');
+            createOrUpdateStudentRecordsMock.mockResolvedValue({
+                created: true,
+                updated: false,
+                studentRecords: []
+            });
+            jest.spyOn(CourseImport, 'getBatchOfCourses').mockResolvedValue([
+                {
+                    name: 'course1',
+                }
+            ] as Course[]);
+            jest.spyOn(StudentPlan, 'find').mockReturnValue({
+                page: jest.fn().mockResolvedValue([])
+            } as any);
+
+            // if all grades data is not intended to be overridden, records are updated per grade
+            const expectedUpdatePerGrade = importSettings === undefined || importSettings.overrideData === undefined
+                ? true
+                : !importSettings.overrideData;
+            const historyRow: IHistoryRow = {
+                studentId: 'studentId',
+                courseId: 'courseId',
+                creditEarned: 1,
+                creditAttempted: 1,
+                gradeLevel: 9,
+                term: 'term',
+                score: 98,
+                status: 'PLANNED'
+            };
+            const batch = [[historyRow]];
+            const studentHistory = new StudentHistory(
+                'scope',
+                'ns',
+                1,
+                true,
+                true,
+                importSettings
+            );
+
+            await studentHistory.processBatch(batch);
+
+            expect(createOrUpdateStudentRecordsMock).toHaveBeenCalledWith(
+                'studentId',
+                'migration',
+                'scope',
+                {},
+                [],
+                true,
+                true,
+                expectedUpdatePerGrade,
+            );
+        });
+    });
 });

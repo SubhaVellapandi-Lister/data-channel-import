@@ -444,11 +444,19 @@ export class CPImportProcessor extends BaseProcessor {
         const batchSize = input.parameters!['batchSize'] || 8;
         const updatePlans = input.parameters!['updatePlans'] || false;
         const attachContextsIfNeeded = input.parameters!['attachContextsIfNeeded'] || false;
+        const importSettings = input.parameters!['importSettings'];
         let namespace = input.parameters!['namespace'];
         if (!namespace) {
             namespace = this.job.rawConfig.tenant?.name ?? '0';
         }
-        this.historyHandler = new StudentHistory(scope, namespace, batchSize, updatePlans, attachContextsIfNeeded);
+        this.historyHandler = new StudentHistory(
+            scope,
+            namespace,
+            batchSize,
+            updatePlans,
+            attachContextsIfNeeded,
+            importSettings
+        );
     }
 
     public async after_importHistories(input: IStepBeforeInput): Promise<IStepAfterOutput> {
