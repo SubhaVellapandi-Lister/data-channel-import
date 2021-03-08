@@ -44,13 +44,13 @@ export enum ValidateDateFormat {
 }
 
 export enum SchemaType {
-	Number = "number",
-	Date = "date",
+  Number = "number",
+  Date = "date",
 }
 
 //These are ranges which dependsOn rangeSetter values to set min max limit for that row
 export interface IRangeLimit {
-	[key: number]: number;
+  [key: number]: number;
 }
 
 /**
@@ -129,4 +129,5 @@ export interface IValidateParameters {
   dynamicInput: boolean;
   multipleFileConfig: boolean;
   jsonSchemaNames?: string[];
+  writeErrorDataToJobMeta?: boolean;
 }

@@ -1,4 +1,4 @@
-import { IRowData, IRowProcessorInput } from "@data-channels/dcSDK";
+import { IMeta, IRowData, IRowProcessorInput, Job } from "@data-channels/dcSDK";
 
 export const jobOutFileExtension = "d.output";
 
@@ -17,9 +17,9 @@ export function getBucketDetailsFromInputFile(inputFile: IRowProcessorInput): st
 }
 export function getFileNameFromInputFile(inputFile: IRowProcessorInput, jobOutFileExt: string): string {
     return (
-    inputFile.fileInfo?.key
-      ?.match(new RegExp(`([a-zA-Z0-9_]*${inputFile.name}${jobOutFileExt})\\.(csv|txt)`))?.[1]
-      .replace(`${jobOutFileExt}`, "") ?? inputFile.name
+        inputFile.fileInfo?.key
+            ?.match(new RegExp(`([a-zA-Z0-9_]*${inputFile.name}${jobOutFileExt})\\.(csv|txt)`))?.[1]
+            .replace(`${jobOutFileExt}`, "") ?? inputFile.name
     );
 }
 export function toCamelCase(input: string): string {
@@ -33,4 +33,21 @@ export function getKeyValueCaseInsensitive(obj: IRowData, prop: string): string 
             return obj[key];
         }
     }
+}
+export interface IFileLogMetrics {
+    [fileName: string]: {
+      totalDataCount: number;
+      invalidCount: number;
+      warningCount: number;
+      validCount: number;
+      recordIdentifier: {
+        critical: {};
+        warning: {};
+      };
+    };
+  }
+
+export function checkExistingMetaIfEmpty(jobMetaData: Job): boolean {
+    const metaData: IMeta | undefined = jobMetaData?.meta;
+    return !metaData ? true : false;
 }
