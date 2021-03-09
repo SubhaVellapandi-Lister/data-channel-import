@@ -90,7 +90,9 @@ export class BuiltinsLambdaStack extends Stack {
 
         const genericEnvironmentVars = {
             AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1",
-            STUB_SECURITY_SCAN: String(stubSecurityScan)
+            STUB_SECURITY_SCAN: String(stubSecurityScan),
+            NODE_CONFIG_DIR: '/opt',
+            NODE_CONFIG_ENV: environment
         };
 
         const efsEnvironmentVars = {
