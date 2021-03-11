@@ -11,13 +11,15 @@ export const testDeleteConfig: IDeleteConfig = {
                 operator: "=",
                 value: "today"
             }
-        }
+        },
+        maxDeletionsPerJob: 1
     }
 };
 
-export const testEmptyJobsDeleteConfig: IDeleteConfig = {
+export const testDeleteConfigWithEmptyJobCriteria: IDeleteConfig = {
     jobs: {
-        criteria: {}
+        criteria: {},
+        maxDeletionsPerJob: 1
     }
 };
 
@@ -30,7 +32,7 @@ export const testDeleteInputWithEmptyJobDeleteCriteria: IFileProcessorInput = {
     inputs: {},
     outputs: {},
     parameters: {
-        deleteConfig: _.cloneDeep(testEmptyJobsDeleteConfig)
+        deleteConfig: _.cloneDeep(testDeleteConfigWithEmptyJobCriteria)
     }
 };
 

@@ -44,7 +44,7 @@ export class Delete extends BaseProcessor {
             await this.terminalError(`DeleteConfig is required`);
         }
 
-        if (config === undefined || Object.keys(config!).length === 0) {
+        if (Object.keys(config ?? {}).length === 0) {
             await this.terminalError(`DeleteConfig cannot be empty`);
         }
 
@@ -71,25 +71,35 @@ export class Delete extends BaseProcessor {
     }
 
     private async findAndDeleteJobs(jobDeleteConfig: IJobDeleteConfig): Promise<IJobsResult | undefined> {
-        if (jobDeleteConfig.criteria === undefined || Object.keys(jobDeleteConfig.criteria).length === 0) return;
+        if (Object.keys(jobDeleteConfig.criteria ?? {}).length === 0) {
+            return;
+        }
+        if (jobDeleteConfig.maxDeletionsPerJob < 1) {
+            this.terminalError('maxDeletionsPerJob must have a minimum value of 1');
+            return;
+        }
         const findCriteria = await this.parseJobDeleteCriteria(jobDeleteConfig.criteria!);
-        if (findCriteria === undefined) return;
+        if (findCriteria === undefined) {
+            return;
+        }
 
         const hardDelete = jobDeleteConfig.hardDelete ?? false;
         const forceDelete = jobDeleteConfig.forceDelete ?? false;
 
-        const pageSize = 50;
+        const pageSize = 100;
         const jobsResult: IJobsResult = { total: 0, deleted: 0 };
         const jobsPager = Job.find({ findCriteria, pageSize: pageSize });
 
         jobsResult.total = await jobsPager.total();
         console.log(`Total Jobs found: ${jobsResult.total}`);
+        console.log(`Max deletions per job: ${jobDeleteConfig.maxDeletionsPerJob}`);
         if (jobsResult.total > 0) {
             const pages = Math.ceil(jobsResult.total / pageSize);
-            //let jobPromises: Promise<Job>[] = [];
             for (let thisPage = 1 ; thisPage <= pages; thisPage++) {
                 const slimJobs = (await jobsPager.page(thisPage)).filter(slimJob => slimJob !== null);
                 for (const slimJob of slimJobs) {
+                    if (jobsResult.deleted === jobDeleteConfig.maxDeletionsPerJob) break;
+
                     const job = await slimJob.delete(hardDelete, forceDelete);
                     if (job) jobsResult.deleted += 1;
                     console.log(`
