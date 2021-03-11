@@ -5,6 +5,7 @@ export interface IJobDeleteCriteria {
 }
 
 export interface IJobDeleteConfig {
+    maxDeletionsPerJob: number;
     criteria?: IJobDeleteCriteria;
     hardDelete?: boolean;
     forceDelete?: boolean;

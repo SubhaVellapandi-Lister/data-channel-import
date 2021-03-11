@@ -3,7 +3,7 @@ import _ from "lodash";
 
 import { IDeleteConfig } from "../Delete.interface";
 
-import { getDeleteProcessor, testDeleteInput, testDeleteInputWithEmptyJobDeleteCriteria, testDeleteInputWithUndefinedParameters, testEmptyJobsDeleteConfig } from "./DeleteTestUtils";
+import { getDeleteProcessor, testDeleteInput, testDeleteInputWithEmptyJobDeleteCriteria, testDeleteInputWithUndefinedParameters } from "./DeleteTestUtils";
 
 describe("DeleteProcessor", () => {
     afterAll(() => {
@@ -28,14 +28,14 @@ describe("DeleteProcessor", () => {
         expect(spy).toHaveBeenCalledWith('Delete', 'DeleteConfig cannot be empty');
     });
 
-    test("delete job with empty criteria", async () => {
+    test("delete jobs with empty criteria", async () => {
         const deleteProcessor = getDeleteProcessor();
         const output = await deleteProcessor.delete(testDeleteInputWithEmptyJobDeleteCriteria);
 
         expect(output).toEqual({ results: {} });
     });
 
-    test("delete job with invlid criteria (invalid expiry date)", async () => {
+    test("delete jobs with invlid criteria (invalid expiry date)", async () => {
         const deleteProcessor = getDeleteProcessor();
         const input = _.cloneDeep(testDeleteInput);
         (input.parameters!['deleteConfig'] as IDeleteConfig).jobs!.criteria!.expiryDate!.value = 'Invalid Date String';
@@ -46,7 +46,82 @@ describe("DeleteProcessor", () => {
         expect(spy).toHaveBeenCalledWith('Delete', 'Invalid expiry date provided');
     });
 
-    test("delete job with valid criteria and hard delete set to true", async () => {
+    test("delete jobs with invalid maxDeletionsPerJob", async () => {
+        const deleteProcessor = getDeleteProcessor();
+        const input = _.cloneDeep(testDeleteInput);
+        (input.parameters!['deleteConfig'] as IDeleteConfig).jobs!.maxDeletionsPerJob = 0;
+        const spy = jest.spyOn(deleteProcessor.job, 'terminalError').mockReturnValue(new Promise(resolve => resolve()));
+        const output = await deleteProcessor.delete(input);
+
+        expect(output).toEqual({ results: {} });
+        expect(spy).toHaveBeenCalledWith('Delete', 'maxDeletionsPerJob must have a minimum value of 1');
+    });
+
+    test("delete jobs with valid criteria and smaller maxDeletionsPerJob than total jobs found", async () => {
+        const deleteProcessor = getDeleteProcessor();
+        const input = _.cloneDeep(testDeleteInput);
+        const deleteConfig = (input.parameters!['deleteConfig'] as IDeleteConfig);
+        deleteConfig.jobs!.criteria!.expiryDate!.value = 'today';
+
+        const totalSpy = jest.spyOn(JobPager.prototype, 'total')
+            .mockReturnValue(new Promise(resolve => resolve(2)));
+        const pageSpy = jest.spyOn(JobPager.prototype, 'page')
+            .mockReturnValue(
+                new Promise(resolve => resolve([SlimJob.fromCore(getDeleteProcessor().job.rawConfig), SlimJob.fromCore(getDeleteProcessor().job.rawConfig)])));
+        const deleteSpy = jest.spyOn(SlimJob.prototype, 'delete')
+            .mockReturnValue(new Promise(resolve => resolve(getDeleteProcessor().job)));
+        const findSpy = jest.spyOn(Job, 'find').mockReturnValue(new JobPager({ findCriteria: {} }));
+
+        const output = await deleteProcessor.delete(input);
+
+        expect(output).toEqual({ results: { jobs: { total: 2, deleted: 1 } } });
+        expect(deleteSpy).toHaveBeenCalled();
+        expect(totalSpy).toHaveBeenCalled();
+        expect(pageSpy).toHaveBeenCalled();
+        expect(findSpy).toHaveBeenCalled();
+    });
+
+    test("delete jobs with valid criteria and no jobs found", async () => {
+        const deleteProcessor = getDeleteProcessor();
+        const input = _.cloneDeep(testDeleteInput);
+        const deleteConfig = (input.parameters!['deleteConfig'] as IDeleteConfig);
+        deleteConfig.jobs!.criteria!.expiryDate!.value = 'today';
+
+        const totalSpy = jest.spyOn(JobPager.prototype, 'total')
+            .mockReturnValue(new Promise(resolve => resolve(0)));
+        const findSpy = jest.spyOn(Job, 'find').mockReturnValue(new JobPager({ findCriteria: {} }));
+
+        const output = await deleteProcessor.delete(input);
+
+        expect(output).toEqual({ results: { jobs: { total: 0, deleted: 0 } } });
+        expect(totalSpy).toHaveBeenCalled();
+        expect(findSpy).toHaveBeenCalled();
+    });
+
+    test("delete jobs with valid criteria and no jobs deleted", async () => {
+        const deleteProcessor = getDeleteProcessor();
+        const input = _.cloneDeep(testDeleteInput);
+        const deleteConfig = (input.parameters!['deleteConfig'] as IDeleteConfig);
+        deleteConfig.jobs!.criteria!.expiryDate!.value = 'today';
+
+        const totalSpy = jest.spyOn(JobPager.prototype, 'total')
+            .mockReturnValue(new Promise(resolve => resolve(1)));
+        const pageSpy = jest.spyOn(JobPager.prototype, 'page')
+            .mockReturnValue(new Promise(resolve => resolve([SlimJob.fromCore(getDeleteProcessor().job.rawConfig)])));
+        const deleteSpy = jest.spyOn(SlimJob.prototype, 'delete')
+            .mockReturnValue(new Promise(resolve => resolve(undefined)));
+        const findSpy = jest.spyOn(Job, 'find').mockReturnValue(new JobPager({ findCriteria: {} }));
+
+        const output = await deleteProcessor.delete(input);
+
+        expect(output).toEqual({ results: { jobs: { total: 1, deleted: 0 } } });
+        expect(deleteSpy).toHaveBeenCalled();
+        expect(totalSpy).toHaveBeenCalled();
+        expect(pageSpy).toHaveBeenCalled();
+        expect(findSpy).toHaveBeenCalled();
+    });
+
+    test("delete jobs with valid criteria and hard delete set to true", async () => {
         const deleteProcessor = getDeleteProcessor();
         const input = _.cloneDeep(testDeleteInput);
         const deleteConfig = (input.parameters!['deleteConfig'] as IDeleteConfig);
@@ -70,7 +145,7 @@ describe("DeleteProcessor", () => {
         expect(findSpy).toHaveBeenCalled();
     });
 
-    test("delete job with valid criteria and force delete set to true", async () => {
+    test("delete jobs with valid criteria and force delete set to true", async () => {
         const deleteProcessor = getDeleteProcessor();
         const input = _.cloneDeep(testDeleteInput);
         const deleteConfig = (input.parameters!['deleteConfig'] as IDeleteConfig);
