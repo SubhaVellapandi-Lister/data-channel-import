@@ -79,7 +79,7 @@
     "lint-staged": "10.5.4"
   },
   "dependencies": {
-    "@data-channels/dcSDK": "1.0.15",
+    "@data-channels/dcSDK": "1.0.17",
     "lodash": "4.17.20",
     "node-fetch": "2.6.1"
   },
