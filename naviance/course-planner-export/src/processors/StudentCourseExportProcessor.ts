@@ -84,7 +84,7 @@ function booleanToString(item: any) {
  */
 const auditHeaders = [
     'Tenant_ID',
-    'Hishschool_ID',
+    'Highschool_ID',
     'GUID',
     'Plan_Name',
     'Student_ID',
