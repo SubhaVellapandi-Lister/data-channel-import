@@ -65,6 +65,11 @@ export class InitiateExportsProcessor extends BaseProcessor {
 
         const guidByTenantId: { [key: string]: string } = {};
 
+        const courseExportCustomHeaders = [
+            "Highschool_ID", "Highschool_Name", "Student_ID", "Class_Year", "First_Name", "Last_Name", "Student_Plan_ID",
+            "Plan_Type", "Plan_Name", "Grade", "Alternate_Course", "Course_ID", "Course_Name", "Instructional_Level", "Course_Subject", "SCED_Code",
+            "CSSC_Code", "Course_Active", "Is_Planned", "Global_Alternate_Course", "Alternate_Priority"];
+
         for (const tenantId of tenantIds) {
             const tenantPage = Tenant.find({ findCriteria: { name: { operator: 'eq', value: tenantId }}});
             const tenants = await tenantPage.all();
@@ -115,15 +120,13 @@ export class InitiateExportsProcessor extends BaseProcessor {
                                 academicYear,
                                 academicYearOrGreater: true,
                                 currentPlansOnly: true,
-                                customHeaders: [
-                                    "Highschool_ID","Highschool_Name","Student_ID","Class_Year","First_Name","Last_Name","Student_Plan_ID","Plan_Type","Plan_Name","Grade","Alternate_Course","Course_ID","Course_Name","Course_Subject","SCED_Code","CSSC_Code","Course_Active","Is_Planned"
-                                ]
+                                customHeaders: courseExportCustomHeaders
                             }
                         }
                     }
                 }
 
-            }, true, this.job.serv);
+            }, true);
             guidByTenantId[tenantId] = job ? job.guid : 'ERROR';
         }
 
