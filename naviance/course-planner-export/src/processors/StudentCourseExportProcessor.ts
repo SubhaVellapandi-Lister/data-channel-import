@@ -347,6 +347,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             clusterName = (clusterProgram.annotations.getValue('name') || '').toString();
         }
         const columns = {
+            Target_Highschool_ID: '',
             Plan_Of_Study_Name: '',
             Plan_Of_Study_ID: '',
             Plan_Of_Study_Is_Published: '',
@@ -451,6 +452,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             columns[`${prefix}_Planned_Credits`] = plannedCredits.toString();
         }
 
+        columns.Target_Highschool_ID = posProgram.file.namespace.toString().replace(/naviance\./, '');
+
         setProgSpecificCols(posProgram, 'PoS');
 
         if (pathwayProgram) {
@@ -505,7 +508,6 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         const rowData = {
             Tenant_ID: hsId,
-            Highschool_ID: hsId,
             GUID: plan.guid,
             Plan_Name: planName,
             Student_ID:  studentId,
