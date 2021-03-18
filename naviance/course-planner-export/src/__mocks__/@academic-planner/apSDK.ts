@@ -42,3 +42,9 @@ export class Course {
         };
     }
 }
+
+export class SlimStudentPlan extends realSDK.SlimStudentPlan {
+    public get audits() {
+        return this.summary.expanded.audits;
+    }
+}

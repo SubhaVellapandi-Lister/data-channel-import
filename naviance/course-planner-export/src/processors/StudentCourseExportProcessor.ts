@@ -320,6 +320,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             .filter((srec) => (srec.record as ICourseRecord).grade !== undefined)
             .map((srec) => srec.identifier);
 
+        const auditedCredits = PlanAudit.auditCredits({plan, pathwayProgram});
+
         let clusterName = '';
         let clusterId = '';
         if (clusterProgram) {
@@ -339,7 +341,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             Num_Requirements_Total: audit.progress.statementsTotal.toString(),
             Requirements_All_Met: (audit.progress.statementsMet === audit.progress.statementsTotal).toString(),
             Required_Credits_Total: (audit.progress.creditsRequired || 0).toString(),
-            Required_Credits_Remaining: (audit.progress.creditsRemaining || 0).toString(),
+            Required_Credits_Remaining: auditedCredits.posCreditRemaining,
             PoS_Num_Requirements_Met: '',
             PoS_Num_Requirements_Total: '',
             PoS_Requirements_All_Met: '',
@@ -422,7 +424,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             columns[`${namePrefix}_Is_Published`] = booleanToString(program.annotations.getValue('published'));
             columns[`${prefix}_Num_Requirements_Met`] = statementsMet.toString();
             columns[`${prefix}_Num_Requirements_Total`] = statements.length.toString();
-            columns[`${prefix}_Required_Credits_Remaining`] = (audit.progress.creditsRemaining || 0).toString();
+            columns[`${prefix}_Required_Credits_Remaining`] = prefix === 'PoS' ? auditedCredits.posCreditRemaining : auditedCredits.pathwayCreditRemaining;
             columns[`${prefix}_Required_Credits_Total`] = creditsTotal.toString();
             columns[`${prefix}_Requirements_All_Met`] = booleanToString(PlanAudit.isAllMet(programAudit));
             columns[`${prefix}_Completed_Credits_Used`] = rawAudit.progress.credits.creditsGradedUsed.toString();

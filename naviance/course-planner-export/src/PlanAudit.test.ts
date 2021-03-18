@@ -1,25 +1,13 @@
 import {IProgramDetailed} from "@academic-planner/academic-planner-common";
-import {ProgramAudit} from "@academic-planner/apSDK";
+import {
+    Annotations,
+    ITotalCreditCounts,
+    Program,
+    ProgramAudit,
+    SlimStudentPlan
+} from "@academic-planner/apSDK";
 import 'jest';
 import {PlanAudit} from "./PlanAudit";
-
-describe('PlanAudit tests', () => {
-    afterEach(() => {
-        jest.resetAllMocks();
-    });
-
-    test('credits in plan regression', async () => {
-        const progAudit = new ProgramAudit(rawProgramAuditDetail, []);
-        const ret = PlanAudit.creditsInPlan(progAudit);
-        expect(ret).toEqual(0);
-    });
-
-    test('plan green checkmark regression', async () => {
-        const progAudit = new ProgramAudit(rawProgramAuditDetail, []);
-        const ret = PlanAudit.isAllMet(progAudit);
-        expect(ret).toEqual(true);
-    });
-});
 
 const rawProgramAuditDetail: IProgramDetailed = {
     namespace: "",
@@ -91,3 +79,92 @@ const rawProgramAuditDetail: IProgramDetailed = {
     }
 
 };
+
+describe('PlanAudit tests', () => {
+    afterEach(() => {
+        jest.resetAllMocks();
+    });
+
+    test('credits in plan regression', async () => {
+        const progAudit = new ProgramAudit(rawProgramAuditDetail, []);
+        const ret = PlanAudit.creditsInPlan(progAudit);
+        expect(ret).toEqual(0);
+    });
+
+    test('plan green checkmark regression', async () => {
+        const progAudit = new ProgramAudit(rawProgramAuditDetail, []);
+        const ret = PlanAudit.isAllMet(progAudit);
+        expect(ret).toEqual(true);
+    });
+
+    describe('Audit Plan Credits', () => {
+        const mockPlan = (opts: { programDetailsMock: ProgramAudit[] }) => {
+            return new SlimStudentPlan({
+                guid: 'student-plan-1',
+                scope: "scope",
+                created: "2021-03-16T15:32:02.119Z",
+                studentPrincipleId: "1000",
+                authorPrincipleId: "1000",
+                isDeleted: false,
+                buildProgressPercent: 100,
+                expanded: {
+                    audits: {
+                        programDetails: [...opts.programDetailsMock]
+                    }
+                }
+            });
+        };
+
+        const posProgramAuditMock = new ProgramAudit(rawProgramAuditDetail, []);
+        const pathwayProgramAuditMock = new ProgramAudit(rawProgramAuditDetail, []);
+        let posCalculateCreditTotalsSpy: jest.SpyInstance;
+        let pathwayCalculateCreditTotalsSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            posCalculateCreditTotalsSpy = jest.spyOn(posProgramAuditMock, 'calculateCreditTotals').mockReturnValue({
+                totalCreditsRequiredMinusAttempted: 10,
+            } as ITotalCreditCounts);
+
+            pathwayCalculateCreditTotalsSpy = jest.spyOn(pathwayProgramAuditMock, 'calculateCreditTotals').mockReturnValue({
+                totalCreditsAttempted: 2
+            } as ITotalCreditCounts);
+        })
+
+        it('should audit credits for plan without pathway', () => {
+            const plan = mockPlan({programDetailsMock: [posProgramAuditMock]})
+            const {pathwayCreditRemaining, posCreditRemaining} = PlanAudit.auditCredits({
+                plan,
+                pathwayProgram: undefined
+            })
+            expect(posCreditRemaining).toBe(10); // result from calculateCreditTotals
+            expect(pathwayCreditRemaining).toBe(0); // no pathway, no credit remaining to calculate
+            expect(posCalculateCreditTotalsSpy).toHaveBeenCalled();
+        });
+
+        it('should audit credits for plan with pathway', () => {
+            const totalCredits = 6;
+            const pathwayMock = {
+                annotations: Annotations.simple({
+                    totalCredits
+                })
+            } as Program;
+
+            const plan = mockPlan({
+                programDetailsMock: [
+                    posProgramAuditMock,
+                    pathwayProgramAuditMock
+                ]
+            })
+
+            const {pathwayCreditRemaining, posCreditRemaining} = PlanAudit.auditCredits({
+                plan,
+                pathwayProgram: pathwayMock
+            })
+
+            expect(posCreditRemaining).toBe(10); // result from calculateCreditTotals
+            expect(pathwayCreditRemaining).toBe(4); // totalCredits - totalCreditsAttempted
+            expect(posCalculateCreditTotalsSpy).toHaveBeenCalled();
+            expect(pathwayCalculateCreditTotalsSpy).toHaveBeenCalled();
+        });
+    })
+});
