@@ -21,7 +21,7 @@
     "deploy-qa": "npm run build && npm run pack && npm run sam-package-qa && npm run sam-deploy-qa",
     "sam-package-navprod": "sam package --template-file sam-template-prod.yml --output-template-file sam-packaged-navprod.yml --s3-bucket data-channels-processor-deployments-navprod",
     "sam-deploy-navprod": "sam deploy --template-file ./sam-packaged-navprod.yml --stack-name cf-naviance-dc-ap-export-prod --capabilities CAPABILITY_IAM --region us-east-1",
-    "deploy-navprod": "npm run build && npm run pack && npm run sam-package-navprod && npm run sam-deploy-navprod && rm course-planner-export.zip"
+    "deploy-navprod": "npm run build && npm run pack && npm run sam-package-navprod && npm run sam-deploy-navprod && rimraf course-planner-export.zip"
   },
   "repository": {
     "type": "git",
@@ -44,6 +44,7 @@
     "minimist": "1.2.5",
     "mkdirp": "1.0.4",
     "npm-pack-zip": "1.2.7",
+    "rimraf": "3.0.2",
     "shx": "0.3.2",
     "ts-jest": "25.5.1",
     "ts-node": "8.10.1",

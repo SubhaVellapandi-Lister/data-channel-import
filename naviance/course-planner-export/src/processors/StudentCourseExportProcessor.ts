@@ -323,6 +323,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
      * One row per plan
      * @param plan
      * @param posProgram
+     * @param posNamespace
      * @param highSchoolId
      * @param clusterProgram
      * @param pathwayProgram
@@ -331,6 +332,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
     private async auditColumns(
         plan: SlimStudentPlan,
         posProgram: Program,
+        posNamespace: string,
         highSchoolId: string,
         clusterProgram?: Program,
         pathwayProgram?: Program
@@ -347,6 +349,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             clusterName = (clusterProgram.annotations.getValue('name') || '').toString();
         }
         const columns = {
+            Target_Highschool_ID: '',
             Plan_Of_Study_Name: '',
             Plan_Of_Study_ID: '',
             Plan_Of_Study_Is_Published: '',
@@ -451,6 +454,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             columns[`${prefix}_Planned_Credits`] = plannedCredits.toString();
         }
 
+        columns.Target_Highschool_ID = posNamespace.replace(/naviance\./, '');
+
         setProgSpecificCols(posProgram, 'PoS');
 
         if (pathwayProgram) {
@@ -505,7 +510,6 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         const rowData = {
             Tenant_ID: hsId,
-            Highschool_ID: hsId,
             GUID: plan.guid,
             Plan_Name: planName,
             Student_ID:  studentId,
@@ -532,7 +536,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         try {
             Object.assign(rowData, await this.auditColumns(
-                plan, programs.pos, hsId, programs.cluster, programs.pathway));
+                plan, programs.pos, namespace.toString(), hsId, programs.cluster, programs.pathway));
         } catch (error) {
             console.log(`Error ${hsId} - ${plan.guid}`);
             console.log(error);

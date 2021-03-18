@@ -5,7 +5,7 @@ Resources:
   ProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://data-channels-processor-deployments-navprod/64f36784955f78db9a73d513022b6a2a
+      CodeUri: s3://data-channels-processor-deployments-navprod/9fac48855368342067e17e20c245e1e6
       FunctionName: cf-naviance-dc-ap-export-navprod
       Handler: dist/index.exportHandler
       Timeout: 900
