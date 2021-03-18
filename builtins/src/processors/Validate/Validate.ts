@@ -554,8 +554,7 @@ export class Validate extends BaseProcessor {
           if (checkUpdateStatus) {
               this.job.setMetaValue('processors', this.logDetails.processor);
           } else {
-              this.existingMetaData.processors[
-                  'validate'
+              this.existingMetaData['processors'
               ] = this.logDetails.processor;
               this.job.setMetaValue('processors', this.existingMetaData.processors);
           }
