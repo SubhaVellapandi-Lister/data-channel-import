@@ -1,4 +1,15 @@
-import {ProgramAudit, RequirementAudit} from "@academic-planner/apSDK";
+import {Program, ProgramAudit, RequirementAudit, SlimStudentPlan} from "@academic-planner/apSDK";
+
+interface AuditCreditProps {
+    plan: SlimStudentPlan;
+    pathwayProgram: Program | undefined;
+}
+
+interface AuditedCredits {
+    posCreditRemaining: number;
+    pathwayCreditRemaining: number;
+    totalCreditRemaining: number;
+}
 
 export class PlanAudit {
 
@@ -30,5 +41,25 @@ export class PlanAudit {
         );
 
         return isAllMet === 0;
+    }
+
+    static auditCredits({plan, pathwayProgram}: AuditCreditProps ): AuditedCredits {
+        let pathwayCreditRemaining = 0;
+        const [ posAudit, pathwayAudit ] = plan.audits!.programDetails;
+
+        // Pathway credits are calculated in a different way
+        if (pathwayAudit && pathwayProgram) {
+            const totalCredits = pathwayProgram!.annotations.getValue('totalCredits') as number
+            const  { totalCreditsAttempted }= pathwayAudit.calculateCreditTotals()
+            pathwayCreditRemaining = totalCredits - totalCreditsAttempted
+        }
+
+        const {totalCreditsRequiredMinusAttempted: posCreditRemaining} = posAudit.calculateCreditTotals();
+
+        return  {
+            posCreditRemaining,
+            pathwayCreditRemaining,
+            totalCreditRemaining: posCreditRemaining + pathwayCreditRemaining
+        }
     }
 }
