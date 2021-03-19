@@ -132,12 +132,13 @@ describe('PlanAudit tests', () => {
 
         it('should audit credits for plan without pathway', () => {
             const plan = mockPlan({programDetailsMock: [posProgramAuditMock]})
-            const {pathwayCreditRemaining, posCreditRemaining} = PlanAudit.auditCredits({
+            const {pathwayCreditRemaining, posCreditRemaining, totalCreditRemaining} = PlanAudit.auditCredits({
                 plan,
                 pathwayProgram: undefined
             })
             expect(posCreditRemaining).toBe(10); // result from calculateCreditTotals
             expect(pathwayCreditRemaining).toBe(0); // no pathway, no credit remaining to calculate
+            expect(totalCreditRemaining).toBe(10);
             expect(posCalculateCreditTotalsSpy).toHaveBeenCalled();
         });
 
@@ -156,13 +157,14 @@ describe('PlanAudit tests', () => {
                 ]
             })
 
-            const {pathwayCreditRemaining, posCreditRemaining} = PlanAudit.auditCredits({
+            const {pathwayCreditRemaining, posCreditRemaining, totalCreditRemaining} = PlanAudit.auditCredits({
                 plan,
                 pathwayProgram: pathwayMock
             })
 
             expect(posCreditRemaining).toBe(10); // result from calculateCreditTotals
             expect(pathwayCreditRemaining).toBe(4); // totalCredits - totalCreditsAttempted
+            expect(totalCreditRemaining).toBe(14);
             expect(posCalculateCreditTotalsSpy).toHaveBeenCalled();
             expect(pathwayCalculateCreditTotalsSpy).toHaveBeenCalled();
         });

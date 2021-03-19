@@ -341,7 +341,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             Num_Requirements_Total: audit.progress.statementsTotal.toString(),
             Requirements_All_Met: (audit.progress.statementsMet === audit.progress.statementsTotal).toString(),
             Required_Credits_Total: (audit.progress.creditsRequired || 0).toString(),
-            Required_Credits_Remaining: auditedCredits.posCreditRemaining,
+            Required_Credits_Remaining: auditedCredits.totalCreditRemaining,
             PoS_Num_Requirements_Met: '',
             PoS_Num_Requirements_Total: '',
             PoS_Requirements_All_Met: '',

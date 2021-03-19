@@ -8,6 +8,7 @@ interface AuditCreditProps {
 interface AuditedCredits {
     posCreditRemaining: number;
     pathwayCreditRemaining: number;
+    totalCreditRemaining: number;
 }
 
 export class PlanAudit {
@@ -57,7 +58,8 @@ export class PlanAudit {
 
         return  {
             posCreditRemaining,
-            pathwayCreditRemaining
+            pathwayCreditRemaining,
+            totalCreditRemaining: posCreditRemaining + pathwayCreditRemaining
         }
     }
 }
