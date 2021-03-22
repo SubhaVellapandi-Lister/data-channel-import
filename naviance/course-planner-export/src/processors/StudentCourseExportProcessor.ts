@@ -79,12 +79,8 @@ function booleanToString(item: any) {
     return item ? 'TRUE' : 'FALSE';
 }
 
-/**
- * For one row per plan export
- */
 const auditHeaders = [
     'Tenant_ID',
-    'Hishschool_ID',
     'GUID',
     'Plan_Name',
     'Student_ID',
@@ -139,9 +135,6 @@ const auditHeaders = [
     'Credit_Deficiency_Number',
 ];
 
-/**
- * For one row per course export
- */
 const courseHeaders = [
     'Highschool_ID',
     'Highschool_Name',
@@ -319,21 +312,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         return student.classYear - (13 - gradeLevel);
     }
 
-    /**
-     * One row per plan
-     * @param plan
-     * @param posProgram
-     * @param highSchoolId
-     * @param clusterProgram
-     * @param pathwayProgram
-     * @private
-     */
     private async auditColumns(
-        plan: SlimStudentPlan,
-        posProgram: Program,
-        highSchoolId: string,
-        clusterProgram?: Program,
-        pathwayProgram?: Program
+        plan: SlimStudentPlan, posProgram: Program, clusterProgram?: Program, pathwayProgram?: Program
     ): Promise<object> {
         const audit = plan.audits!;
         const gradedRecIds: string[] = audit.studentRecords
@@ -464,16 +444,6 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         return columns;
     }
 
-    /**
-     * One row per plan
-     * @param studentId
-     * @param plan
-     * @param headers
-     * @param namespace
-     * @param scopeAsNamespace
-     * @param hsId
-     * @private
-     */
     private async auditRowsFromPlan(
         studentId: string, plan: SlimStudentPlan, headers: string[],
         namespace: Namespace, scopeAsNamespace: Namespace, hsId: string
@@ -507,7 +477,6 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         const rowData = {
             Tenant_ID: hsId,
-            Highschool_ID: hsId,
             GUID: plan.guid,
             Plan_Name: planName,
             Student_ID:  studentId,
@@ -534,7 +503,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
         try {
             Object.assign(rowData, await this.auditColumns(
-                plan, programs.pos, hsId, programs.cluster, programs.pathway));
+                plan, programs.pos, programs.cluster, programs.pathway));
         } catch (error) {
             console.log(`Error ${hsId} - ${plan.guid}`);
             console.log(error);
@@ -658,7 +627,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                 Course_Name: course.display,
                 Course_Subject: subName,
                 Course_Active: booleanToString(active),
-                Alternate_Course: globalAlternateCourse ? 'TRUE' : 'FALSE',
+                Alternate_Course: booleanToString(false),
                 SCED_Code: sced,
                 CSSC_Code: cssc,
                 Instructional_Level: instLevel,
@@ -792,7 +761,6 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                         );
                     }
                     if (exportConf.mode === ExportMode.Audit) {
-                        // a.k.a course demand - one row per plan
                         const rowsFromPlan = await this.auditRowsFromPlan(
                            studentId,
                            splan,
@@ -892,11 +860,6 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         return { outputs: {} };
     }
 
-    /**
-     * Return ['21632USPU', '21633USPU'] for example
-     * @param params
-     * @private
-     */
     private parseHsToProcess(params: IExportParameters): string[] {
         const schoolId = params.tenantId;
         const hsMapping: IHsMap = this.getFindSchoolsOutput('hsMapping');
@@ -933,7 +896,6 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
             let headersToWrite = baseHeaders;
             if (exportConf.customHeaders) {
-                // both baseHeaders and customHeaders need to have the column in order to show up
                 headersToWrite = exportConf.customHeaders.filter((h: string) => baseHeaders.includes(h));
             }
 
