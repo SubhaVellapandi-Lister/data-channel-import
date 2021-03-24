@@ -16,7 +16,7 @@
     "test:cov": "jest --coverage --no-cache --runInBand",
     "test:nocov": "jest --no-cache --runInBand",
     "pack": "rimraf course-planner-import.zip && npm-pack-zip",
-    "sam-package-dev": "sam package --template-file sam-template-dev.yml --output-template-file sam-packaged-dev.yml --s3-bucket data-channels-processor-deployments-dev",
+    "sam-package-dev": "sam package --template-file sam-template-dev.yml --output-template-file sam-packaged-dev.yml --s3-bucket data-channels-processor-deployments-dev --region us-east-1",
     "sam-deploy-dev": "sam deploy --template-file ./sam-packaged-dev.yml --stack-name cf-naviance-dc-ap-import-dev --capabilities CAPABILITY_IAM --region us-east-1",
     "deploy-dev": "npm run build && npm run pack && npm run sam-package-dev && npm run sam-deploy-dev && rimraf course-planner-import.zip",
     "sam-package-prod": "sam package --template-file sam-template-prod.yml --output-template-file sam-packaged-prod.yml --s3-bucket data-channels-processor-deployments-dev",

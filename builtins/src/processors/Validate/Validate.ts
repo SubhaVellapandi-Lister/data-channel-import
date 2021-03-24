@@ -310,23 +310,26 @@ export class Validate extends BaseProcessor {
       for (const schemaName of this.config.jsonSchemaNames) {
           const validationSchema: { [key: string]: any } = this.config[schemaName] ?? {};
 
-          for (const fieldScehma of Object.values(validationSchema)) {
-              const fieldName = fieldScehma.name;
+          for (const fieldSchema of Object.values(validationSchema)) {
+              const fieldName = fieldSchema.name;
               columnConfig[fieldName] = {
-                  required: !fieldScehma.optional
+                  required: !fieldSchema.optional
               };
 
-              if (fieldScehma.dependsOn) {
-                  columnConfig[fieldName].dependsOn = fieldScehma.dependsOn;
-                  rangeLimitSetters.add(fieldScehma.dependsOn);
+              if (fieldSchema.dependsOn) {
+                  columnConfig[fieldName].dependsOn = fieldSchema.dependsOn;
+                  rangeLimitSetters.add(fieldSchema.dependsOn);
               }
 
-              columnConfig[fieldName].validTypes = [fieldTypeMap[fieldScehma.type] ?? fieldScehma.type];
+              columnConfig[fieldName].validTypes = [fieldTypeMap[fieldSchema.type] ?? fieldSchema.type];
 
-              if (fieldScehma.min || fieldScehma.max) {
+              columnConfig[fieldName].validValues = fieldSchema.validValues;
+
+              if (fieldSchema.min || fieldSchema.max) {
+                  const maxVal = fieldSchema.max ?? Number.MAX_SAFE_INTEGER;
                   columnConfig[fieldName].range = {
-                      minVal: fieldScehma.min ?? 0,
-                      maxVal: fieldScehma.max ?? Number.MAX_SAFE_INTEGER
+                      minVal: fieldSchema.min ?? 0,
+                      maxVal
                   };
               }
           }

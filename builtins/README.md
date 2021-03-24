@@ -818,3 +818,86 @@ Example Config
         }
       }
 ```
+
+### Match Fields
+
+Matches and maps field values from lookup files into a source file.  For example, to lookup Naviance Student ID values when the source file contains school-specific ID values.
+
+|                          |                                             |
+| ------------------------ | ------------------------------------------- |
+| **method name**          | mapFields                                   |
+| **granularity**          | row                                         |
+| **code**                 | [Match.ts](src/processors/Match/Match.ts)   |
+| **input name**           | Any input name you want, e.g. "data"        |
+| **output name**          | Defaults to `${inputName}Matched            |
+| **config property name** | matchConfig                                 |
+
+Configuration is set in `matchConfig` and relates the idea of `source` and `lookup` inputs (files).  There can only be one source input per step, but there can be any number of lookup inputs.  The configuration will specify which columns from the `source` should be matched to columns on the `lookups`, and when matches are found, which `target` columns from the lookups should be inserted into the source as output.
+
+There are also settings to disallow duplicate lookups, in cases where you want the lookup to only be used once, or for the match type of a lookup to be unique (e.g. don't allow matching a particular student by named+birthdate if already matched a row by ID).
+
+Three outputs are provided: matched, unmatched, and error.  The default names for these are `${sourceInputName}Matched`, `${sourceInputName}Unmatched`, and `${sourceInputName}MatchErrors`.  These names can be overriden in the optional config.
+
+Required `matchConfig` Properties:
+* sourceInputName (string)
+  * Name of the input into the step for the `source`
+* targetColumnNames (list of strings)
+  * Name of columns in the source to be modified or added to based on lookups
+* matchItems ([IMatchItem](src/processors/Match/Match.interface.ts) list)
+  * The criteria used to match source to lookup, see interface for details
+
+Optional `matchConfig` properties
+* targetMustBeUnique (boolean defaulting to false)
+  * Don't allow a given lookup row to be used more than once.  If multiple rows from source match, then toss any rows after first onto the error output.
+* targetMustBeUniquePerMatchType (boolean defaulting to false)
+  * Don't allow a given lookup row to be used more than once unless if by the same IMatchItem.
+* matchedOutputName (string)
+  * override default matched output name
+* unmatchedOutputName (string)
+  * override default unmatched output name
+* errorsOutputName (string)
+  * override default errors output name
+
+Example Config
+
+```json
+"parameters": {
+  "matchConfig": {
+    "sourceInputName": "scores",
+    "matchItems": [
+        {
+            "lookupInputName": "students",
+            "lookupTargets": {
+                "navStudentId": "studentId"
+            },
+            "matchColumns": [
+                {
+                    "dataType": "string",
+                    "lookupColumnName": "schoolStudentId",
+                    "sourceColumnName": "studentId"
+                }
+            ]
+        },
+        {
+            "lookupInputName": "students",
+            "lookupTargets": {
+                "navStudentId": "studentId"
+            },
+            "matchColumns": [
+                {
+                    "dataType": "string",
+                    "lookupColumnName": "name",
+                    "sourceColumnName": "name"
+                },
+                {
+                    "dataType": "string",
+                    "lookupColumnName": "birthdate",
+                    "sourceColumnName": "birthdate"
+                }
+            ]
+        }
+    ],
+    "targetColumnNames": ["studentId"]
+  }
+}
+```
