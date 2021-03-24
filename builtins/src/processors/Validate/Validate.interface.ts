@@ -15,6 +15,15 @@ export enum ValidateStatus {
   Invalid = "invalid",
 }
 
+export enum NavianceStatus {
+  TestingCompleted = "TESTING_COMPLETED",
+  TestingCompletedWithAlerts = "TESTING_COMPLETED_WITH_ALERTS",
+  ImportInProgress = "IMPORT_IN_PROGRESS",
+  ImportCompleted = "IMPORT_COMPLETED",
+  ImportCompletedWithAlerts = "IMPORT_COMPLETED_WITH_ALERTS",
+  CriticalError = "CRITICAL_ERROR"
+}
+
 // Interface for validate comparator
 export enum ValidateComparator {
   Greater = "gt",

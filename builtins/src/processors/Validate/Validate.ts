@@ -4,6 +4,7 @@ import {
     IRowProcessorOutput,
     IStepAfterOutput,
     IStepBeforeInput,
+    Job,
     RowOutputValue
 } from "@data-channels/dcSDK";
 
@@ -30,7 +31,8 @@ import {
     IFileConfig,
     IFileValidateConfig,
     IFileConfigColumns,
-    ValidateComparatorMessage
+    ValidateComparatorMessage,
+    NavianceStatus
 } from "./Validate.interface";
 import { fieldTypeMap } from "./ValidationConstants";
 
@@ -62,6 +64,7 @@ export class Validate extends BaseProcessor {
   private validCountValue: number = 0;
   private totalDataCount: number = 0;
   private existingMetaData = { processors: {} };
+  private validationStatus = ValidateStatus.Valid;
   /**
    * Method used to call before the processor begins to process the data.
    * @param input IStepBeforeInput
@@ -173,7 +176,6 @@ export class Validate extends BaseProcessor {
       }
 
       const validationErrors: string[] = [];
-      let validationStatus = ValidateStatus.Valid;
       // evaluating each object entry for the required status and check for valdiation status by using the configs
       for (const [columnName, columnConfig] of Object.entries(updateConfig.columns)) {
           const data = getKeyValueCaseInsensitive(input.data, columnName);
@@ -181,7 +183,7 @@ export class Validate extends BaseProcessor {
           if (data === undefined) {
               if (columnConfig.required) {
                   validationErrors.push(`Missing required column ${columnName}`);
-                  validationStatus = ValidateStatus.Invalid;
+                  this.validationStatus = ValidateStatus.Invalid;
               }
               continue;
           }
@@ -192,24 +194,24 @@ export class Validate extends BaseProcessor {
 
           if (!validValueCase && warningVal) {
               validationErrors.push(`Invalid Value for ${columnName}`);
-              validationStatus = ValidateStatus.Warning;
+              this.validationStatus = ValidateStatus.Warning;
               continue;
           } else if (columnConfig.validValues && !validValueCase) {
               validationErrors.push(`Invalid Value for ${columnName}`);
               if (columnConfig.warnIfNotValidValue) {
-                  validationStatus = ValidateStatus.Warning;
+                  this.validationStatus = ValidateStatus.Warning;
               } else {
-                  validationStatus = ValidateStatus.Invalid;
+                  this.validationStatus = ValidateStatus.Invalid;
               }
               continue;
           }
 
           if (!data.length && columnConfig.invalidIfBlank) {
               validationErrors.push(`Column ${columnName} cannot be blank`);
-              validationStatus = ValidateStatus.Invalid;
+              this.validationStatus = ValidateStatus.Invalid;
           } else if (!data.length && columnConfig.warnIfBlank) {
               validationErrors.push(`Column ${columnName} cannot be blank`);
-              validationStatus = ValidateStatus.Warning;
+              this.validationStatus = ValidateStatus.Warning;
           }
 
           let hasValidType = columnConfig.validTypes ? false : true;
@@ -231,7 +233,7 @@ export class Validate extends BaseProcessor {
               }
               if (hasValidType) {
                   validationErrors.push(`Column ${columnName} should be of type ${columnConfig.validTypes!.join(", ")}`);
-                  validationStatus = ValidateStatus.Warning;
+                  this.validationStatus = ValidateStatus.Warning;
               }
           }
 
@@ -243,30 +245,30 @@ export class Validate extends BaseProcessor {
                       } and must be of type ${columnConfig.validTypes!.join(", ")}`
                   )
                   : validationErrors.push(`Column ${columnName} must be of type ${columnConfig.validTypes!.join(", ")}`);
-              validationStatus = ValidateStatus.Invalid;
+              this.validationStatus = ValidateStatus.Invalid;
           } else {
-              validationStatus = this.rangeValidator.validateRange(parseFloat(data), columnConfig, columnName, validationErrors, validationStatus);
+              this.validationStatus = this.rangeValidator.validateRange(parseFloat(data), columnConfig, columnName, validationErrors, this.validationStatus);
               if (columnConfig.maxlength && !(data.length <= columnConfig.maxlength)) {
                   validationErrors.push(`Column ${columnName} exceeds the maximum length of ${columnConfig.maxlength}`);
-                  validationStatus = ValidateStatus.Invalid;
+                  this.validationStatus = ValidateStatus.Invalid;
               }
           }
       }
 
       const outputs: { [name: string]: RowOutputValue } = {};
 
-      if (validationStatus !== ValidateStatus.Invalid || !updateConfig.discardInvalidRows) {
+      if (this.validationStatus !== ValidateStatus.Invalid || !updateConfig.discardInvalidRows) {
       // write data output
           let dataOutputRow = input.raw;
           if (updateConfig.includeLogInData) {
-              dataOutputRow = [...dataOutputRow, validationStatus, validationErrors.join("; ")];
+              dataOutputRow = [...dataOutputRow, this.validationStatus, validationErrors.join("; ")];
           }
           outputs[dataOutputName] = dataOutputRow;
       }
 
       const logDataByHeader = {
           Row: input.index.toString(),
-          [statusName]: validationStatus,
+          [statusName]: this.validationStatus,
           [infoName]: validationErrors.join("; ")
       };
 
@@ -288,7 +290,7 @@ export class Validate extends BaseProcessor {
       }
 
       return {
-          error: validationStatus === ValidateStatus.Invalid,
+          error: this.validationStatus === ValidateStatus.Invalid,
           outputs
       };
   }
@@ -502,7 +504,7 @@ export class Validate extends BaseProcessor {
   }
 
   /**
-   * This method capture the critical and warning details into job's meta
+   * This method stores critical and warning details into job's meta
    * @param outputs
    */
   private setJobMetData(
@@ -519,35 +521,47 @@ export class Validate extends BaseProcessor {
       }
 
       this.totalDataCount++;
-      this.errorLogMetrics[
-          inputFileName
-      ].totalDataCount = this.totalDataCount;
+      this.errorLogMetrics[inputFileName].totalDataCount = this.totalDataCount;
       switch (result.Validation_Status) {
       case 'invalid':
           ++this.invalidcountValue;
-          this.errorLogMetrics[
-              inputFileName
-          ].invalidCount = this.invalidcountValue;
-          this.errorLogMetrics[inputFileName].recordIdentifier.critical[
-              result.Row
-          ] = result.Validation_Info;
+          this.errorLogMetrics[inputFileName].invalidCount = this.invalidcountValue;
+          this.errorLogMetrics[inputFileName].recordIdentifier.critical[result.Row] = result.Validation_Info;
           break;
       case 'warning':
           ++this.warningCountValue;
-          this.errorLogMetrics[
-              inputFileName
-          ].warningCount = this.warningCountValue;
-          this.errorLogMetrics[inputFileName].recordIdentifier.warning[
-              result.Row
-          ] = result.Validation_Info;
+          this.errorLogMetrics[inputFileName].warningCount = this.warningCountValue;
+          this.errorLogMetrics[inputFileName].recordIdentifier.warning[result.Row] = result.Validation_Info;
           break;
       case 'valid':
           ++this.validCountValue;
-          this.errorLogMetrics[
-              inputFileName
-          ].validCount = this.validCountValue;
+          this.errorLogMetrics[inputFileName].validCount = this.validCountValue;
           break;
       }
+  }
+
+  private setNavianceStatus(): void {
+      let navianceStatus: string;
+      switch (this.validationStatus) {
+      case ValidateStatus.Valid:
+          navianceStatus = NavianceStatus.TestingCompleted;
+          break;
+      case ValidateStatus.Warning:
+          navianceStatus = NavianceStatus.TestingCompletedWithAlerts;
+          break;
+      case ValidateStatus.Invalid:
+          navianceStatus = NavianceStatus.CriticalError;
+          break;
+      default:
+          navianceStatus = "";
+      }
+
+      const isLastStep = this.job.flowIdx === this.job.flow.length - 1;
+      if (!isLastStep && this.validationStatus !== ValidateStatus.Invalid) {
+          navianceStatus = NavianceStatus.ImportInProgress;
+      }
+
+      this.job.setMetaValue('navianceStatus', navianceStatus);
   }
 
   public async after_validate(): Promise<IStepAfterOutput> {
@@ -557,11 +571,11 @@ export class Validate extends BaseProcessor {
           if (checkUpdateStatus) {
               this.job.setMetaValue('processors', this.logDetails.processor);
           } else {
-              this.existingMetaData['processors'
-              ] = this.logDetails.processor;
+              this.existingMetaData['processors'] = this.logDetails.processor;
               this.job.setMetaValue('processors', this.existingMetaData.processors);
           }
       }
+      this.setNavianceStatus();
       return {
           results: {}
       };
