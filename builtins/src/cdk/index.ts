@@ -75,7 +75,7 @@ export class BuiltinsLambdaStack extends Stack {
         const builtinsProps: NodejsFunctionProps = {
             functionName,
             handler: 'builtInHandler',
-            runtime: Runtime.NODEJS_12_X,
+            runtime: Runtime.NODEJS_14_X,
             memorySize: 3000,
             timeout: Duration.seconds(300),
             entry: `${__dirname}/../index.ts`,
