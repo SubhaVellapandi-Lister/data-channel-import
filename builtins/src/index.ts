@@ -4,10 +4,12 @@ import {
     Athena,
     Diff,
     Echo,
+    Enumerate,
     Generate,
     Glue,
     GroupBy,
     HelloWorld,
+    Match,
     SecurityScan,
     SESProcessor,
     SNSProcessor,
@@ -16,7 +18,7 @@ import {
     ThrowError,
     Translate,
     Webhook,
-    Delete
+    Delete,    
 } from "./processors";
 
 export const builtInHandler = generateHandler({
@@ -29,6 +31,8 @@ export const builtInHandler = generateHandler({
     sns: SNSProcessor,
     email: SESProcessor,
     emailJobInfo: SESProcessor,
+    enumerate: Enumerate,
+    matchFields: Match,
     throwError: ThrowError,
     diff: Diff,
     groupby: GroupBy,
@@ -47,3 +51,4 @@ export * from "./processors";
 export * from "./processors/Validate/DateUtil";
 export * from "./processors/Validate/DateValidator";
 export * from "./processors/Validate/Validate.interface";
+export * from "./processors/Match/Match.interface";
