@@ -74,7 +74,7 @@ describe("DeleteProcessor", () => {
 
         const output = await deleteProcessor.delete(input);
 
-        expect(output).toEqual({ results: { jobs: { total: 2, deleted: 1 } } });
+        expect(output).toEqual({ results: { jobs: { total: 2, deleted: 1, error: 0 } } });
         expect(deleteSpy).toHaveBeenCalled();
         expect(totalSpy).toHaveBeenCalled();
         expect(pageSpy).toHaveBeenCalled();
@@ -93,7 +93,7 @@ describe("DeleteProcessor", () => {
 
         const output = await deleteProcessor.delete(input);
 
-        expect(output).toEqual({ results: { jobs: { total: 0, deleted: 0 } } });
+        expect(output).toEqual({ results: { jobs: { total: 0, deleted: 0, error: 0 } } });
         expect(totalSpy).toHaveBeenCalled();
         expect(findSpy).toHaveBeenCalled();
     });
@@ -114,7 +114,7 @@ describe("DeleteProcessor", () => {
 
         const output = await deleteProcessor.delete(input);
 
-        expect(output).toEqual({ results: { jobs: { total: 1, deleted: 0 } } });
+        expect(output).toEqual({ results: { jobs: { total: 1, deleted: 0, error: 1 } } });
         expect(deleteSpy).toHaveBeenCalled();
         expect(totalSpy).toHaveBeenCalled();
         expect(pageSpy).toHaveBeenCalled();
@@ -138,7 +138,7 @@ describe("DeleteProcessor", () => {
 
         const output = await deleteProcessor.delete(input);
 
-        expect(output).toEqual({ results: { jobs: { total: 1, deleted: 1 } } });
+        expect(output).toEqual({ results: { jobs: { total: 1, deleted: 1, error: 0 } } });
         expect(deleteSpy).toHaveBeenCalledWith(true, false);
         expect(totalSpy).toHaveBeenCalled();
         expect(pageSpy).toHaveReturned();
@@ -162,7 +162,7 @@ describe("DeleteProcessor", () => {
 
         const output = await deleteProcessor.delete(input);
 
-        expect(output).toEqual({ results: { jobs: { total: 1, deleted: 1 } } });
+        expect(output).toEqual({ results: { jobs: { total: 1, deleted: 1, error: 0 } } });
         expect(deleteSpy).toHaveBeenCalledWith(false, true);
         expect(totalSpy).toHaveBeenCalled();
         expect(pageSpy).toHaveReturned();

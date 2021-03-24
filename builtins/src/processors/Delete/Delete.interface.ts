@@ -18,6 +18,7 @@ export interface IDeleteConfig {
 export interface IJobsResult {
     total: number;
     deleted: number;
+    error: number;
 }
 
 export interface IDeleteResult {
