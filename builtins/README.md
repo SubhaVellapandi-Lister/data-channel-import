@@ -838,6 +838,8 @@ There are also settings to disallow duplicate lookups, in cases where you want t
 
 Three outputs are provided: matched, unmatched, and error.  The default names for these are `${sourceInputName}Matched`, `${sourceInputName}Unmatched`, and `${sourceInputName}MatchErrors`.  These names can be overriden in the optional config.
 
+** Important ** Lookup inputs must come before the source input in the "inputs" list of the channel step config.
+
 Required `matchConfig` Properties:
 * sourceInputName (string)
   * Name of the input into the step for the `source`

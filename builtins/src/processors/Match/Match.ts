@@ -90,6 +90,10 @@ export class Match extends BaseProcessor {
             } else if (this.config.sourceInputName === input.name) {
                 // Do the actual mapping between the given source row, and any lookups
 
+                if (!this.lookups[matchItem.lookupInputName]) {
+                    throw new Error("Lookup inputs must come before source inputs in the channel step config");
+                }
+
                 const rowMatch = this.matchLookupRow(input.data, this.lookups[matchItem.lookupInputName], matchItemIndex, matchItem.matchColumns);
 
                 if (rowMatch) {
