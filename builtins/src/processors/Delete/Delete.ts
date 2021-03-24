@@ -87,24 +87,25 @@ export class Delete extends BaseProcessor {
         const forceDelete = jobDeleteConfig.forceDelete ?? false;
 
         const pageSize = 100;
-        const jobsResult: IJobsResult = { total: 0, deleted: 0 };
+        const jobsResult: IJobsResult = { total: 0, deleted: 0, error: 0 };
         const jobsPager = Job.find({ findCriteria, pageSize: pageSize });
 
         jobsResult.total = await jobsPager.total();
+        const total = Math.min(jobsResult.total, jobDeleteConfig.maxDeletionsPerJob);
         console.log(`Total Jobs found: ${jobsResult.total}`);
         console.log(`Max deletions per job: ${jobDeleteConfig.maxDeletionsPerJob}`);
-        if (jobsResult.total > 0) {
-            const pages = Math.ceil(jobsResult.total / pageSize);
+        if (total > 0) {
+            const pages = Math.ceil(total / pageSize);
             for (let thisPage = 1 ; thisPage <= pages; thisPage++) {
                 const slimJobs = (await jobsPager.page(thisPage)).filter(slimJob => slimJob !== null);
                 for (const slimJob of slimJobs) {
-                    if (jobsResult.deleted === jobDeleteConfig.maxDeletionsPerJob) break;
+                    if ((jobsResult.deleted + jobsResult.error) === jobDeleteConfig.maxDeletionsPerJob) break;
 
                     const job = await slimJob.delete(hardDelete, forceDelete);
-                    if (job) jobsResult.deleted += 1;
+                    job ? jobsResult.deleted += 1 : jobsResult.error += 1;
                     console.log(`
                         Deleting job with guid: ${slimJob.guid},
-                        Delete Result: ${job !== undefined}
+                        Delete Result: ${job != null}
                     `);
                 }
             }
