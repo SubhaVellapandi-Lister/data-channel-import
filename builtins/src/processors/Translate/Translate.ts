@@ -52,22 +52,24 @@ export class Translate extends BaseProcessor {
    */
   public async before_translate(input: IStepBeforeInput): Promise<void> {
       const configParamters = input.parameters as ITranslateParameters;
-      this.dynamicInput = configParamters.dynamicInput;
-      this.dynamicOutput = configParamters.dynamicOutput;
       this.multipleFileConfig = configParamters.multipleFileConfig;
-      if (this.multipleFileConfig) {
-          if (!configParamters.fileTranslateConfig || _.isEmpty(configParamters.fileTranslateConfig)) {
-              throw new Error("Missing fileTranslateConfig in Translate-Builtin");
-          }
+
+      if (this.multipleFileConfig && _.isEmpty(configParamters.fileTranslateConfig)) {
+          throw new Error("Missing fileTranslateConfig in Translate-Builtin");
       } else if (!this.multipleFileConfig && !configParamters.translateConfig) {
           throw new Error("Missing translateConfig in Translate-Builtin");
       }
 
+      this.dynamicInput = configParamters.dynamicInput;
+      this.dynamicOutput = configParamters.dynamicOutput;
       this.currentStep = this.job.currentStep ?? "";
       this.nextStep = findNextJobStep(this.job.flow, this.currentStep);
       this.previousStep = findPreviousJobStep(this.job.flow, this.currentStep);
-      if (this.previousStep) this.jobOutFileExtension = toCamelCase(this.previousStep) + jobOutFileExtension;
       this.currentStep = toCamelCase(this.currentStep);
+
+      if (this.previousStep) {
+          this.jobOutFileExtension = toCamelCase(this.previousStep) + jobOutFileExtension;
+      }
   }
 
   /**
@@ -339,4 +341,13 @@ export class Translate extends BaseProcessor {
           });
       }
   }
+
+  //Getter for checking values in unit tests
+  public get PreviousStep(): string { return this.previousStep; }
+  public get CurrentStep(): string { return this.currentStep; }
+  public get NextStep(): string { return this.nextStep; }
+  public get JobOutFileExtension(): string { return this.jobOutFileExtension; }
+  public get DynamicInput(): boolean { return this.dynamicInput; }
+  public get DynamicOutput(): boolean { return this.dynamicOutput; }
+  public get MultipleFileConfig(): boolean { return this.multipleFileConfig; }
 }
