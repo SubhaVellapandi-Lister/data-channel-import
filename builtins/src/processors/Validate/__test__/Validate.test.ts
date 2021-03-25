@@ -1,6 +1,10 @@
 import "jest";
 import {
+    currentStepEmptyJobConfig,
+    previodStepJobConfig,
     validateConfig,
+    invalidMultiFileConfig,
+    invalidConfig,
     validateConfigWithWarning,
     validateConfigLogExcluded,
     validateConfigUsingSchema,
@@ -8,6 +12,7 @@ import {
     usersDataRowWithInvalidEmail,
     usersDataRowWithValidEmail,
     usersDataRowWithInvalidValue,
+    usersDataRowWithMissingValues,
     usersDataInputRowWithMissingValue,
     usersHeaderInputRowWithMissingColumn,
     validateConfigWithLogHeaders,
@@ -26,10 +31,42 @@ import {
     testScoreHeaderInputRow,
     testScoreInvalidDataInputRow,
     testScoreValidDataInputRow,
-    testScoreInvalidDataInputRow2
+    testScoreInvalidDataInputRow2,
+    enrollmentDataRowWithInvalidTypesValue
 } from "./ValidateTestInput";
 
 describe("ValidateProcessor", () => {
+    test ("Check for job with current step empty", async () => {
+        const validateProcessor = getValidateProcessor(currentStepEmptyJobConfig);
+        await validateProcessor["before_validate"](validateConfig);
+        expect(validateProcessor.getCurrentStep()).toBe("");
+    });
+
+    test ("Check for job with previous step", async () => {
+        const validateProcessor = getValidateProcessor(previodStepJobConfig);
+        await validateProcessor["before_validate"](validateConfig);
+        expect(validateProcessor.getPreviousStep()).toBe("prevStep");
+        expect(validateProcessor.getJobOutFileExtension()).toBe("Prevstepd.output");
+    });
+
+    test ("Check for invalid config by skipping file config when multipleFileConfig is true", async () => {
+        const validateProcessor = getValidateProcessor();
+        try {
+            await validateProcessor["before_validate"](invalidMultiFileConfig);
+        } catch (err) {
+            expect(err.message).toBe("Missing fileValidateConfig in Validate-Builtin");
+        }
+    });
+
+    test ("Check for invalid config", async () => {
+        const validateProcessor = getValidateProcessor();
+        try {
+            await validateProcessor["before_validate"](invalidConfig);
+        } catch (err) {
+            expect(err.message).toBe("Missing validateConfig in Validate-Builtin");
+        }
+    });
+
     test("Validate the email column for their values and return validation status with message in the output file", async () => {
         const validateProcessor = getValidateProcessor();
         await validateProcessor["before_validate"](validateConfig);
@@ -183,7 +220,8 @@ describe("ValidateProcessor", () => {
                     "1",
                     "1.5",
                     "2016-09-20 14:04:05",
-                    "01",
+                    "0.1",
+                    "FALSE",
                     "valid",
                     ""
                 ]
@@ -193,26 +231,52 @@ describe("ValidateProcessor", () => {
 
     test("Validate to check a different format date time value and check if error is thrown", async () => {
         const validateProcessor = getValidateProcessor();
-        await validateProcessor["before_validate"](validateConfig);
-        await validateProcessor["validate"](sectionsHeaderInputRowWithDate);
-
-        const result = await validateProcessor["validate"](sectionsDataRowWithInvalidDateFormat);
-
+        await validateProcessor.before_validate(validateConfig);
+        await validateProcessor.validate(enrollmentHeaderInputRowWithDifferentDateFormat);
+        const result = await validateProcessor.validate(enrollmentDataRowWithInvalidTypesValue);
         expect(result).toEqual({
             error: true,
             outputs: {
-                sectionsValidated: [
-                    "UNIV-SRF101-602-202002",
-                    "Canvas Course",
-                    "UNIV-SRF101-602-202002",
-                    "10-12-2020",
-                    "2021-01-10",
-                    "202002",
-                    "SRF101",
-                    "03",
-                    "invalid",
-                    "Column start_dt must be lesser than the Column current_date and must be of type datetime"
+                enrollmentValidated: [
+                    'UNIV-SRF101-602-202002',
+                    'Yolanda.Gold',
+                    'INSTRUCTOR',
+                    '1',
+                    '1.5',
+                    '2016-09-20 14:04:05',
+                    '0.1',
+                    "TRUE",
+                    '2021',
+                    '',
+                    '',
+                    'invalid',
+                    'Column invalid_type_column must be of type invalid_type'
                 ]
+            }
+        });
+    });
+
+    test("Testing for after validate with writeErrorDataToJobMeta set", async () => {
+        const validateProcessor = getValidateProcessor();
+        await validateProcessor.before_validate(validateConfig);
+        await validateProcessor.validate(sectionsHeaderInputRowWithDate);
+        await validateProcessor.validate(sectionsDataRowWithInvalidDateFormat);
+        await validateProcessor.after_validate();
+        expect(validateProcessor.job.meta).toEqual({
+            navianceStatus: "CRITICAL_ERROR",
+            processors: {
+                validate: {
+                    sections: {
+                        totalDataCount: 1,
+                        invalidCount: 0,
+                        warningCount: 0,
+                        validCount: 0,
+                        recordIdentifier: {
+                            critical:{},
+                            warning:{}
+                        }
+                    }
+                }
             }
         });
     });
@@ -237,6 +301,29 @@ describe("ValidateProcessor", () => {
                     "1",
                     "testusernew@gmail.com"
                 ]
+            }
+        });
+    });
+
+    test("Including the log headers config to write custom column values in to the log file - case 2", async () => {
+        const validateProcessor = getValidateProcessor();
+        await validateProcessor.before_validate(validateConfigWithLogHeaders);
+        await validateProcessor.validate(sectionsHeaderInputRowWithDate);
+        const result = await validateProcessor.validate(sectionsDataRowWithDatetimeValue);
+        expect(result).toEqual({
+            error: false,
+            outputs: {
+                sectionsValidated: [
+                    'UNIV-SRF101-602-202002',
+                    'Canvas Course',
+                    'UNIV-SRF101-602-202002',
+                    '2020-08-10',
+                    '2021-01-10',
+                    '202002',
+                    'SRF101',
+                    '03'
+                ],
+                log: ['2', '', 'valid']
             }
         });
     });
@@ -300,6 +387,31 @@ describe("ValidateProcessor", () => {
         });
     });
 
+    test("Test for invalidIfBlank and warnIfBlank configuration", async () => {
+        const validateProcessor = getValidateProcessor();
+        await validateProcessor["before_validate"](validateConfig);
+        await validateProcessor["validate"](usersHeaderInputRow);
+
+        const result = await validateProcessor["validate"](usersDataRowWithMissingValues);
+
+        expect(result).toEqual({
+            error: true,
+            outputs: {
+                usersValidated: [
+                    "",
+                    "goldnew",
+                    "yolandanew",
+                    "",
+                    "ygold_test",
+                    "12345",
+                    "testusernewgmail.com",
+                    "invalid",
+                    "Column integration_id cannot be blank; Column email cannot be blank; Column email must be of type email; Column secondary_email must be of type email; Invalid Value for available_ind"
+                ]
+            }
+        });
+    });
+
     test("Validate the case insenstive validation approach in the users file", async () => {
         const validateProcessor = getValidateProcessor();
         await validateProcessor["before_validate"](validateConfig);
@@ -340,7 +452,9 @@ describe("ValidateProcessor", () => {
                     "100001",
                     "UNIV-SRF101-602-202002",
                     "20200810",
-                    "20200810",
+                    "20200910",
+                    "03:00pm",
+                    "03:45pm",
                     "10:30AM",
                     "202011",
                     "20201201",
@@ -367,13 +481,15 @@ describe("ValidateProcessor", () => {
                     "UNIV-SRF101-602-202002",
                     "202810",
                     "2020080",
+                    "03:00pm",
+                    "02:45pm",
                     "10.30AM",
                     "20211",
                     "2020121",
                     "2020-01-2310:30:00",
                     "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest@test.com",
                     "invalid",
-                    "Column student_course_start_date must be lesser than or equal to the Column student_course_end_date and must be of type datetime; Column student_course_end_date must be greater than or equal to the Column student_course_start_date and must be of type datetime; Column mob must be of type datetime; Column par_student_start_date must be of type datetime; Column par_student_end_date must be equal to the Column par_student_end_date and must be of type datetime; Column birth_date must be of type datetime; Column email must be of type email"
+                    "Column student_course_start_date must be lesser than or equal to the Column student_course_end_date and must be of type datetime; Column student_course_end_date must be greater than or equal to the Column student_course_start_date and must be of type datetime; Column course_period_start_time must be lesser than the Column course_period_end_time and must be of type datetime; Column course_period_end_time must be greater than the Column course_period_start_time and must be of type datetime; Column mob must be of type datetime; Column par_student_start_date must be of type datetime; Column par_student_end_date must be equal to the Column par_student_end_date and must be of type datetime; Column birth_date must be of type datetime; Column email must be of type email"
                 ]
             }
         });
@@ -394,6 +510,7 @@ describe("ValidateProcessor", () => {
                     "UNIV-SRF101-602-202002",
                     "20200810",
                     "20200810",
+                    "03:00pm",
                     "10:30AM",
                     "202011",
                     "20201201",
