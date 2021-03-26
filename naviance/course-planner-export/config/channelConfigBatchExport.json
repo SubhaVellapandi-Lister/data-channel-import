@@ -1,0 +1,116 @@
+{
+  "guid": "c59a3544-0858-4e5e-87a9-c72255bc9f4f",
+  "product": "naviance",
+  "name": "exportStudentCourseReports",
+  "isDeleted": false,
+  "configType": "CHANNEL",
+  "noTaskLogs": false,
+  "detailsGuid": "ad4370c9-53cb-4ca4-a327-be4305d48f86",
+  "isLatest": true,
+  "created": "2020-07-14T20:53:55.357Z",
+  "replaced": "2020-07-14T20:53:55.357Z",
+  "author": "Matt.Demaray@hobsons.com",
+  "flow": [
+    "getHighschools",
+    "findSchools",
+    "getStudents",
+    "exportActiveCourses",
+    "exportStudentCourses"
+  ],
+  "steps": {
+    "findSchools": {
+      "method": "findSchools",
+      "processor": "cf-naviance-dc-ap-export-navprod",
+      "parameters": {
+        "auth0Domain": "${SSM:/academic-planner-prod/auth0Domain}",
+        "planningUrl": "${SSM:/academic-planner-prod/planUrl}",
+        "rulesRepoUrl": "${SSM:/academic-planner-prod/repoUrl}",
+        "auth0Audience": "${SSM:/academic-planner-prod/auth0Audience}",
+        "auth0ClientId": "${SSM:/academic-planner-prod/auth0ClientId}",
+        "auth0ClientSecret": "${SSM:/academic-planner-prod/auth0ClientSecret}"
+      },
+      "granularity": "row",
+	  "outputs": [
+        "BatchHighschools"
+      ]
+    },
+    "getStudents": {
+      "method": "getStudents",
+      "outputs": [
+        "Students"
+      ],
+      "processor": "arn:aws:lambda:us-east-1:532277129074:function:cf-naviance-dc-migrate-master",
+      "parameters": {
+        "DB_NAME": "${SSM:/naviance-db-prod/DB_NAME}",
+        "DB_PASS": "${SSM:/naviance-db-prod/DB_PASS}",
+        "DB_USER": "${SSM:/naviance-db-prod/DB_USER}",
+        "DB_READ_HOST": "${SSM:/naviance-db-prod/DB_READ_HOST}",
+        "DB_WRITE_HOST": "${SSM:/naviance-db-prod/DB_WRITE_HOST}"
+      },
+      "granularity": "once"
+    },
+    "getHighschools": {
+      "method": "getHighschools",
+      "outputs": [
+        "Highschools"
+      ],
+      "processor": "arn:aws:lambda:us-east-1:532277129074:function:cf-naviance-dc-migrate-master",
+      "parameters": {
+        "DB_NAME": "${SSM:/naviance-db-prod/DB_NAME}",
+        "DB_PASS": "${SSM:/naviance-db-prod/DB_PASS}",
+        "DB_USER": "${SSM:/naviance-db-prod/DB_USER}",
+        "DB_READ_HOST": "${SSM:/naviance-db-prod/DB_READ_HOST}",
+        "DB_WRITE_HOST": "${SSM:/naviance-db-prod/DB_WRITE_HOST}"
+      },
+      "granularity": "once"
+    },
+    "exportActiveCourses": {
+      "method": "exportCourses",
+      "outputs": [
+        "Courses"
+      ],
+      "processor": "cf-naviance-dc-ap-export-navprod",
+      "parameters": {
+        "active": true,
+        "auth0Domain": "${SSM:/academic-planner-prod/auth0Domain}",
+        "planningUrl": "${SSM:/academic-planner-prod/planUrl}",
+        "rulesRepoUrl": "${SSM:/academic-planner-prod/repoUrl}",
+        "auth0Audience": "${SSM:/academic-planner-prod/auth0Audience}",
+        "auth0ClientId": "${SSM:/academic-planner-prod/auth0ClientId}",
+        "rulesRepoProduct": "naviance",
+        "auth0ClientSecret": "${SSM:/academic-planner-prod/auth0ClientSecret}"
+      },
+      "granularity": "once"
+    },
+    "exportStudentCourses": {
+      "inputs": [
+		"BatchHighschools",
+        "Students"
+      ],
+      "method": "exportStudentCourses",
+      "outputs": [
+        "CourseExport",
+        "PlanExport"
+      ],
+      "processor": "cf-naviance-dc-ap-export-navprod",
+      "parameters": {
+        "auth0Domain": "${SSM:/academic-planner-prod/auth0Domain}",
+        "planningUrl": "${SSM:/academic-planner-prod/planUrl}",
+        "rulesRepoUrl": "${SSM:/academic-planner-prod/repoUrl}",
+        "auth0Audience": "${SSM:/academic-planner-prod/auth0Audience}",
+        "auth0ClientId": "${SSM:/academic-planner-prod/auth0ClientId}",
+        "rulesRepoProduct": "naviance",
+        "auth0ClientSecret": "${SSM:/academic-planner-prod/auth0ClientSecret}"
+      },
+      "granularity": "row",
+	  "batchParallelCalls": 1,
+      "batchProcessInputs": {
+        "BatchHighschools": {
+          "batchRows": 4
+        }
+      }
+    }
+  },
+  "systemFailureRetries": 1,
+  "inheritOnly": false
+}

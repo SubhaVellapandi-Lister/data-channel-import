@@ -67,4 +67,25 @@ $ docker build --build-arg repoPassword=[repo pw] -t cpexport .
 $ docker run --rm --entrypoint cat cpexport /usr/src/app/cpexport.zip > cpexport.zip
 
 ```
+## Maintenance Notes
 
+### Trigger "nightly" report for just a few districts
+Replace the districts in the following (on PC):
+```bash
+dchan -e navprod job.execute -c naviance/initiateExportStudentCourseReports --parameters "{\"steps\": {\"initiateExports\":{\"tenants\":[\"4823910DUS\"]}}}"
+```
+
+### Find out which jobs were run recently
+Look for channel name "exportStudentCourseReports" and "initiateExportStudentCourseReports" that creates them.
+```angular2html
+dchan -e navprod job.find -p naviance
+or 
+dchan -e navprod job.find -p naviance -t 000001DUS
+```
+
+### Update the data channel config
+```angular2html
+channel.findone [guid] --json > myfile.json
+and then
+channel.update [guid] myfile.json
+```
