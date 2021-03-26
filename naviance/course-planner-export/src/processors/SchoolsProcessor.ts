@@ -6,12 +6,15 @@ export class SchoolsProcessor extends BaseProcessor {
     private schoolsByDistrict: { [dsId: string]: string[]} = {};
     private districtIdByNavianceId: { [navId: string]: string } = {};
     private schoolNamesById: { [navId: string]: string } = {};
+    private batchHighschoolOutputName = 'BatchHighschools';
 
     public async findSchools(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
 
         if (input.index === 1) {
             return {
-                outputs: {}
+                outputs: {
+                    [this.batchHighschoolOutputName]: ['HighschoolId']
+                }
             };
         }
 
@@ -65,10 +68,14 @@ export class SchoolsProcessor extends BaseProcessor {
         for (const schoolId of districtIds) {
             if (this.schoolsByDistrict[schoolId]) {
                 fullDistrictList[schoolId] = this.schoolsByDistrict[schoolId];
-
                 for (const hsId of fullDistrictList[schoolId]) {
                     schoolAssignedIDs[hsId] = this.districtIdByNavianceId[hsId];
                     schoolNames[hsId] = this.schoolNamesById[hsId];
+
+                    if (input.outputs[this.batchHighschoolOutputName]) {
+                        const output = input.outputs[this.batchHighschoolOutputName].writeStream;
+                        this.writeOutputRow(output, [hsId]);
+                    }
                 }
             }
         }

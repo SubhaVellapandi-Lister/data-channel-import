@@ -182,6 +182,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
     private parallelSchools = 8;
     private pageSize = 100;
     private districtAssignedIds: { [navId: string]: string } = {};
+    private inputHighschoolIdList: string[] = [];
 
     private async findProgram(namespace: Namespace, scopeAsNamespace: Namespace, name: string): Promise<Program> {
 
@@ -845,6 +846,16 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             return { outputs: {} };
         }
 
+        // list of highschools
+
+        if (input.name === 'BatchHighschools') {
+            this.inputHighschoolIdList.push(input.raw[0].trim());
+
+            return { outputs: {} };
+        }
+
+        // students input
+
         try {
             const student = JSON.parse(input.data['JSON_OBJECT']) as INavianceStudent;
             const navId = student.id.toString();
@@ -880,6 +891,11 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         if (params.highschools) {
             highschoolsToProcess = highschoolsToProcess.filter(
                 (hsId) => params.highschools!.includes(hsId));
+        }
+
+        if (this.inputHighschoolIdList.length) {
+            highschoolsToProcess = highschoolsToProcess.filter(
+                (hsId) => this.inputHighschoolIdList.includes(hsId));
         }
 
         return highschoolsToProcess;
