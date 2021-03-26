@@ -506,7 +506,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             Object.assign(rowData, await this.auditColumns(
                 plan, programs.pos, programs.cluster, programs.pathway));
         } catch (error) {
-            console.log(`Error ${hsId} - ${plan.guid}`);
+            console.log(`Plan Error ${hsId} - ${plan.guid} -`);
             console.log(error);
 
             return [];
