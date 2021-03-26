@@ -1,4 +1,4 @@
-import { Job, JobStatus } from "@data-channels/dcSDK";
+import { ConfigType, IJobConfig, Job, JobStatus, jobWithInlineChannel } from "@data-channels/dcSDK";
 import { toUpper } from "lodash";
 
 import { Validate } from "../Validate";
@@ -23,6 +23,38 @@ export const testScoreFileInfo = {
     key: "testScore.csv",
     bucket: "sfdev"
 };
+
+export const invalidMultiFileConfig = {
+    parameters: {
+        multipleFileConfig: true,
+        dynamicOutput: true,
+        dynamicInput: true
+    }
+};
+
+export const invalidConfig = {
+    parameters: {
+        dynamicOutput: true,
+        dynamicInput: true
+    }
+};
+
+export const invalidColumnsConfig = {
+    parameters: {
+        dynamicOutput: true,
+        dynamicInput: true,
+        validateConfig: {
+            columns: {
+                someColumn: {
+                    range: {
+                        min: 0
+                    }
+                }
+            }
+        }
+    }
+};
+
 export const validateConfig = {
     parameters: {
         multipleFileConfig: true,
@@ -52,12 +84,13 @@ export const validateConfig = {
                     email: {
                         required: true,
                         validTypes: ["email"],
-                        invalidIfBlank: false
+                        warnIfBlank: true
                     },
                     secondary_email: {
                         required: false,
                         validTypes: ["email"],
-                        invalidIfBlank: false
+                        invalidIfBlank: false,
+                        warnIfNotValidValue: true
                     },
                     user_id: {
                         required: true,
@@ -180,9 +213,35 @@ export const validateConfig = {
                     },
                     authoritative_status: {
                         required: false,
-                        validTypes: ["integer"],
+                        validTypes: ["decimal"],
                         invalidIfBlank: false,
-                        validValues: ["01", "02", "03", "04", "05", "06"]
+                        validValues: ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6"]
+                    },
+                    is_on_probation: {
+                        required: false,
+                        validTypes: ["boolean"],
+                        invalidIfBlank: false
+                    },
+                    batch_year: {
+                        required: false,
+                        validTypes: ["datetime"],
+                        invalidIfBlank: false,
+                        dateTimeFormat: ["YYYY"],
+                        compareField: "invalid_date_column",
+                        comparator: "invalid operator"
+                    },
+                    invalid_date_column: {
+                        required: false,
+                        validTypes: ["datetime"],
+                        invalidIfBlank: false,
+                        dateTimeFormat: ["invalid format"]
+                    },
+                    invalid_type_column: {
+                        required: false,
+                        validTypes: ["invalid_type"],
+                        invalidIfBlank: false,
+                        dateTimeFormat: ["invalid format"],
+                        validWithWarningTypes: true
                     }
                 },
                 includeDataInLog: true,
@@ -206,6 +265,22 @@ export const validateConfig = {
                         dateTimeFormat: ["YYYYMMDD"],
                         compareField: "student_course_start_date",
                         comparator: "gtEq"
+                    },
+                    course_period_start_time: {
+                        required: false,
+                        validTypes: ["datetime"],
+                        invalidIfBlank: false,
+                        dateTimeFormat: ["HH:MM A"],
+                        compareField: "course_period_end_time",
+                        comparator: "lt"
+                    },
+                    course_period_end_time: {
+                        required: false,
+                        validTypes: ["datetime"],
+                        invalidIfBlank: false,
+                        dateTimeFormat: ["HH:MM A"],
+                        compareField: "course_period_start_time",
+                        comparator: "gt"
                     },
                     mob: {
                         required: false,
@@ -245,7 +320,9 @@ export const validateConfig = {
             }
         },
         dynamicOutput: true,
-        dynamicInput: true
+        dynamicInput: true,
+        warnIfNotValidValue: true,
+        writeErrorDataToJobMeta: true
     }
 };
 
@@ -426,8 +503,61 @@ export const validateConfigWithLogHeaders = {
                 includeLogInData: false,
                 logHeaders: ["logData"],
                 discardInvalidRows: true
+            },
+            sections: {
+                columns: {
+                    integration_id: {
+                        required: true,
+                        validTypes: ["string"],
+                        invalidIfBlank: true
+                    },
+                    course_section_name: {
+                        required: true,
+                        validTypes: ["string"],
+                        invalidIfBlank: true
+                    },
+                    course_section_id: {
+                        required: true,
+                        validTypes: ["string"],
+                        invalidIfBlank: true
+                    },
+                    start_dt: {
+                        required: false,
+                        validTypes: ["datetime"],
+                        invalidIfBlank: false,
+                        dateTimeFormat: ["YYYY-MM-DD"],
+                        compareField: "current_date",
+                        comparator: "lt"
+                    },
+                    end_dt: {
+                        required: false,
+                        validTypes: ["datetime"],
+                        invalidIfBlank: false,
+                        dateTimeFormat: ["YYYY-MM-DD"],
+                        compareField: "start_dt",
+                        comparator: "gt"
+                    },
+                    term_id: {
+                        required: false,
+                        validTypes: ["string"],
+                        invalidIfBlank: false
+                    },
+                    course_integration_id: {
+                        required: false,
+                        validTypes: ["string"],
+                        invalidIfBlank: false
+                    },
+                    course_section_delivery: {
+                        required: false,
+                        validTypes: ["string"],
+                        invalidIfBlank: false,
+                        validvalues: ["01", "02", "03", "99"]
+                    }
+                },
+                logHeaders: ["Row", "Validation_Info", "Validation_Status"]
             }
-        }
+        },
+        writeErrorDataToJobMeta: true
     }
 };
 
@@ -720,6 +850,39 @@ export const usersDataRowWithInvalidValue = {
     fileInfo: userFileInfo
 };
 
+export const usersDataRowWithMissingValues = {
+    index: 2,
+    raw: [
+        "",
+        "goldnew",
+        "yolandanew",
+        "",
+        "ygold_test",
+        "12345",
+        "testusernewgmail.com"
+    ],
+    data: {
+        integration_id: "",
+        family_name: "goldnew",
+        given_name: "yolandanew",
+        email: "",
+        user_id: "ygold_test",
+        available_ind: "12345",
+        secondary_email: "testusernewgmail.com"
+    },
+    json: [
+        "",
+        "goldnew",
+        "yolandanew",
+        "",
+        "ygold_test",
+        "12345",
+        "testusernewgmail.com"
+    ],
+    name: "users",
+    fileInfo: userFileInfo
+};
+
 export const sectionsHeaderInputRowWithDate = {
     index: 1,
     name: "sections",
@@ -793,7 +956,11 @@ export const enrollmentHeaderInputRowWithDifferentDateFormat = {
         "available_ind",
         "credit_hours",
         "last_access_date",
-        "authoritative_status"
+        "authoritative_status",
+        "is_on_probation",
+        "batch_year",
+        "invalid_date_column",
+        "invalid_type_column"
     ],
     data: {
         course_section_integration_id: "course_section_integration_id",
@@ -802,13 +969,17 @@ export const enrollmentHeaderInputRowWithDifferentDateFormat = {
         available_ind: "available_ind",
         credit_hours: "credit_hours",
         last_access_date: "last_access_date",
-        authoritative_status: "authoritative_status"
+        authoritative_status: "authoritative_status",
+        is_on_probation: "is_on_probation",
+        batch_year: "batch_year",
+        invalid_date_column: "invalid_date_column",
+        invalid_type_column: "invalid_type_column"
     }
 };
 
 export const enrollmentDataRowWithDifferentDateFormatValue = {
     index: 2,
-    raw: ["UNIV-SRF101-602-202002", "Yolanda.Gold", "INSTRUCTOR", "1", "1.5", "2016-09-20 14:04:05", "01"],
+    raw: ["UNIV-SRF101-602-202002", "Yolanda.Gold", "INSTRUCTOR", "1", "1.5", "2016-09-20 14:04:05", "0.1", "FALSE"],
     data: {
         course_section_integration_id: "UNIV-SRF101-602-20200",
         user_integration_id: "Yolanda.Gold",
@@ -816,9 +987,56 @@ export const enrollmentDataRowWithDifferentDateFormatValue = {
         available_ind: "1",
         credit_hours: "1.5",
         last_access_date: "2016-09-20 14:04:05",
-        authoritative_status: "01"
+        authoritative_status: "0.1",
+        is_on_probation: "FALSE"
     },
-    json: ["UNIV-SRF101-602-202002", "Yolanda.Gold", "INSTRUCTOR", "1", "1.5", "2016-09-20 14:04:05", "01"],
+    json: ["UNIV-SRF101-602-202002", "Yolanda.Gold", "INSTRUCTOR", "1", "1.5", "2016-09-20 14:04:05", "0.1", "FALSE"],
+    name: "enrollment",
+    fileInfo: enrollmentFileInfo
+};
+
+export const enrollmentDataRowWithInvalidTypesValue = {
+    index: 2,
+    raw: [
+        "UNIV-SRF101-602-202002",
+        "Yolanda.Gold",
+        "INSTRUCTOR",
+        "1",
+        "1.5",
+        "2016-09-20 14:04:05",
+        "0.1",
+        "TRUE",
+        "2021",
+        "",
+        ""
+    ],
+    data: {
+        course_section_integration_id: "UNIV-SRF101-602-20200",
+        user_integration_id: "Yolanda.Gold",
+        user_role: "INSTRUCTOR",
+        available_ind: "1",
+        credit_hours: "1.5",
+        last_access_date: "2016-09-20 14:04:05",
+        authoritative_status: "0.1",
+        is_on_probation: "TRUE",
+        batch_year: "2021",
+        invalid_date_column: "",
+        invalid_type_column: ""
+    },
+    json: [
+        "UNIV-SRF101-602-202002",
+        "Yolanda.Gold",
+        "INSTRUCTOR",
+        "1",
+        "1.5",
+        "2016-09-20 14:04:05",
+        "0.1",
+        "TRUE",
+        "2021",
+        "2021",
+        "",
+        ""
+    ],
     name: "enrollment",
     fileInfo: enrollmentFileInfo
 };
@@ -996,6 +1214,33 @@ export const userDataRowWithCaseInSensitiveValue = {
     fileInfo: userFileInfo
 };
 
+export const channelConfig = {
+    guid: "some-channel-guid",
+    product: "some-product",
+    name: "some-channel",
+    configType: ConfigType.CHANNEL,
+    isDeleted: false,
+    noTaskLogs: false,
+    detailsGuid: "some-channel-details-guid",
+    isLatest: true,
+    created:  new Date(),
+    replaced: new Date(),
+    author: "",
+    flow: ["validate"],
+    steps: {
+        validate: {
+            inputs: ["users"],
+            method: "validate",
+            outputs: ["usersValidated"],
+            processor: "some-processor-name",
+            parameters: validateConfig.parameters,
+            granularity: "row"
+        }
+    },
+    systemFailureRetries: 1,
+    inheritOnly: false
+};
+
 const jobConfig = {
     guid: "some-guid-here",
     created: new Date(),
@@ -1003,8 +1248,65 @@ const jobConfig = {
     isDeleted: false,
     currentStep: "validate",
     flow: ["validate"],
+    flowIdx: 0,
     status: JobStatus.Started,
     statusMsg: "",
+    channel: {
+        guid: "some-channel-guid-here",
+        name: "some-channel"
+    },
+    filesIn: [
+        {
+            s3: { key: "ready/manualimports/piiMask/users.csv", bucket: "sfdev" },
+            name: "users"
+        }
+    ],
+    filesOut: [{ s3: { key: "users", bucket: "" }, name: "users_1" }],
+    steps: {
+        validate: {
+            finished: false
+        }
+    }
+};
+
+export const previodStepJobConfig = {
+    guid: "some-guid-here",
+    name: "previous-step-job",
+    currentStep: "validate",
+    flow: ["prevStep", "validate"],
+    flowIdx: 1,
+    status: JobStatus.Started,
+    statusMsg: "",
+    created: new Date(),
+    isDeleted: false,
+    channel: {
+        guid: "some-channel-guid-here",
+        name: "some-channel"
+    },
+    filesIn: [
+        {
+            s3: { key: "ready/manualimports/piiMask/users.csv", bucket: "sfdev" },
+            name: "users"
+        }
+    ],
+    filesOut: [{ s3: { key: "users", bucket: "" }, name: "users_1" }],
+    steps: {
+        validate: {
+            finished: false
+        }
+    }
+};
+
+export const currentStepEmptyJobConfig = {
+    guid: "some-guid-here",
+    name: "empty-step-job",
+    currentStep: null,
+    flow: ["validate"],
+    flowIdx: 0,
+    status: JobStatus.Started,
+    statusMsg: "",
+    created: new Date(),
+    isDeleted: false,
     channel: {
         guid: "some-channel-guid-here",
         name: "some-channel"
@@ -1032,6 +1334,8 @@ export const studentCourseHeaderInputRowWithDate = {
         "integration_id",
         "student_course_start_date",
         "student_course_end_date",
+        "course_period_start_time",
+        "course_period_end_time",
         "mob",
         "par_student_start_date",
         "par_student_end_date",
@@ -1043,6 +1347,8 @@ export const studentCourseHeaderInputRowWithDate = {
         integration_id: "integration_id",
         student_course_start_date: "student_course_start_date",
         student_course_end_date: "student_course_end_date",
+        course_period_start_time: "course_period_start_time",
+        course_period_end_time: "course_period_end_time",
         mob: "mob",
         par_student_start_date: "par_student_start_date",
         par_student_end_date: "par_student_end_date",
@@ -1057,7 +1363,9 @@ export const studentCourseDataRowWithDatetimeValue = {
         "100001",
         "UNIV-SRF101-602-202002",
         "20200810",
-        "20200810",
+        "20200910",
+        "03:00pm",
+        "03:45pm",
         "10:30AM",
         "202011",
         "20201201",
@@ -1068,7 +1376,9 @@ export const studentCourseDataRowWithDatetimeValue = {
         institution_id: "100001",
         integration_id: "UNIV-SRF101-602-202002",
         student_course_start_date: "20200810",
-        student_course_end_date: "20200810",
+        student_course_end_date: "20200910",
+        course_period_start_time: "03:00pm",
+        course_period_end_time: "03:45pm",
         mob: "10:30AM",
         par_student_start_date: "202011",
         par_student_end_date: "20201201",
@@ -1079,7 +1389,9 @@ export const studentCourseDataRowWithDatetimeValue = {
         "100001",
         "UNIV-SRF101-602-202002",
         "20200810",
-        "20200810",
+        "20200910",
+        "03:00pm",
+        "03:45pm",
         "10:30AM",
         "202011",
         "20201201",
@@ -1096,6 +1408,8 @@ export const studentCourseDataRowWithInvalidDatetimeValue = {
         "UNIV-SRF101-602-202002",
         "202810",
         "2020080",
+        "03:00pm",
+        "02:45pm",
         "10.30AM",
         "20211",
         "2020121",
@@ -1107,6 +1421,8 @@ export const studentCourseDataRowWithInvalidDatetimeValue = {
         integration_id: "UNIV-SRF101-602-202002",
         student_course_start_date: "202810",
         student_course_end_date: "2020080",
+        course_period_start_time: "03:00pm",
+        course_period_end_time: "02:45pm",
         mob: "10.30AM",
         par_student_start_date: "20211",
         par_student_end_date: "2020121",
@@ -1118,6 +1434,8 @@ export const studentCourseDataRowWithInvalidDatetimeValue = {
         "UNIV-SRF101-602-202002",
         "202810",
         "2020080",
+        "03:00pm",
+        "02:45pm",
         "10.30AM",
         "20211",
         "2020121",
@@ -1134,6 +1452,7 @@ export const studentCourseDataRowWithInvalidDatetime = {
         "UNIV-SRF101-602-202002",
         "20200810",
         "20200810",
+        "03:00pm",
         "10:30AM",
         "202011",
         "20201201",
@@ -1144,6 +1463,7 @@ export const studentCourseDataRowWithInvalidDatetime = {
         integration_id: "UNIV-SRF101-602-202002",
         student_course_start_date: "20200810",
         student_course_end_date: "20200810",
+        course_period_start_time: "03:00pm",
         mob: "10:30AM",
         par_student_start_date: "202011",
         par_student_end_date: "20201201",
@@ -1154,6 +1474,7 @@ export const studentCourseDataRowWithInvalidDatetime = {
         "UNIV-SRF101-602-202002",
         "20200810",
         "20200810",
+        "03:00pm",
         "10:30AM",
         "202011",
         "20201201",
@@ -1162,8 +1483,9 @@ export const studentCourseDataRowWithInvalidDatetime = {
     name: "studentCourse",
     fileInfo: studentCourseFileInfo
 };
-export function getValidateProcessor(): Validate {
-    const validateProcessor = new Validate(Job.fromConfig(jobConfig));
+export function getValidateProcessor(customConfig?: IJobConfig): Validate {
+    const config = customConfig ?? jobConfig;
+    const validateProcessor = new Validate(jobWithInlineChannel(config, channelConfig));
     validateProcessor.createOutput = jest.fn().mockReturnValue(``);
     validateProcessor.createInput = jest.fn().mockReturnValue(``);
 

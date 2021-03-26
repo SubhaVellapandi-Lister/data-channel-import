@@ -3,11 +3,13 @@ import { IMeta, IRowData, IRowProcessorInput, Job } from "@data-channels/dcSDK";
 export const jobOutFileExtension = "d.output";
 
 export function findNextJobStep(flow: string[], currentStep: string): string {
-    return flow.slice(flow.indexOf(currentStep) + 1)[0] ?? "";
+    const indexOfStep = flow.indexOf(currentStep);
+    return indexOfStep === -1 || (indexOfStep + 1) === flow.length ? "": flow[indexOfStep + 1];
 }
 
 export function findPreviousJobStep(flow: string[], currentStep: string): string {
-    return flow.slice(0, flow.indexOf(currentStep)).slice(-1)[0];
+    const indexOfStep = flow.indexOf(currentStep);
+    return indexOfStep > 0 ? flow[indexOfStep - 1] : "";
 }
 export function getFilePathFromInputFile(inputFile: IRowProcessorInput): string {
     return inputFile.fileInfo?.key?.match(new RegExp("(.*/)"))?.[0] ?? "";

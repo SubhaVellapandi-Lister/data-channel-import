@@ -7,6 +7,7 @@ import {
     Job,
     RowOutputValue
 } from "@data-channels/dcSDK";
+import { isEmpty } from "lodash";
 
 import {
     findNextJobStep,
@@ -71,11 +72,9 @@ export class Validate extends BaseProcessor {
    */
   public async before_validate(input: IStepBeforeInput): Promise<void> {
       this.config = input.parameters as IValidateParameters;
-      if (this.config.multipleFileConfig) {
-          if (!this.config?.fileValidateConfig || this.config?.fileValidateConfig === {}) {
-              throw new Error("Missing fileValidateConfig in Validate-Builtin");
-          }
-      } else if (!this.config.multipleFileConfig && !this.config?.validateConfig) {
+      if (this.config.multipleFileConfig && isEmpty(this.config.fileValidateConfig)) {
+          throw new Error("Missing fileValidateConfig in Validate-Builtin");
+      } else if (!this.config.multipleFileConfig && !this.config.validateConfig) {
           throw new Error("Missing validateConfig in Validate-Builtin");
       }
       this.currentStep = this.job.currentStep ?? "";
@@ -84,10 +83,10 @@ export class Validate extends BaseProcessor {
       if (this.previousStep) {
           this.jobOutFileExtension = toCamelCase(this.previousStep) + jobOutFileExtension;
       }
-      if (this.config.jsonSchemaNames?.length) {
+      if (this.config.jsonSchemaNames?.length && this.config.validateConfig) {
           const { columnConfig, rangeLimitSetters } = this.parseValidationSchema();
           this.config.validateConfig.columns = Object.assign(
-              this.config.validateConfig?.columns ?? {},
+              this.config.validateConfig.columns ?? {},
               columnConfig
           );
           this.rangeLimitSetters = rangeLimitSetters;
@@ -580,4 +579,9 @@ export class Validate extends BaseProcessor {
           results: {}
       };
   }
+
+  //Some Getters For Unit Tests
+  public getCurrentStep = (): string => this.currentStep;
+  public getPreviousStep = (): string => this.previousStep;
+  public getJobOutFileExtension = (): string => this.jobOutFileExtension;
 }

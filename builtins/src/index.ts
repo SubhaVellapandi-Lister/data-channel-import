@@ -18,7 +18,7 @@ import {
     ThrowError,
     Translate,
     Webhook,
-    Delete,    
+    Delete
 } from "./processors";
 
 export const builtInHandler = generateHandler({

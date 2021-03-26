@@ -36,7 +36,7 @@ export class RangeValidator {
 
       status = this.validateNumberByLimit(
           data,
-          columnConfig.range.minVal ?? 0,
+          range.minVal!,
           columnName,
           Math.min,
           validationErrors,
@@ -47,7 +47,7 @@ export class RangeValidator {
 
       status = this.validateNumberByLimit(
           data,
-          columnConfig.range.maxVal ?? 0,
+          range.maxVal!,
           columnName,
           Math.max,
           validationErrors,
