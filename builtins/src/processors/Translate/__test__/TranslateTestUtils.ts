@@ -35,6 +35,60 @@ const testJobConfig = {
     }
 };
 
+export const previousStepJobConfig = {
+    guid: "some-guid-here",
+    name: "previous-step-job",
+    currentStep: "translate",
+    flow: ["previous-step", "translate"],
+    status: JobStatus.Started,
+    statusMsg: "",
+    created: new Date(),
+    isDeleted: false,
+    channel: {
+        guid: "some-channel-guid-here",
+        name: "some-channel"
+    },
+    filesIn: [
+        {
+            s3: { key: "ready/manualimports/piiMask/users.csv", bucket: "sfdev" },
+            name: "users"
+        }
+    ],
+    filesOut: [{ s3: { key: "users", bucket: "" }, name: "users_1" }],
+    steps: {
+        validate: {
+            finished: false
+        }
+    }
+};
+
+export const currentStepEmptyJobConfig = {
+    guid: "some-guid-here",
+    name: "empty-step-job",
+    flow: ["translate"],
+    status: JobStatus.Started,
+    statusMsg: "",
+    created: new Date(),
+    isDeleted: false,
+    currentStep: null,
+    channel: {
+        guid: "some-channel-guid-here",
+        name: "some-channel"
+    },
+    filesIn: [
+        {
+            s3: { key: "ready/manualimports/piiMask/users.csv", bucket: "sfdev" },
+            name: "users"
+        }
+    ],
+    filesOut: [{ s3: { key: "users", bucket: "" }, name: "users_1" }],
+    steps: {
+        validate: {
+            finished: false
+        }
+    }
+};
+
 export const fileTranslateConfigWithHeaderMappings: IFileTranslateConfig = {
     headerMappings: {
         "Course_Name": "New_Course_Name",
@@ -78,7 +132,9 @@ export const fileTranslateConfigWithValueMappings: IFileTranslateConfig = {
                 toValue: "Some-CTE-Translated"
             }
         ]
-    }
+    },
+    removeEmptyHeaders: true,
+    removeUnmappedHeaders: true
 };
 
 const translateParameters: ITranslateParameters = {
@@ -261,8 +317,9 @@ export {
     testInputDataRowWithMultipleFileConfigInParameters
 };
 
-export function getTranslateProcessor(): Translate {
-    const job = jobWithInlineChannel(testJobConfig, testChannelConfig);
+export function getTranslateProcessor(customConfig?: IJobConfig): Translate {
+    const config = customConfig ?? testJobConfig;
+    const job = jobWithInlineChannel(config, testChannelConfig);
     const translateProcessor = new Translate(job);
     return translateProcessor;
 }

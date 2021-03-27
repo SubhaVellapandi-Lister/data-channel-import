@@ -4,10 +4,12 @@ import "jest";
 import _, { head } from "lodash";
 
 import {
+    currentStepEmptyJobConfig,
     fileTranslateConfigWithHeaderMappings,
     fileTranslateConfigWithIndexMappings,
     fileTranslateConfigWithValueMappings,
     getTranslateProcessor,
+    previousStepJobConfig,
     testChannelConfig,
     testInputDataRow,
     testInputDataRowWithMultipleFileConfigInParameters,
@@ -28,12 +30,27 @@ describe("TranslateProcessor", () => {
         jest.restoreAllMocks();
     });
 
-    test("before_translate", async () => {
+    test("test for before_translate", async () => {
         const translateProcessor = getTranslateProcessor();
+        await translateProcessor.before_translate(testTranslateConfig);
+        expect(translateProcessor.CurrentStep).toBe("Translate");
+        expect(translateProcessor.NextStep).toBe("dummyNextStep");
+        expect(translateProcessor.DynamicInput).toBeTruthy();
+        expect(translateProcessor.DynamicOutput).toBeTruthy();
+        expect(translateProcessor.MultipleFileConfig).toBeFalsy();
+    });
 
-        const result = await translateProcessor.before_translate(testTranslateConfig);
+    test("test for job with previous step", async () => {
+        const translateProcessor = getTranslateProcessor(previousStepJobConfig);
+        await translateProcessor.before_translate(testTranslateConfig);
+        expect(translateProcessor.PreviousStep).toEqual("previous-step");
+        expect(translateProcessor.JobOutFileExtension).toEqual("Previous-stepd.output");
+    });
 
-        expect(result).toBeUndefined();
+    test("test for job with current step empty", async () => {
+        const translateProcessor = getTranslateProcessor(currentStepEmptyJobConfig);
+        await translateProcessor.before_translate(testTranslateConfig);
+        expect(translateProcessor.CurrentStep).toEqual("");
     });
 
     test("before_translate with multipleFileConfig set to true but empty fileTranslateConfig", async () => {
