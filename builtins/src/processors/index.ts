@@ -10,7 +10,7 @@ export * from "./Match/Match";
 export * from "./Merge";
 export * from "./SecurityScan";
 export * from "./SES/SES";
-export * from "./SNS";
+export * from "./SNS/SNS";
 export * from "./Sort";
 export * from "./ThrowError";
 export * from "./Translate/Translate";
