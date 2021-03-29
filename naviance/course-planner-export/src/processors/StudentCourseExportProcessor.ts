@@ -79,6 +79,9 @@ function booleanToString(item: any) {
     return item ? 'TRUE' : 'FALSE';
 }
 
+/**
+ * For one row per plan export
+ */
 const auditHeaders = [
     'Tenant_ID',
     'GUID',
@@ -133,8 +136,12 @@ const auditHeaders = [
     'Planned_Courses',
     'Completed_Courses',
     'Credit_Deficiency_Number',
+    'Target_Highschool_ID'
 ];
 
+/**
+ * For one row per course export
+ */
 const courseHeaders = [
     'Highschool_ID',
     'Highschool_Name',
@@ -313,6 +320,14 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         return student.classYear - (13 - gradeLevel);
     }
 
+    /**
+     * One row per plan
+     * @param plan
+     * @param posProgram
+     * @param clusterProgram
+     * @param pathwayProgram
+     * @private
+     */
     private async auditColumns(
         plan: SlimStudentPlan, posProgram: Program, clusterProgram?: Program, pathwayProgram?: Program
     ): Promise<object> {
@@ -362,7 +377,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             Pathway_Completed_Credits_Used: '',
             Pathway_Planned_Credits_Used: '',
             Pathway_Completed_Credits: "0", // need to tweak once we are storing course histories
-            Pathway_Planned_Credits: ''
+            Pathway_Planned_Credits: '',
+            Target_Highschool_ID: ''
         };
 
         let planTotalCreditsRequired = 0;
@@ -434,6 +450,8 @@ export class StudentCourseExportProcessor extends BaseProcessor {
             columns[`${prefix}_Planned_Credits`] = plannedCredits.toString();
         }
 
+        columns.Target_Highschool_ID = plan.meta?.schoolId?.toString() ?? '';
+
         setProgSpecificCols(posProgram, 'PoS');
 
         if (pathwayProgram) {
@@ -445,6 +463,16 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         return columns;
     }
 
+    /**
+     * One row per plan
+     * @param studentId
+     * @param plan
+     * @param headers
+     * @param namespace
+     * @param scopeAsNamespace
+     * @param hsId
+     * @private
+     */
     private async auditRowsFromPlan(
         studentId: string, plan: SlimStudentPlan, headers: string[],
         namespace: Namespace, scopeAsNamespace: Namespace, hsId: string
@@ -628,7 +656,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                 Course_Name: course.display,
                 Course_Subject: subName,
                 Course_Active: booleanToString(active),
-                Alternate_Course: booleanToString(false),
+                Alternate_Course: globalAlternateCourse ? 'TRUE' : 'FALSE',
                 SCED_Code: sced,
                 CSSC_Code: cssc,
                 Instructional_Level: instLevel,
@@ -762,6 +790,7 @@ export class StudentCourseExportProcessor extends BaseProcessor {
                         );
                     }
                     if (exportConf.mode === ExportMode.Audit) {
+                        // a.k.a course demand - one row per plan
                         const rowsFromPlan = await this.auditRowsFromPlan(
                            studentId,
                            splan,
@@ -871,6 +900,11 @@ export class StudentCourseExportProcessor extends BaseProcessor {
         return { outputs: {} };
     }
 
+    /**
+     * Return ['21632USPU', '21633USPU'] for example
+     * @param params
+     * @private
+     */
     private parseHsToProcess(params: IExportParameters): string[] {
         const schoolId = params.tenantId;
         const hsMapping: IHsMap = this.getFindSchoolsOutput('hsMapping');
@@ -912,6 +946,9 @@ export class StudentCourseExportProcessor extends BaseProcessor {
 
             let headersToWrite = baseHeaders;
             if (exportConf.customHeaders) {
+                // both baseHeaders and customHeaders need to have the column in order to show up
+                // Note that manual export sets its own custom headers. They are different than nightly export.
+                // Nightly export sets its course export custom headers in InitiateExportsProcessor
                 headersToWrite = exportConf.customHeaders.filter((h: string) => baseHeaders.includes(h));
             }
 

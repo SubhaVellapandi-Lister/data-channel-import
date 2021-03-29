@@ -116,14 +116,17 @@ export class InitiateExportsProcessor extends BaseProcessor {
                                 academicYearOrGreater: true,
                                 currentPlansOnly: true,
                                 customHeaders: [
-                                    "Highschool_ID","Highschool_Name","Student_ID","Class_Year","First_Name","Last_Name","Student_Plan_ID","Plan_Type","Plan_Name","Grade","Alternate_Course","Course_ID","Course_Name","Course_Subject","SCED_Code","CSSC_Code","Course_Active","Is_Planned"
-                                ]
+                                    "Highschool_ID","Highschool_Name","Student_ID","Class_Year","First_Name",
+                                    "Last_Name","Student_Plan_ID","Plan_Type","Plan_Name","Grade","Alternate_Course",
+                                    "Course_ID","Course_Name","Course_Subject","SCED_Code","CSSC_Code",
+                                    "Course_Active","Is_Planned", "Target_Highschool_ID", "Instructional_Level"
+                                ] // always add new columns at the end because big data expects it that way
                             }
                         }
                     }
                 }
 
-            }, true, this.job.serv);
+            }, true);
             guidByTenantId[tenantId] = job ? job.guid : 'ERROR';
         }
 
