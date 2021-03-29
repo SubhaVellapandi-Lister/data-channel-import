@@ -67,7 +67,6 @@ export class SESProcessor extends BaseProcessor {
 
         if (!this.config.to.length) {
             console.log('No To Addresses Found');
-
             return { results: { sent: false } };
         }
 
@@ -89,14 +88,12 @@ export class SESProcessor extends BaseProcessor {
             }
         }
 
-        const defaultTemplate = {
-            subject: 'Data Channels Job - ${job.name} - ${job.status}',
-            body: 'Job has ${job.status} ${job.statusMsg}\n\nStep Results:\n\n${job.steps}',
-            isHtml: false
-        };
-
         if (!this.config.template) {
-            this.config.template = defaultTemplate;
+            this.config.template = {
+                subject: 'Data Channels Job - ${job.name} - ${job.status}',
+                body: 'Job has ${job.status} ${job.statusMsg}\n\nStep Results:\n\n${job.steps}',
+                isHtml: false
+            };
         }
 
         const subject = this.templateResolver(this.config.template.subject);
@@ -158,4 +155,7 @@ export class SESProcessor extends BaseProcessor {
 
         return matcher(template, { job: this.job.rawConfig });
     }
+
+    //Public Getters for Unit tests
+    get Config(): ISESParams { return this.config; }
 }

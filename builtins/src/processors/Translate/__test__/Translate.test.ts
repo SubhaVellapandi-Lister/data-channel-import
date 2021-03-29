@@ -1,7 +1,6 @@
 import { ChannelConfig, IRowProcessorInput, IStepBeforeInput, JobStatus, OutputStreams } from "@data-channels/dcSDK";
-import { Cloud9 } from "aws-sdk";
 import "jest";
-import _, { head } from "lodash";
+import _ from "lodash";
 
 import {
     currentStepEmptyJobConfig,

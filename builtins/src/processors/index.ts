@@ -9,7 +9,7 @@ export * from "./HelloWorld";
 export * from "./Match/Match";
 export * from "./Merge";
 export * from "./SecurityScan";
-export * from "./SES";
+export * from "./SES/SES";
 export * from "./SNS";
 export * from "./Sort";
 export * from "./ThrowError";
