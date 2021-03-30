@@ -1,5 +1,4 @@
-import { ConfigType, IJobConfig, Job, JobStatus, jobWithInlineChannel } from "@data-channels/dcSDK";
-import { toUpper } from "lodash";
+import { ConfigType, IJobConfig, JobStatus, jobWithInlineChannel } from "@data-channels/dcSDK";
 
 import { Validate } from "../Validate";
 
