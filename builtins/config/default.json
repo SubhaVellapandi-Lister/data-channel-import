@@ -5,6 +5,9 @@
         "permissionBoundary": "tf-iam-permission-boundary",
         "functionName": "ss-data-channels-BuiltInProcessor-${environment}",
         "stackName": "ss-data-channels-builtins-${environment}",
+        "eventBridge": {
+            "busName": ""
+        },
         "efs": {
             "mountPath": "",
             "securityGroupId": "",
