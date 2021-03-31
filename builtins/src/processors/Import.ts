@@ -37,7 +37,7 @@ export class Import extends BaseProcessor {
             schoolId: this.job.tenant?.name,
             testType: this.job.name,
             url: JSON.stringify(Object.values(urlsForInputNames(this.job))),
-            importId: this.job.guid
+            importId: `${this.job.guid}/${this.job.currentStep}`
         };
 
         console.log('Import Detail Payload', this.importDetailPayload);
