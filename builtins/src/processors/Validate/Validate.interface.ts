@@ -73,7 +73,7 @@ export interface IFileConfigColumns {
   [name: string]: IFileConfig;
 }
 
-export interface maxLengthValidRange {
+export interface IMaxLengthValidRange {
   [dataType:string]:number;
   }
 
@@ -97,7 +97,7 @@ export interface IFileConfig {
     maxVal?: number; // if value is greater than the maxVal config, record is invalid
   };
   dependsOn?: string;
-  maxLengthValidRange?:maxLengthValidRange; //if column has multiple datatype with different maxlength
+  maxLengthValidRange?:IMaxLengthValidRange; //if column has multiple datatype with different maxlength
 }
 
 // Interface for validate configs
