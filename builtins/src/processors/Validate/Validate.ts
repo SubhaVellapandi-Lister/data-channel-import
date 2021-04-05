@@ -602,9 +602,9 @@ export class Validate extends BaseProcessor {
 
   //Counts number of digits after decimal point
   private decimalCount(num: number|any) {
-    const numStr = String(num);
-    if (numStr.includes('.')) {
-       return numStr.split('.')[1].length;
+    const decimalString = String(num);
+    if (decimalString.includes('.')) {
+       return decimalString.split('.')[1].length;
     };
     return 0;
  }
