@@ -601,7 +601,7 @@ export class Validate extends BaseProcessor {
   }
 
   //Counts number of digits after decimal point
-  private decimalCount(num: number|any) {
+  private decimalCount(num: number|any) :number{
     const decimalString = String(num);
     if (decimalString.includes('.')) {
        return decimalString.split('.')[1].length;
