@@ -4,7 +4,6 @@ import {
     IRowProcessorOutput,
     IStepAfterOutput,
     IStepBeforeInput,
-    Job,
     RowOutputValue
 } from "@data-channels/dcSDK";
 import { isEmpty } from "lodash";
@@ -66,6 +65,8 @@ export class Validate extends BaseProcessor {
   private totalDataCount: number = 0;
   private existingMetaData = { processors: {} };
   private validationStatus = ValidateStatus.Valid;
+  private validTypeFormat:boolean = true;
+
   /**
    * Method used to call before the processor begins to process the data.
    * @param input IStepBeforeInput
@@ -100,6 +101,8 @@ export class Validate extends BaseProcessor {
    */
   public async validate(input: IRowProcessorInput): Promise<IRowProcessorOutput> {
       let inputFileName = input.name;
+      this.validationStatus = ValidateStatus.Valid;
+      this.validTypeFormat = true;
       if (this.config.jsonSchemaNames?.length && input.index > 1) {
           this.rangeValidator.setRangeLimitLevels(input.data, this.rangeLimitSetters);
       }
@@ -223,6 +226,10 @@ export class Validate extends BaseProcessor {
               }
           }
 
+          if(columnConfig.maxLengthValidRange && !this.validTypeFormat){
+            validationErrors.push(`Column ${columnName} should be valid format`);
+          }
+
           if (!hasValidType && columnConfig.validWithWarningTypes) {
               for (const validType of columnConfig.validTypes ?? []) {
                   hasValidType = this.valueIsValidType(validType, data, compareData, columnConfig);
@@ -236,7 +243,7 @@ export class Validate extends BaseProcessor {
               }
           }
 
-          if (!hasValidType) {
+          if (!hasValidType && this.validTypeFormat) {
               columnConfig.comparator && columnConfig.compareField
                   ? validationErrors.push(
                       `Column ${columnName} must be ${ValidateComparatorMessage[columnConfig.comparator]} the Column ${
@@ -376,10 +383,16 @@ export class Validate extends BaseProcessor {
           break;
       }
       case ValidateDataType.Decimal: {
-          if ((!data && !columnConfig.invalidIfBlank) || !isNaN(parseFloat(data))) {
-              hasValidType = true;
-          }
-          break;
+        if ((!data && !columnConfig.invalidIfBlank) || !isNaN(parseFloat(data))) {
+            if(columnConfig.maxLengthValidRange){
+             const decimailCount = this.decimalCount(data);
+              hasValidType = (decimailCount <= columnConfig.maxLengthValidRange[typeToCheck])?true:false;
+              this.validTypeFormat = hasValidType?true:false;
+              } else {
+                  hasValidType = true;
+              }
+            }
+            break;
       }
       case ValidateDataType.Datetime: {
           if (
@@ -394,8 +407,15 @@ export class Validate extends BaseProcessor {
       }
       // eslint-disable-next-line no-fallthrough
       case ValidateDataType.String: {
-          hasValidType = true;
-      }
+        if(typeof data === 'string'){
+            if(columnConfig.maxLengthValidRange){
+             hasValidType = (data.length <= columnConfig.maxLengthValidRange[typeToCheck])?true:false;
+             this.validTypeFormat = hasValidType?true:false;
+            }else {
+                hasValidType = true;
+            }
+         }
+        break;      }
       }
 
       return hasValidType;
@@ -579,6 +599,15 @@ export class Validate extends BaseProcessor {
           results: {}
       };
   }
+
+  //Counts number of digits after decimal point
+  private decimalCount(num: number|any) {
+    const numStr = String(num);
+    if (numStr.includes('.')) {
+       return numStr.split('.')[1].length;
+    };
+    return 0;
+ }
 
   //Some Getters For Unit Tests
   public getCurrentStep = (): string => this.currentStep;

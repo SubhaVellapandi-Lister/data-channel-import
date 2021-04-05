@@ -73,6 +73,10 @@ export interface IFileConfigColumns {
   [name: string]: IFileConfig;
 }
 
+export interface maxLengthValidRange {
+  [dataType:string]:number;
+  }
+
 // Interface for file level config
 export interface IFileConfig {
   required?: boolean; // invalid if column doesn't exist
@@ -93,6 +97,7 @@ export interface IFileConfig {
     maxVal?: number; // if value is greater than the maxVal config, record is invalid
   };
   dependsOn?: string;
+  maxLengthValidRange?:maxLengthValidRange; //if column has multiple datatype with different maxlength
 }
 
 // Interface for validate configs
