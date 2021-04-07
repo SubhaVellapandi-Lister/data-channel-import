@@ -43,7 +43,6 @@ export class DateUtil {
         const regEx = /^\d{4}$/;
         return dateString.match(regEx) ? true : false;
     }
-
     static compareDates(date1: string, date2: string): number {
         const inputDate1 = Date.parse(date1);
         const inputDate2 = Date.parse(date2);
@@ -67,5 +66,10 @@ export class DateUtil {
         currentDate.setHours(hours);
         currentDate.setMinutes(minutes);
         return currentDate.toString();
+    }
+    static isZYYYY(dateString: string): boolean {
+        // regex to evaluate date only Zero or in the format yyyy
+        const regEx = /^0+$/;
+        return dateString.match(regEx) ? true : this.isYYYY(dateString);
     }
 }

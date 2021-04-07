@@ -35,7 +35,9 @@ import {
     enrollmentDataRowWithInvalidTypesValue,
     course_outcomesHeaderInputRow,
     course_outcomeDataRowWithValidDecimalRange,
-    course_outcomeDataRowWithInvalidDecimalRange
+    course_outcomeDataRowWithInvalidDecimalRange,
+    enrollmentDataRowWithInvalidValueinZyyyy,
+    enrollmentDataRowWithZeroValueInDateTime
 } from "./ValidateTestInput";
 
 describe("ValidateProcessor", () => {
@@ -631,67 +633,125 @@ describe("ValidateProcessor", () => {
             }
         });
     });
-
-    test('Test for maxLengthValidRange with Invalid Decimal Point', async () => {
+    test("Validate to check a zero value is accepted in zyyyy format date time", async () => {
         const validateProcessor = getValidateProcessor();
-        await validateProcessor['before_validate'](validateConfig);
-        await validateProcessor['validate'](course_outcomesHeaderInputRow);
-
-        const result = await validateProcessor['validate'](
-            course_outcomeDataRowWithInvalidDecimalRange
+        await validateProcessor.before_validate(validateConfig);
+        await validateProcessor.validate(
+            enrollmentHeaderInputRowWithDifferentDateFormat
+        );
+        const result = await validateProcessor.validate(
+            enrollmentDataRowWithZeroValueInDateTime
         );
         expect(result).toEqual({
             error: true,
             outputs: {
-                log: [
-                    '2',
-                    'Test1864',
-                    '12.97653721829731243541',
-                    'ART-8A-00401-199730',
-                    'A',
-                    'A',
-                    '1.5',
-                    'L',
-                    'invalid',
-                    'Column midterm_grade should be valid format'
+                enrollmentValidated: [
+                    "UNIV-SRF101-602-202002",
+                    "Yolanda.Gold",
+                    "INSTRUCTOR",
+                    "1",
+                    "1.5",
+                    "2016-09-20 14:04:05",
+                    "0.1",
+                    "TRUE",
+                    "0",
+                    "",
+                    "",
+                    "invalid",
+                    "Column invalid_type_column must be of type invalid_type"
                 ]
             }
         });
     });
-
+    test("Validate a error in zyyyy format date time", async () => {
+        const validateProcessor = getValidateProcessor();
+        await validateProcessor.before_validate(validateConfig);
+        await validateProcessor.validate(
+            enrollmentHeaderInputRowWithDifferentDateFormat
+        );
+        const result = await validateProcessor.validate(
+            enrollmentDataRowWithInvalidValueinZyyyy
+        );
+        expect(result).toEqual({
+            error: true,
+            outputs: {
+                enrollmentValidated: [
+                    "UNIV-SRF101-602-202002",
+                    "Yolanda.Gold",
+                    "INSTRUCTOR",
+                    "1",
+                    "1.5",
+                    "2016-09-20 14:04:05",
+                    "0.1",
+                    "TRUE",
+                    "12",
+                    "",
+                    "",
+                    "invalid",
+                    "Column batch_year must be of type datetime; Column invalid_type_column must be of type invalid_type"
+                ]
+            }
+        });
+    });
+    test('Test for maxLengthValidRange with Invalid Decimal Point', async () => {
+        const validateProcessor = getValidateProcessor();
+        await validateProcessor['before_validate'](validateConfig);
+        await validateProcessor['validate'](course_outcomesHeaderInputRow);
+    
+        const result = await validateProcessor['validate'](
+          course_outcomeDataRowWithInvalidDecimalRange
+        );
+        expect(result).toEqual({
+          error: true,
+          outputs: {
+            log: [
+              '2',
+              'Test1864',
+              '12.97653721829731243541',
+              'ART-8A-00401-199730',
+              'A',
+              'A',
+              '1.5',
+              'L',
+              'invalid',
+              'Column midterm_grade should be valid format',
+            ],
+          },
+        });
+    });
     test('Test for maxLengthValidRange with valid Decimal Point', async () => {
         const validateProcessor = getValidateProcessor();
         await validateProcessor['before_validate'](validateConfig);
         await validateProcessor['validate'](course_outcomesHeaderInputRow);
-
+    
         const result = await validateProcessor['validate'](
-            course_outcomeDataRowWithValidDecimalRange
+          course_outcomeDataRowWithValidDecimalRange
         );
         expect(result).toEqual({
-            error: false,
-            outputs: {
-                course_outcomesValidated: [
-                    'Test1864',
-                    '12.976',
-                    'ART-8A-00401-199730',
-                    'A',
-                    'A',
-                    '1.5',
-                    'L'
-                ],
-                log: [
-                    '2',
-                    'Test1864',
-                    '12.976',
-                    'ART-8A-00401-199730',
-                    'A',
-                    'A',
-                    '1.5',
-                    'L',
-                    'valid',
-                    ''
-                ]
-            }
+          error: false,
+          outputs: {
+            course_outcomesValidated: [
+              'Test1864',
+              '12.976',
+              'ART-8A-00401-199730',
+              'A',
+              'A',
+              '1.5',
+              'L',
+            ],
+            log: [
+              '2',
+              'Test1864',
+              '12.976',
+              'ART-8A-00401-199730',
+              'A',
+              'A',
+              '1.5',
+              'L',
+              'valid',
+              '',
+            ],
+          },
         });
     });
 });
