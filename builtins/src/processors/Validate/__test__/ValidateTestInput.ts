@@ -22,6 +22,10 @@ export const testScoreFileInfo = {
     key: "testScore.csv",
     bucket: "sfdev"
 };
+export const course_outcomesFileInfo = {
+    key: 'course_outcomes.txt',
+    bucket: 'sfdev'
+};
 
 export const invalidMultiFileConfig = {
     parameters: {
@@ -316,6 +320,54 @@ export const validateConfig = {
                 includeDataInLog: true,
                 includeLogInData: true,
                 discardInvalidRows: false
+            },
+            course_outcomes: {
+                columns: {
+                    final_grade: {
+                        required: false,
+                        validTypes: ['string'],
+                        invalidIfBlank: false
+                    },
+                    credit_hours: {
+                        required: false,
+                        validTypes: ['decimal'],
+                        invalidIfBlank: false
+                    },
+                    display_grade: {
+                        required: false,
+                        validTypes: ['string'],
+                        invalidIfBlank: false
+                    },
+                    midterm_grade: {
+                        required: false,
+                        validTypes: ['integer', 'decimal', 'string'],
+                        invalidIfBlank: false,
+                        maxLengthValidRange: {
+                            string: 4,
+                            decimal: 6
+                        }
+                    },
+                    enrollment_type: {
+                        required: false,
+                        maxlength: 2,
+                        validTypes: ['string'],
+                        validValues: ['L', 'PF', 'AU'],
+                        invalidIfBlank: false
+                    },
+                    user_integration_id: {
+                        required: true,
+                        validTypes: ['string'],
+                        invalidIfBlank: true
+                    },
+                    course_section_integration_id: {
+                        required: true,
+                        validTypes: ['string'],
+                        invalidIfBlank: true
+                    }
+                },
+                includeDataInLog: true,
+                includeLogInData: false,
+                discardInvalidRows: true
             }
         },
         dynamicOutput: true,
@@ -323,6 +375,78 @@ export const validateConfig = {
         warnIfNotValidValue: true,
         writeErrorDataToJobMeta: true
     }
+};
+
+export const course_outcomesHeaderInputRow = {
+    index: 1,
+    name: 'course_outcomes',
+    raw: [
+        'user_integration_id',
+        'midterm_grade',
+        'course_section_integration_id',
+        'final_grade',
+        'display_grade',
+        'credit_hours',
+        'enrollment_type'
+    ],
+    data: {
+        user_integration_id: 'user_integration_id',
+        midterm_grade: 'midterm_grade',
+        course_section_integration_id: 'course_section_integration_id',
+        final_grade: 'final_grade',
+        display_grade: 'display_grade',
+        credit_hours: 'credit_hours',
+        enrollment_type: 'enrollment_type'
+    },
+    fileInfo: course_outcomesFileInfo
+};
+
+export const course_outcomeDataRowWithInvalidDecimalRange = {
+    index: 2,
+    raw: [
+        'Test1864',
+        '12.97653721829731243541',
+        'ART-8A-00401-199730',
+        'A',
+        'A',
+        '1.5',
+        'L'
+    ],
+    data: {
+        user_integration_id: 'Test1864',
+        midterm_grade: '12.97653721829731243541',
+        course_section_integration_id: 'ART-8A-00401-199730',
+        final_grade: 'A',
+        display_grade: 'A',
+        credit_hours: '1.5',
+        enrollment_type: 'L'
+    },
+    json: [
+        'Test1864',
+        '12.97653721829731243541',
+        'ART-8A-00401-199730',
+        'A',
+        'A',
+        '1.5',
+        'L'
+    ],
+    name: 'course_outcomes'
+};
+
+export const course_outcomeDataRowWithValidDecimalRange = {
+    index: 2,
+    raw: ['Test1864', '12.976', 'ART-8A-00401-199730', 'A', 'A', '1.5', 'L'],
+    data: {
+        user_integration_id: 'Test1864',
+        midterm_grade: '12.976',
+        course_section_integration_id: 'ART-8A-00401-199730',
+        final_grade: 'A',
+        display_grade: 'A',
+        credit_hours: '1.5',
+        enrollment_type: 'L'
+    },
+    json: ['Test1864', '12.976', 'ART-8A-00401-199730', 'A', 'A', '1.5', 'L'],
+    name: 'course_outcomes'
 };
 
 export const validateConfigLogExcluded = {
