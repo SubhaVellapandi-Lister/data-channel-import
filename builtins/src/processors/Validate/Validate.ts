@@ -228,6 +228,7 @@ export class Validate extends BaseProcessor {
 
             if (columnConfig.maxLengthValidRange && !this.validTypeFormat) {
                 validationErrors.push(`Column ${columnName} should be valid format`);
+                this.validationStatus = ValidateStatus.Invalid;
             }
 
             if (!hasValidType && columnConfig.validWithWarningTypes) {
