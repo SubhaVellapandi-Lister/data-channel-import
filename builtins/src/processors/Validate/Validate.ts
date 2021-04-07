@@ -304,7 +304,7 @@ export class Validate extends BaseProcessor {
     private parseValidationSchema(): {
         columnConfig: IFileConfigColumns;
         rangeLimitSetters: Set<string>;
-    } {
+        } {
         const columnConfig: IFileConfigColumns = {},
             rangeLimitSetters = new Set<string>(this.rangeLimitSetters);
 
@@ -364,59 +364,59 @@ export class Validate extends BaseProcessor {
         let hasValidType = false;
         const data = inputData.toUpperCase();
         switch (typeToCheck) {
-            case ValidateDataType.Email: {
-                if (this.emailValidator.validateEmail(data, columnConfig.required!)) {
+        case ValidateDataType.Email: {
+            if (this.emailValidator.validateEmail(data, columnConfig.required!)) {
+                hasValidType = true;
+            }
+            break;
+        }
+        case ValidateDataType.Boolean: {
+            if (["TRUE", "FALSE", "1", "0"].includes(data)) {
+                hasValidType = true;
+            }
+            break;
+        }
+        case ValidateDataType.Integer: {
+            if ((!data && !columnConfig.invalidIfBlank) || (!data.includes(".") && !isNaN(parseInt(data)))) {
+                hasValidType = true;
+            }
+            break;
+        }
+        case ValidateDataType.Decimal: {
+            if ((!data && !columnConfig.invalidIfBlank) || !isNaN(parseFloat(data))) {
+                if (columnConfig.maxLengthValidRange) {
+                    const decimalCount = this.decimalCount(data);
+                    hasValidType = (decimalCount <= columnConfig.maxLengthValidRange[typeToCheck]) ? true : false;
+                    this.validTypeFormat = hasValidType ? true : false;
+                } else {
                     hasValidType = true;
                 }
-                break;
             }
-            case ValidateDataType.Boolean: {
-                if (["TRUE", "FALSE", "1", "0"].includes(data)) {
-                    hasValidType = true;
-                }
-                break;
-            }
-            case ValidateDataType.Integer: {
-                if ((!data && !columnConfig.invalidIfBlank) || (!data.includes(".") && !isNaN(parseInt(data)))) {
-                    hasValidType = true;
-                }
-                break;
-            }
-            case ValidateDataType.Decimal: {
-                if ((!data && !columnConfig.invalidIfBlank) || !isNaN(parseFloat(data))) {
-                    if (columnConfig.maxLengthValidRange) {
-                        const decimalCount = this.decimalCount(data);
-                        hasValidType = (decimalCount <= columnConfig.maxLengthValidRange[typeToCheck]) ? true : false;
-                        this.validTypeFormat = hasValidType ? true : false;
-                    } else {
-                        hasValidType = true;
-                    }
-                }
-                break;
-            }
-            case ValidateDataType.Datetime: {
-                if (
-                    (columnConfig.dateTimeFormat === undefined || columnConfig.dateTimeFormat === null) &&
+            break;
+        }
+        case ValidateDataType.Datetime: {
+            if (
+                (columnConfig.dateTimeFormat === undefined || columnConfig.dateTimeFormat === null) &&
                     !isNaN(Date.parse(data))
-                ) {
+            ) {
+                hasValidType = true;
+                break;
+            }
+            hasValidType = this.validateDateFormat(columnConfig, data, compareData, hasValidType);
+            break;
+        }
+        // eslint-disable-next-line no-fallthrough
+        case ValidateDataType.String: {
+            if (typeof data === 'string') {
+                if (columnConfig.maxLengthValidRange) {
+                    hasValidType = (data.length <= columnConfig.maxLengthValidRange[typeToCheck]) ? true : false;
+                    this.validTypeFormat = hasValidType ? true : false;
+                } else {
                     hasValidType = true;
-                    break;
                 }
-                hasValidType = this.validateDateFormat(columnConfig, data, compareData, hasValidType);
-                break;
             }
-            // eslint-disable-next-line no-fallthrough
-            case ValidateDataType.String: {
-                if (typeof data === 'string') {
-                    if (columnConfig.maxLengthValidRange) {
-                        hasValidType = (data.length <= columnConfig.maxLengthValidRange[typeToCheck]) ? true : false;
-                        this.validTypeFormat = hasValidType ? true : false;
-                    } else {
-                        hasValidType = true;
-                    }
-                }
-                break;
-            }
+            break;
+        }
         }
 
         return hasValidType;
@@ -543,37 +543,37 @@ export class Validate extends BaseProcessor {
         this.totalDataCount++;
         this.errorLogMetrics[inputFileName].totalDataCount = this.totalDataCount;
         switch (result.Validation_Status) {
-            case 'invalid':
-                ++this.invalidcountValue;
-                this.errorLogMetrics[inputFileName].invalidCount = this.invalidcountValue;
-                this.errorLogMetrics[inputFileName].recordIdentifier.critical[result.Row] = result.Validation_Info;
-                break;
-            case 'warning':
-                ++this.warningCountValue;
-                this.errorLogMetrics[inputFileName].warningCount = this.warningCountValue;
-                this.errorLogMetrics[inputFileName].recordIdentifier.warning[result.Row] = result.Validation_Info;
-                break;
-            case 'valid':
-                ++this.validCountValue;
-                this.errorLogMetrics[inputFileName].validCount = this.validCountValue;
-                break;
+        case 'invalid':
+            ++this.invalidcountValue;
+            this.errorLogMetrics[inputFileName].invalidCount = this.invalidcountValue;
+            this.errorLogMetrics[inputFileName].recordIdentifier.critical[result.Row] = result.Validation_Info;
+            break;
+        case 'warning':
+            ++this.warningCountValue;
+            this.errorLogMetrics[inputFileName].warningCount = this.warningCountValue;
+            this.errorLogMetrics[inputFileName].recordIdentifier.warning[result.Row] = result.Validation_Info;
+            break;
+        case 'valid':
+            ++this.validCountValue;
+            this.errorLogMetrics[inputFileName].validCount = this.validCountValue;
+            break;
         }
     }
 
     private setNavianceStatus(): void {
         let navianceStatus: string;
         switch (this.validationStatus) {
-            case ValidateStatus.Valid:
-                navianceStatus = NavianceStatus.TestingCompleted;
-                break;
-            case ValidateStatus.Warning:
-                navianceStatus = NavianceStatus.TestingCompletedWithAlerts;
-                break;
-            case ValidateStatus.Invalid:
-                navianceStatus = NavianceStatus.CriticalError;
-                break;
-            default:
-                navianceStatus = "";
+        case ValidateStatus.Valid:
+            navianceStatus = NavianceStatus.TestingCompleted;
+            break;
+        case ValidateStatus.Warning:
+            navianceStatus = NavianceStatus.TestingCompletedWithAlerts;
+            break;
+        case ValidateStatus.Invalid:
+            navianceStatus = NavianceStatus.CriticalError;
+            break;
+        default:
+            navianceStatus = "";
         }
 
         const isLastStep = this.job.flowIdx === this.job.flow.length - 1;
