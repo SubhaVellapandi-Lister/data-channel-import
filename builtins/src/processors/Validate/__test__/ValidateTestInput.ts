@@ -225,9 +225,7 @@ export const validateConfig = {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: ["ZYYYY"],
-                        compareField: "invalid_date_column",
-                        comparator: "invalid operator"
+                        dateTimeFormat: ["ZYYYY"]
                     },
                     invalid_date_column: {
                         required: false,
