@@ -1,0 +1,25 @@
+{
+	"product": "PRODUCT_NAME",
+	"name": "INGRESS_NAME",
+	"tenant": {
+		"product": "PRODUCT_NAME",
+		"name": "TENANT_NAME"
+	},
+	"configType": "INGRESS",
+	"jobs": [
+		{
+			"name": "JOB_NAME",
+			"channel": {
+				"guid": "GUID",
+				"name": "DELETE_CHANNEL_NAME",
+				"product": "DELETE_CHANNEL_PRODUCT"
+			},
+			"sources": [
+				{
+					"name": "data"
+				}
+			],
+			"cron": "cron(0 */8 * * ? *)" 
+		}
+	]
+}

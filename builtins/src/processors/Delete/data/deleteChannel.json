@@ -1,0 +1,30 @@
+{
+	"product": "PRODUCT_NAME",
+	"name": "CHANNEL_NAME",
+	"configType": "CHANNEL",
+	"flow": [
+		"delete"
+	],
+	"steps": {
+		"delete": {
+			"processor": "ss-data-channels-BuiltInProcessor",
+			"method": "delete",
+			"granularity": "once",
+			"parameters": {
+				"deleteConfig": {
+					"jobs": {
+						"hardDelete": true,
+						"forceDelete": true,
+						"criteria": {
+							"expiryDate": {
+								"operator": "<=", 
+								"value": "today"
+							}
+						},
+						"maxDeletionsPerJob": 10000
+					}
+				}
+			}
+		}
+	}
+}
