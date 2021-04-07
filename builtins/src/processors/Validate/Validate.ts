@@ -606,7 +606,7 @@ export class Validate extends BaseProcessor {
         const decimalString = String(num);
         if (decimalString.includes('.')) {
             return decimalString.split('.')[1].length;
-        };
+        }
         return 0;
     }
 
