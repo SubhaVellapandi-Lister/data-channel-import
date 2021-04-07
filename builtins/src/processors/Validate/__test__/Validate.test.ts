@@ -32,7 +32,9 @@ import {
     testScoreInvalidDataInputRow,
     testScoreValidDataInputRow,
     testScoreInvalidDataInputRow2,
-    enrollmentDataRowWithInvalidTypesValue
+    enrollmentDataRowWithInvalidTypesValue,
+    enrollmentDataRowWithInvalidValueinZyyyy,
+    enrollmentDataRowWithZeroValueInDateTime
 } from "./ValidateTestInput";
 
 describe("ValidateProcessor", () => {
@@ -624,6 +626,66 @@ describe("ValidateProcessor", () => {
                     "12279384",
                     "valid",
                     ""
+                ]
+            }
+        });
+    });
+    test("Validate to check a zero value is accepted in zyyyy format date time", async () => {
+        const validateProcessor = getValidateProcessor();
+        await validateProcessor.before_validate(validateConfig);
+        await validateProcessor.validate(
+            enrollmentHeaderInputRowWithDifferentDateFormat
+        );
+        const result = await validateProcessor.validate(
+            enrollmentDataRowWithZeroValueInDateTime
+        );
+        expect(result).toEqual({
+            error: true,
+            outputs: {
+                enrollmentValidated: [
+                    "UNIV-SRF101-602-202002",
+                    "Yolanda.Gold",
+                    "INSTRUCTOR",
+                    "1",
+                    "1.5",
+                    "2016-09-20 14:04:05",
+                    "0.1",
+                    "TRUE",
+                    "0",
+                    "",
+                    "",
+                    "invalid",
+                    "Column invalid_type_column must be of type invalid_type"
+                ]
+            }
+        });
+    });
+    test("Validate a error in zyyyy format date time", async () => {
+        const validateProcessor = getValidateProcessor();
+        await validateProcessor.before_validate(validateConfig);
+        await validateProcessor.validate(
+            enrollmentHeaderInputRowWithDifferentDateFormat
+        );
+        const result = await validateProcessor.validate(
+            enrollmentDataRowWithInvalidValueinZyyyy
+        );
+        expect(result).toEqual({
+            error: true,
+            outputs: {
+                enrollmentValidated: [
+                    "UNIV-SRF101-602-202002",
+                    "Yolanda.Gold",
+                    "INSTRUCTOR",
+                    "1",
+                    "1.5",
+                    "2016-09-20 14:04:05",
+                    "0.1",
+                    "TRUE",
+                    "12",
+                    "",
+                    "",
+                    "invalid",
+                    "Column batch_year must be of type datetime; Column invalid_type_column must be of type invalid_type"
                 ]
             }
         });

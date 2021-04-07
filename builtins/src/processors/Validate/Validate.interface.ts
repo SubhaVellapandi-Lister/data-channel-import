@@ -50,6 +50,7 @@ export enum ValidateDateFormat {
   YYYYMMDD = "YYYYMMDD",
   YYYYMM = "YYYYMM",
   YYYY = "YYYY",
+  ZYYYY = "ZYYYY", // To support Zero or YYYY format values
 }
 
 export enum SchemaType {

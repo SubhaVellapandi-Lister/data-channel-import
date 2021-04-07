@@ -225,7 +225,7 @@ export const validateConfig = {
                         required: false,
                         validTypes: ["datetime"],
                         invalidIfBlank: false,
-                        dateTimeFormat: ["YYYY"],
+                        dateTimeFormat: ["ZYYYY"],
                         compareField: "invalid_date_column",
                         comparator: "invalid operator"
                     },
@@ -1682,4 +1682,93 @@ export const testScoreInvalidDataInputRow2 = {
     name: "testScore",
     fileInfo: testScoreFileInfo,
     ...validateConfigUsingSchema
+};
+export const enrollmentDataRowWithZeroValueInDateTime = {
+    index: 2,
+    raw: [
+        "UNIV-SRF101-602-202002",
+        "Yolanda.Gold",
+        "INSTRUCTOR",
+        "1",
+        "1.5",
+        "2016-09-20 14:04:05",
+        "0.1",
+        "TRUE",
+        "0",
+        "",
+        ""
+    ],
+    data: {
+        course_section_integration_id: "UNIV-SRF101-602-20200",
+        user_integration_id: "Yolanda.Gold",
+        user_role: "INSTRUCTOR",
+        available_ind: "1",
+        credit_hours: "1.5",
+        last_access_date: "2016-09-20 14:04:05",
+        authoritative_status: "0.1",
+        is_on_probation: "TRUE",
+        batch_year: "0",
+        invalid_date_column: "",
+        invalid_type_column: ""
+    },
+    json: [
+        "UNIV-SRF101-602-202002",
+        "Yolanda.Gold",
+        "INSTRUCTOR",
+        "1",
+        "1.5",
+        "2016-09-20 14:04:05",
+        "0.1",
+        "TRUE",
+        "0",
+        "",
+        ""
+    ],
+    name: "enrollment",
+    fileInfo: enrollmentFileInfo
+};
+
+export const enrollmentDataRowWithInvalidValueinZyyyy = {
+    index: 2,
+    raw: [
+        "UNIV-SRF101-602-202002",
+        "Yolanda.Gold",
+        "INSTRUCTOR",
+        "1",
+        "1.5",
+        "2016-09-20 14:04:05",
+        "0.1",
+        "TRUE",
+        "12",
+        "",
+        ""
+    ],
+    data: {
+        course_section_integration_id: "UNIV-SRF101-602-20200",
+        user_integration_id: "Yolanda.Gold",
+        user_role: "INSTRUCTOR",
+        available_ind: "1",
+        credit_hours: "1.5",
+        last_access_date: "2016-09-20 14:04:05",
+        authoritative_status: "0.1",
+        is_on_probation: "TRUE",
+        batch_year: "12",
+        invalid_date_column: "",
+        invalid_type_column: ""
+    },
+    json: [
+        "UNIV-SRF101-602-202002",
+        "Yolanda.Gold",
+        "INSTRUCTOR",
+        "1",
+        "1.5",
+        "2016-09-20 14:04:05",
+        "0.1",
+        "TRUE",
+        "12",
+        "",
+        ""
+    ],
+    name: "enrollment",
+    fileInfo: enrollmentFileInfo
 };

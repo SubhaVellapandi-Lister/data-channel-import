@@ -30,6 +30,9 @@ export class DateValidator {
         case ValidateDateFormat.YYYY: {
             return DateUtil.isYYYY(inputDate);
         }
+        case ValidateDateFormat.ZYYYY: {
+            return DateUtil.isZYYYY(inputDate);
+        }
         default: {
             return false;
         }
