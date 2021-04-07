@@ -226,7 +226,7 @@ export class Validate extends BaseProcessor {
               }
           }
 
-          if(columnConfig.maxLengthValidRange && !this.validTypeFormat){
+          if (columnConfig.maxLengthValidRange && !this.validTypeFormat){
             validationErrors.push(`Column ${columnName} should be valid format`);
           }
 
@@ -385,8 +385,8 @@ export class Validate extends BaseProcessor {
       case ValidateDataType.Decimal: {
         if ((!data && !columnConfig.invalidIfBlank) || !isNaN(parseFloat(data))) {
             if(columnConfig.maxLengthValidRange){
-             const decimailCount = this.decimalCount(data);
-              hasValidType = (decimailCount <= columnConfig.maxLengthValidRange[typeToCheck])?true:false;
+             const decimalCount = this.decimalCount(data);
+              hasValidType = (decimalCount <= columnConfig.maxLengthValidRange[typeToCheck])?true:false;
               this.validTypeFormat = hasValidType?true:false;
               } else {
                   hasValidType = true;
@@ -411,7 +411,7 @@ export class Validate extends BaseProcessor {
             if(columnConfig.maxLengthValidRange){
              hasValidType = (data.length <= columnConfig.maxLengthValidRange[typeToCheck])?true:false;
              this.validTypeFormat = hasValidType?true:false;
-            }else {
+            } else {
                 hasValidType = true;
             }
          }
