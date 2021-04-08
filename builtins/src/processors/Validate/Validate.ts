@@ -388,7 +388,7 @@ export class Validate extends BaseProcessor {
             if (columnConfig.maxLengthValidRange) {
                 const decimalCount = this.decimalCount(data);
                 hasValidType = (decimalCount <= columnConfig.maxLengthValidRange[typeToCheck]) ? true : false;
-                this.validTypeFormat = hasValidType ? true : false;
+                this.validTypeFormat = hasValidType;
             } else {
                 hasValidType = true;
             }
@@ -411,7 +411,7 @@ export class Validate extends BaseProcessor {
         if (typeof data === 'string') {
             if (columnConfig.maxLengthValidRange) {
                 hasValidType = (data.length <= columnConfig.maxLengthValidRange[typeToCheck]) ? true : false;
-                this.validTypeFormat = hasValidType ? true : false;
+                this.validTypeFormat = hasValidType;
             } else {
                 hasValidType = true;
             }
