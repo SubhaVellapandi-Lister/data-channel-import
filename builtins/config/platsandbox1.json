@@ -4,9 +4,6 @@
         "environment": "platsandbox1",
         "functionName": "ss-data-channels-BuiltInProcessor",
         "stackName": "ss-data-channels-builtins",
-        "eventBridge": {
-            "busName": "ss-dc-event-bus-platsandbox1"
-        },
         "efs": {
             "useEfs": true,
             "mountPath": "/mnt/efs",
