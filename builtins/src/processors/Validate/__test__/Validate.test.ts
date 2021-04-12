@@ -697,61 +697,61 @@ describe("ValidateProcessor", () => {
         const validateProcessor = getValidateProcessor();
         await validateProcessor['before_validate'](validateConfig);
         await validateProcessor['validate'](course_outcomesHeaderInputRow);
-    
+
         const result = await validateProcessor['validate'](
-          course_outcomeDataRowWithInvalidDecimalRange
+            course_outcomeDataRowWithInvalidDecimalRange
         );
         expect(result).toEqual({
-          error: true,
-          outputs: {
-            log: [
-              '2',
-              'Test1864',
-              '12.97653721829731243541',
-              'ART-8A-00401-199730',
-              'A',
-              'A',
-              '1.5',
-              'L',
-              'invalid',
-              'Column midterm_grade should be valid format',
-            ],
-          },
+            error: true,
+            outputs: {
+                log: [
+                    '2',
+                    'Test1864',
+                    '12.97653721829731243541',
+                    'ART-8A-00401-199730',
+                    'A',
+                    'A',
+                    '1.5',
+                    'L',
+                    'invalid',
+                    'Column midterm_grade should be valid format'
+                ]
+            }
         });
     });
     test('Test for maxLengthValidRange with valid Decimal Point', async () => {
         const validateProcessor = getValidateProcessor();
         await validateProcessor['before_validate'](validateConfig);
         await validateProcessor['validate'](course_outcomesHeaderInputRow);
-    
+
         const result = await validateProcessor['validate'](
-          course_outcomeDataRowWithValidDecimalRange
+            course_outcomeDataRowWithValidDecimalRange
         );
         expect(result).toEqual({
-          error: false,
-          outputs: {
-            course_outcomesValidated: [
-              'Test1864',
-              '12.976',
-              'ART-8A-00401-199730',
-              'A',
-              'A',
-              '1.5',
-              'L',
-            ],
-            log: [
-              '2',
-              'Test1864',
-              '12.976',
-              'ART-8A-00401-199730',
-              'A',
-              'A',
-              '1.5',
-              'L',
-              'valid',
-              '',
-            ],
-          },
+            error: false,
+            outputs: {
+                course_outcomesValidated: [
+                    'Test1864',
+                    '12.976',
+                    'ART-8A-00401-199730',
+                    'A',
+                    'A',
+                    '1.5',
+                    'L'
+                ],
+                log: [
+                    '2',
+                    'Test1864',
+                    '12.976',
+                    'ART-8A-00401-199730',
+                    'A',
+                    'A',
+                    '1.5',
+                    'L',
+                    'valid',
+                    ''
+                ]
+            }
         });
     });
 });
