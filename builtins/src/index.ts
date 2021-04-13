@@ -1,8 +1,10 @@
 import { generateHandler } from "@data-channels/dcSDK";
 
 import {
+    Aggregate,
     Athena,
     Diff,
+    DragonImport,
     Echo,
     Enumerate,
     Generate,
@@ -22,7 +24,9 @@ import {
 } from "./processors";
 
 export const builtInHandler = generateHandler({
+    aggregate: Aggregate,
     echo: Echo,
+    dragonImport: DragonImport,
     translate: Translate,
     sort: Sort,
     validate: Validate,
