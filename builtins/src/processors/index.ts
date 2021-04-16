@@ -8,6 +8,7 @@ export * from "./GroupBy";
 export * from "./HelloWorld";
 export * from "./Match/Match";
 export * from "./Merge";
+export * from "./PsQuery";
 export * from "./SecurityScan";
 export * from "./SES/SES";
 export * from "./SNS/SNS";

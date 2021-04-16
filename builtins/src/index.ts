@@ -19,7 +19,8 @@ import {
     Translate,
     Webhook,
     Delete,
-    Import
+    Import,
+    PsQuery
 } from "./processors";
 
 export const builtInHandler = generateHandler({
@@ -33,6 +34,7 @@ export const builtInHandler = generateHandler({
     email: SESProcessor,
     emailJobInfo: SESProcessor,
     enumerate: Enumerate,
+    psQuery: PsQuery,
     matchFields: Match,
     throwError: ThrowError,
     diff: Diff,
