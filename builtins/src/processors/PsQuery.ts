@@ -33,23 +33,7 @@ export class PsQuery extends BaseProcessor {
     public async psQuery(input: IFileProcessorInput): Promise<IFileProcessorOutput> {
         this.config = input.parameters!['psQueryConfig'] as IPsQueryConfig;
 
-        let dataVersionValue = '0';
-
-        if (this.job.tenant && this.job.tenant.meta) {
-            this.config.host = (this.job.tenant.meta['psHost'] ?? this.config.host) as string;
-            this.config.clientId = (this.job.tenant.meta['psClientId'] ?? this.config.clientId) as string;
-            this.config.clientSecret = (this.job.tenant.meta['psClientSecret'] ?? this.config.clientSecret) as string;
-            dataVersionValue = this.job.tenant.meta['psDataVersions'] ? 
-                this.job.tenant.meta['psDataVersions'][this.config.tenantDataVersion ?? ''] ?? '0' : 
-                '0';
-        }
-
-        if (typeof this.config.body === 'object' && this.config.tenantDataVersion) {
-            this.config.body['$dataversion_applicationname'] = this.config.tenantDataVersion;
-            if (this.config.tenantDataVersionOnlyLatest) {
-                this.config.body['$dataVersion'] =  dataVersionValue;
-            }
-        }
+        this.loadDataVersionConfig();
 
         this.validateConfig(this.config);
 
@@ -131,6 +115,10 @@ export class PsQuery extends BaseProcessor {
                 }
             }
 
+            if (this.config.tenantDataVersion && resp['$dataversion']) {
+                await this.saveLatestDataVersion(this.config.tenantDataVersion, resp['$dataVersion']);
+            }
+
             console.log(`page ${page} items ${items.length}`);
 
             getNextPage = items.length > 0 && this.config.paginate == true;
@@ -159,6 +147,32 @@ export class PsQuery extends BaseProcessor {
 
         if (!config.endpoint || config.endpoint.trim().length < 0) {
             throw new Error('psQueryConfig Error: invalid endpoint');
+        }
+    }
+
+    private loadDataVersionConfig() {
+        let dataVersionValue = '0';
+
+        if (this.job.tenant && this.job.tenant.meta) {
+            this.config.host = (this.job.tenant.meta['psHost'] ?? this.config.host) as string;
+            this.config.clientId = (this.job.tenant.meta['psClientId'] ?? this.config.clientId) as string;
+            this.config.clientSecret = (this.job.tenant.meta['psClientSecret'] ?? this.config.clientSecret) as string;
+            dataVersionValue = (this.job.tenant.meta[`psDataVersion.${this.config.tenantDataVersion}`] as string) ?? '0'; 
+        }
+
+        if (typeof this.config.body === 'object' && this.config.tenantDataVersion) {
+            this.config.body['$dataversion_applicationname'] = this.config.tenantDataVersion;
+            if (this.config.tenantDataVersionOnlyLatest) {
+                this.config.body['$dataVersion'] =  dataVersionValue;
+            }
+        }
+    }
+
+    private async saveLatestDataVersion(dataVersionName: string, newDataVersion: string): Promise<void> {
+        if (this.job.tenant && this.job.tenant.meta) {
+            await this.job.tenant!.update({
+                meta: { ...this.job.tenant.meta, [`psDataVersion.${dataVersionName}`]: newDataVersion }
+            });
         }
     }
 
