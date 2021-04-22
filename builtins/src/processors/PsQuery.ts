@@ -40,7 +40,6 @@ export class PsQuery extends BaseProcessor {
         const outputName = this.config.resultsOutputName ?? 'results';
 
         if (!this.config.accessToken) {
-            
             console.log('Obtaining access token');
             this.config.accessToken = await this.getAccessToken();
         }
@@ -78,11 +77,7 @@ export class PsQuery extends BaseProcessor {
             if (Array.isArray(resp)) {
                 items = resp;
             } else if (this.config.listKey) {
-                if (!Array.isArray(resp[this.config.listKey])) {
-                    throw new Error(`listKey ${this.config.listKey} not present in response or is not an array`);
-                }
-
-                items = _.get(resp, this.config.listKey);
+                items = _.get(resp, this.config.listKey, []);
             } else {
                 const key = this.config.endpoint.split('/').slice(-1)[0] || this.config.endpoint.split('/').slice(-2)[0];
                 const keyPlural = `${key}s`;
@@ -116,7 +111,7 @@ export class PsQuery extends BaseProcessor {
             }
 
             if (this.config.tenantDataVersion && resp['$dataversion']) {
-                await this.saveLatestDataVersion(this.config.tenantDataVersion, resp['$dataVersion']);
+                await this.saveLatestDataVersion(this.config.tenantDataVersion, resp['$dataversion']);
             }
 
             console.log(`page ${page} items ${items.length}`);
@@ -158,18 +153,24 @@ export class PsQuery extends BaseProcessor {
             this.config.clientId = (this.job.tenant.meta['psClientId'] ?? this.config.clientId) as string;
             this.config.clientSecret = (this.job.tenant.meta['psClientSecret'] ?? this.config.clientSecret) as string;
             dataVersionValue = (this.job.tenant.meta[`psDataVersion.${this.config.tenantDataVersion}`] as string) ?? '0'; 
+            console.log(`Found tenant ${this.job.tenant.name}, using ${this.config.host} with clientId ${this.config.clientId}`);
         }
 
-        if (typeof this.config.body === 'object' && this.config.tenantDataVersion) {
+        if (this.config.tenantDataVersion) {
+            if (!this.config.body) {
+                this.config.body = {};
+            }
             this.config.body['$dataversion_applicationname'] = this.config.tenantDataVersion;
             if (this.config.tenantDataVersionOnlyLatest) {
-                this.config.body['$dataVersion'] =  dataVersionValue;
+                console.log(`Looking for dataVersion ${dataVersionValue} and newer`);
+                this.config.body['$dataversion'] =  dataVersionValue;
             }
         }
     }
 
     private async saveLatestDataVersion(dataVersionName: string, newDataVersion: string): Promise<void> {
         if (this.job.tenant && this.job.tenant.meta) {
+            console.log(`Setting dataVersion ${dataVersionName} ${newDataVersion}`);
             await this.job.tenant!.update({
                 meta: { ...this.job.tenant.meta, [`psDataVersion.${dataVersionName}`]: newDataVersion }
             });
