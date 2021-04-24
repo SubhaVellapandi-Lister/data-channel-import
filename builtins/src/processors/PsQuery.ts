@@ -145,14 +145,14 @@ export class PsQuery extends BaseProcessor {
         }
     }
 
-    private loadDataVersionConfig() {
+    private loadDataVersionConfig(): void {
         let dataVersionValue = '0';
 
         if (this.job.tenant && this.job.tenant.meta) {
             this.config.host = (this.job.tenant.meta['psHost'] ?? this.config.host) as string;
             this.config.clientId = (this.job.tenant.meta['psClientId'] ?? this.config.clientId) as string;
             this.config.clientSecret = (this.job.tenant.meta['psClientSecret'] ?? this.config.clientSecret) as string;
-            dataVersionValue = (this.job.tenant.meta[`psDataVersion.${this.config.tenantDataVersion}`] as string) ?? '0'; 
+            dataVersionValue = (this.job.tenant.meta[`psDataVersion.${this.config.tenantDataVersion}`] as string) ?? '0';
             console.log(`Found tenant ${this.job.tenant.name}, using ${this.config.host} with clientId ${this.config.clientId}`);
         }
 
@@ -163,7 +163,7 @@ export class PsQuery extends BaseProcessor {
             this.config.body['$dataversion_applicationname'] = this.config.tenantDataVersion;
             if (this.config.tenantDataVersionOnlyLatest) {
                 console.log(`Looking for dataVersion ${dataVersionValue} and newer`);
-                this.config.body['$dataversion'] =  dataVersionValue;
+                this.config.body['$dataversion'] = dataVersionValue;
             }
         }
     }
@@ -193,7 +193,7 @@ export class PsQuery extends BaseProcessor {
         let postBody = body;
         if ((!contentType || contentType === 'application/json') && typeof body === 'object') {
             postBody = JSON.stringify(body);
-        } 
+        }
 
         let triesLeft = 3;
         let finalErr;

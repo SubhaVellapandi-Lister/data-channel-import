@@ -13,25 +13,38 @@ import {
 
 import { urlsForInputNames } from "../../utils";
 
+export interface IImportConfig {
+    detailType: string;
+    pauseAfter: boolean;
+}
+
 export class Import extends BaseProcessor {
     private importDetailPayload!: IImportDetailPayload;
     private importPayload!: IImportPayload
+    private config!: IImportConfig;
 
     public async before_import(_input: IStepBeforeInput): Promise<void> {
+        this.config = _input.parameters!['importConfig'] ?? { 
+            detailType: DetailType.SCORES_IMPORT,
+            pauseAfter: true
+        };
+    }
+
+    public async import(_input: IFileProcessorInput): Promise<IFileProcessorOutput> {
+        const url = await this.fileUrls(Object.keys(_input.inputs)[0]);
+        
         this.importDetailPayload = {
             schoolId: this.job.tenant?.name,
             testType: this.job.name,
-            url: this.fileUrls(),
+            url,
             importId: `${this.job.guid}/${this.job.currentStep}`
         };
 
         console.log('Import Detail Payload', this.importDetailPayload);
-    }
-
-    public async import(_input: IFileProcessorInput): Promise<IFileProcessorOutput> {
+        
         this.importPayload = {
             Source: SourceType.NAV_PLATFORM,
-            DetailType: DetailType.SCORES_IMPORT,
+            DetailType: this.config.detailType,
             Time: new Date(),
             Detail: JSON.stringify(this.importDetailPayload)
         };
@@ -51,18 +64,14 @@ export class Import extends BaseProcessor {
     }
 
     public async after_import(_input: IStepAfterInput): Promise<void> {
-        this.pauseAfterStep();
+        if (this.config.pauseAfter) {
+            this.pauseAfterStep();
+        }
     }
 
-    private fileUrls(): string {
-        const fileUrlsByName = urlsForInputNames(this.job);
-        const fileUrls = [];
+    private async fileUrls(inputName: string): Promise<string> {
+        const urls = await this.urlsForInputName(inputName);
 
-        for (const inputName of Object.keys(fileUrlsByName)) {
-            for (const fileUrl of fileUrlsByName[inputName]) {
-                fileUrls.push(fileUrl);
-            }
-        }
-        return fileUrls[0];
+        return urls[0] ?? '';
     }
 }
